@@ -1,58 +1,51 @@
-# Monkey Checks v2.2 — Functional Local App
+# Monkey Checks v2.4 — Supabase Preparation
 
-Base: v2.1.2.
+Base: Monkey Checks v2.3.1 Build Fix.
 
-## Cambios principales
+## Estado
 
-- App conectada entre secciones con navegación funcional.
-- Dashboard Hoy funcional con `localStorage`:
-  - crear tareas desde el botón `+`
-  - marcar/desmarcar checks
-  - abrir detalle de tarea
-  - editar tarea
-  - eliminar tarea
-  - progreso persistente
-- Calendario funcional local:
-  - agregar evento
-  - editar evento
-  - eliminar evento
-  - persistencia local
-- Notas funcional local:
-  - agregar nota
-  - editar nota
-  - eliminar nota
-  - buscar notas
-  - persistencia local
-- Recordatorios funcional local:
-  - agregar recordatorio
-  - editar recordatorio
-  - eliminar recordatorio
-  - activar/desactivar toggle
-  - persistencia local
-- Perfil editable localmente.
-- Configuración con toggles persistentes.
-- Login/Register mock funcional antes de Supabase Auth.
+- UI funcional local con `localStorage`.
+- Build validado para Vercel.
+- Preparación de arquitectura para Supabase sin conectar todavía la BD.
 
-## Deploy
+## Cambios principales v2.4
 
-```bash
-npm install
-npm run build
-```
+- Nuevos hooks preparados para reemplazar storage local por Supabase:
+  - `hooks/use-tasks.ts`
+  - `hooks/use-notes.ts`
+  - `hooks/use-calendar-events.ts`
+  - `hooks/use-reminders.ts`
+  - `hooks/use-profile.ts`
+  - `hooks/use-settings.ts`
+- Nueva capa de servicios de dominio:
+  - `lib/services/task-service.ts`
+  - `lib/services/note-service.ts`
+  - `lib/services/calendar-service.ts`
+  - `lib/services/reminder-service.ts`
+  - `lib/services/profile-service.ts`
+- Nuevas llaves centralizadas:
+  - `lib/storage-keys.ts`
+- Tipado Supabase inicial:
+  - `lib/supabase/database.types.ts`
+- Cliente Supabase tipado:
+  - `lib/supabase/client.ts`
+- Migración inicial sugerida:
+  - `supabase/migrations/0001_monkey_checks_core.sql`
 
-Variables existentes se mantienen igual para la siguiente etapa con Supabase:
+## Variables Vercel
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-## Siguiente fase recomendada
+## Validación
 
-v2.3 UX Pro + validaciones visuales antes de conectar Supabase.
+```bash
+npm install
+npm run build
+```
 
-## v2.2.1 Build Fix
-- Corrige tipos estrictos en CalendarEvent al crear eventos locales.
-- Corrige tipos estrictos en TimeBlock al crear nuevos bloques desde Hoy.
-- Corrige tipos estrictos en Reminder al crear recordatorios.
-- Actualiza tsconfig a jsx react-jsx para evitar modificación automática en Vercel.
+## Próximo paso recomendado
+
+v2.5 / v3: activar Auth real, ejecutar migración en Supabase y cambiar hooks locales por consultas Supabase manteniendo la misma UI.
