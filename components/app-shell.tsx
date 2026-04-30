@@ -2,7 +2,7 @@ import { BottomNav } from "./bottom-nav";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="safe-screen relative pb-24">
+    <main className="app-screen pb-[calc(96px+var(--safe-bottom))]">
       {children}
       <BottomNav />
     </main>

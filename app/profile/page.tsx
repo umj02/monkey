@@ -1,21 +1,30 @@
+import Link from "next/link";
+import { Bell, ChevronRight, Lock, Palette, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+
+const rows = [
+  { label: "Editar información", icon: Pencil, href: "#" },
+  { label: "Cambiar contraseña", icon: Lock, href: "#" },
+  { label: "Notificaciones", icon: Bell, href: "/reminders" },
+  { label: "Tema", icon: Palette, href: "/settings" }
+];
 
 export default function ProfilePage() {
   return (
     <AppShell>
-      <section className="px-5 pt-8">
-        <h1 className="text-2xl font-bold">Mi Perfil</h1>
-        <div className="mt-6 rounded-monkey bg-gradient-to-br from-monkey-purple to-monkey-green p-6 text-white shadow-soft">
-          <div className="text-6xl">🐵</div>
-          <h2 className="mt-3 text-xl font-bold">Juan Pérez</h2>
-          <p className="text-white/80">juan@email.com</p>
-        </div>
+      <section className="page-pad pt-8">
+        <h1 className="text-2xl font-black">Mi Perfil</h1>
+        <section className="mt-6 rounded-card bg-gradient-to-br from-monkey-purple to-monkey-green p-5 text-white shadow-soft">
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25 text-6xl">🐵</div>
+          <h2 className="mt-3 text-center text-xl font-black">Juan Pérez</h2>
+          <p className="text-center text-sm text-white/80">juanperez@email.com</p>
+        </section>
         <div className="mt-6 space-y-3">
-          {["Editar información", "Cambiar contraseña", "Notificaciones", "Tema colorido"].map(item => (
-            <button key={item} className="flex h-14 w-full items-center justify-between rounded-2xl bg-white px-4 font-semibold shadow-sm">
-              {item}
-              <span>›</span>
-            </button>
+          {rows.map((row) => (
+            <Link key={row.label} href={row.href} className="flex h-14 items-center justify-between rounded-[18px] bg-white px-4 text-sm font-bold shadow-card transition active:scale-[.98]">
+              <span className="flex items-center gap-3"><row.icon className="h-4 w-4 text-monkey-muted" />{row.label}</span>
+              <ChevronRight className="h-4 w-4 text-monkey-muted" />
+            </Link>
           ))}
         </div>
       </section>

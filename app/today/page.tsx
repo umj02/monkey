@@ -1,62 +1,63 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ProgressCard } from "@/components/progress-card";
 import { TimeBlockCard } from "@/components/time-block-card";
+import { TaskDetailSheet } from "@/components/task-detail-sheet";
 import type { TimeBlock } from "@/types";
 
-const initialBlocks: TimeBlock[] = [
+const seed: TimeBlock[] = [
   {
-    id: "morning",
+    id: "wake",
     time: "06:00",
     title: "Despertar",
-    emoji: "☀️",
     color: "purple",
+    icon: "☀️",
     tasks: [
-      { id: "t1", title: "Lavarme los dientes", done: true },
-      { id: "t2", title: "Tomar agua", done: true }
+      { id: "a", title: "Lavarme los dientes", done: true },
+      { id: "b", title: "Tomar agua", done: true }
     ]
   },
   {
-    id: "exercise",
+    id: "sport",
     time: "07:00",
     title: "Ejercicio",
-    emoji: "💪",
-    color: "yellow",
+    color: "orange",
+    icon: "🏃‍♂️",
     tasks: [
-      { id: "t3", title: "Hacer estiramientos", done: false },
-      { id: "t4", title: "Correr 20 min", done: false }
+      { id: "c", title: "Hacer estiramientos", done: false },
+      { id: "d", title: "Correr 20 min", done: false }
     ]
   },
   {
     id: "study",
     time: "08:00",
     title: "Estudiar",
-    emoji: "📚",
     color: "green",
+    icon: "📚",
     tasks: [
-      { id: "t5", title: "Matemáticas", done: false },
-      { id: "t6", title: "Lectura", done: false }
+      { id: "e", title: "Matemáticas", done: false },
+      { id: "f", title: "Lectura", done: false }
     ]
   }
 ];
 
 export default function TodayPage() {
-  const [blocks, setBlocks] = useState(initialBlocks);
+  const [blocks, setBlocks] = useState(seed);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const percent = useMemo(() => {
     const tasks = blocks.flatMap((b) => b.tasks);
-    const done = tasks.filter((t) => t.done).length;
-    return Math.round((done / tasks.length) * 100);
+    return Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100);
   }, [blocks]);
 
   function toggleTask(blockId: string, taskId: string) {
-    setBlocks((current) =>
-      current.map((block) =>
+    setBlocks((list) =>
+      list.map((block) =>
         block.id === blockId
-          ? { ...block, tasks: block.tasks.map((task) => task.id === taskId ? { ...task, done: !task.done } : task) }
+          ? { ...block, tasks: block.tasks.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)) }
           : block
       )
     );
@@ -64,34 +65,35 @@ export default function TodayPage() {
 
   return (
     <AppShell>
-      <section className="px-5 pt-8">
+      <section className="page-pad pt-8">
         <header className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500">¡Hola! 👋</p>
-            <h1 className="text-2xl font-bold">Hoy es un gran día</h1>
+            <p className="text-sm font-medium text-monkey-muted">¡Hola! 👋</p>
+            <h1 className="text-[22px] font-black tracking-tight">Hoy es un gran día</h1>
           </div>
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-sm">🐵</div>
+          <button className="grid h-12 w-12 place-items-center rounded-full bg-white text-2xl shadow-card">🐵</button>
         </header>
 
-        <div className="mt-6">
-          <ProgressCard percent={percent} />
+        <div className="mt-5"><ProgressCard percent={percent} /></div>
+
+        <div className="mt-5 flex h-11 items-center justify-between">
+          <button className="text-left text-lg font-black tracking-tight">Martes, 14 de Mayo</button>
+          <button className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm">
+            <CalendarDays className="h-5 w-5 text-monkey-muted" />
+          </button>
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Martes, 14 de Mayo</h2>
-          <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold shadow-sm">Día</button>
-        </div>
-
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-3">
           {blocks.map((block) => (
-            <TimeBlockCard key={block.id} block={block} onToggle={toggleTask} />
+            <TimeBlockCard key={block.id} block={block} onToggle={toggleTask} onOpen={() => setSheetOpen(true)} />
           ))}
         </div>
       </section>
 
-      <button className="fixed bottom-24 right-[calc(50%-195px)] grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-soft">
+      <button className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95">
         <Plus className="h-8 w-8" />
       </button>
+      <TaskDetailSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </AppShell>
   );
 }
