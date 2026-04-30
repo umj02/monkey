@@ -6,18 +6,16 @@ import { EmptyState } from "@/components/empty-state";
 import { Field, TextAreaField } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { Toast, ToastState } from "@/components/toast";
-import { createId, useLocalStorageState } from "@/lib/local-storage";
-import { notesSeed } from "@/lib/mock-data";
+import { useNotes } from "@/hooks/use-notes";
 import type { Note } from "@/types";
 import { Plus, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 const colorClass: Record<Note["color"], string> = { yellow: "bg-yellow-100", pink: "bg-pink-100", green: "bg-green-100", blue: "bg-sky-100", purple: "bg-purple-100" };
 const colors: Note["color"][] = ["yellow", "pink", "green", "blue", "purple"];
 
 export default function NotesPage() {
-  const [notes, setNotes] = useLocalStorageState<Note[]>("monkey.notes.v23", notesSeed);
-  const [query, setQuery] = useState("");
+  const { query, setQuery, filteredNotes, createNote, updateNote, deleteNote } = useNotes();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Note | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -27,7 +25,6 @@ export default function NotesPage() {
   const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
 
-  const filteredNotes = useMemo(() => notes.filter((note) => `${note.title} ${note.body}`.toLowerCase().includes(query.toLowerCase())), [notes, query]);
   function notify(message: string) { setToast({ message, type: "success" }); window.setTimeout(() => setToast(null), 2200); }
   function openNew() { setEditing(null); setTitle(""); setBody(""); setColor("yellow"); setErrors({}); setSheetOpen(true); }
   function openEdit(note: Note) { setEditing(note); setTitle(note.title); setBody(note.body); setColor(note.color); setErrors({}); setSheetOpen(true); }
@@ -37,8 +34,8 @@ export default function NotesPage() {
     if (body.trim().length < 3) nextErrors.body = "Escribí una nota un poco más completa.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    if (editing) setNotes((list) => list.map((note) => note.id === editing.id ? { ...note, title: title.trim(), body: body.trim(), color } : note));
-    else setNotes((list) => [{ id: createId("note"), title: title.trim(), body: body.trim(), color, createdAt: new Date().toISOString() }, ...list]);
+    if (editing) updateNote(editing.id, { title, body, color });
+    else createNote({ title, body, color });
     setSheetOpen(false);
     notify(editing ? "Nota actualizada" : "Nota creada");
   }
@@ -59,7 +56,7 @@ export default function NotesPage() {
         <TextAreaField label="Contenido" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escribí tu nota..." error={errors.body} />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-5 gap-2">{colors.map((item) => <button type="button" key={item} onClick={() => setColor(item)} className={`h-10 rounded-full ${colorClass[item]} ${color === item ? "ring-4 ring-monkey-green/25" : ""}`} aria-label={item} />)}</div></div>
       </FormSheet>
-      <ConfirmSheet open={!!deleteId} title="¿Eliminar nota?" body="Esta nota se eliminará de tu almacenamiento local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) setNotes((list) => list.filter((note) => note.id !== deleteId)); setDeleteId(null); notify("Nota eliminada"); }} />
+      <ConfirmSheet open={!!deleteId} title="¿Eliminar nota?" body="Esta nota se eliminará de tu almacenamiento local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) deleteNote(deleteId); setDeleteId(null); notify("Nota eliminada"); }} />
     </AppShell>
   );
 }

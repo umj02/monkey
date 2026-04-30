@@ -1,23 +1,22 @@
 "use client";
 
+import { useState } from "react";
+import { Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ConfirmSheet } from "@/components/confirm-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { Toast, ToastState } from "@/components/toast";
-import { createId, useLocalStorageState } from "@/lib/local-storage";
-import { calendarSeed } from "@/lib/mock-data";
+import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import type { CalendarEvent } from "@/types";
-import { Plus, SlidersHorizontal, Trash2 } from "lucide-react";
-import { useState } from "react";
 
 const days = [["LUN", "13"], ["MAR", "14"], ["MIÉ", "15"], ["JUE", "16"], ["VIE", "17"], ["SÁB", "18"], ["DOM", "19"]];
 const colors: CalendarEvent["color"][] = ["green", "blue", "yellow", "pink", "purple", "orange"];
 const eventClass: Record<CalendarEvent["color"], string> = { yellow: "bg-yellow-100 text-orange-600", blue: "bg-sky-100 text-sky-700", green: "bg-green-100 text-green-700", pink: "bg-pink-100 text-pink-700", purple: "bg-purple-100 text-purple-700", orange: "bg-orange-100 text-orange-700" };
 
 export default function CalendarPage() {
-  const [events, setEvents] = useLocalStorageState<CalendarEvent[]>("monkey.calendar.v23", calendarSeed);
+  const { events, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -36,8 +35,8 @@ export default function CalendarPage() {
     if (!/^\d{2}:\d{2}$/.test(time)) nextErrors.time = "Usá formato HH:MM.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    if (editing) setEvents((list) => list.map((item) => item.id === editing.id ? { ...item, title: title.trim(), time, color } : item).sort((a, b) => a.time.localeCompare(b.time)));
-    else setEvents((list) => [...list, { id: createId("event"), title: title.trim(), time, color }].sort((a, b) => a.time.localeCompare(b.time)));
+    if (editing) updateEvent(editing.id, { title, time, color });
+    else createEvent({ title, time, color });
     setSheetOpen(false);
     notify(editing ? "Evento actualizado" : "Evento creado");
   }
@@ -60,7 +59,7 @@ export default function CalendarPage() {
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-3 gap-2">{colors.map((item) => <button type="button" key={item} onClick={() => setColor(item)} className={`h-10 rounded-pill text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}>{item}</button>)}</div></div>
       </FormSheet>
-      <ConfirmSheet open={!!deleteId} title="¿Eliminar evento?" body="El evento se quitará de esta vista local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) setEvents((list) => list.filter((item) => item.id !== deleteId)); setDeleteId(null); notify("Evento eliminado"); }} />
+      <ConfirmSheet open={!!deleteId} title="¿Eliminar evento?" body="El evento se quitará de esta vista local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) deleteEvent(deleteId); setDeleteId(null); notify("Evento eliminado"); }} />
     </AppShell>
   );
 }

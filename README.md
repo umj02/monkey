@@ -1,51 +1,33 @@
-# Monkey Checks v2.4 — Supabase Preparation
+# Monkey Checks v2.4.1 — App Architecture Cleanup
 
-Base: Monkey Checks v2.3.1 Build Fix.
+Base: v2.4 Supabase Prep.
 
-## Estado
+## Qué cambia
 
-- UI funcional local con `localStorage`.
-- Build validado para Vercel.
-- Preparación de arquitectura para Supabase sin conectar todavía la BD.
-
-## Cambios principales v2.4
-
-- Nuevos hooks preparados para reemplazar storage local por Supabase:
-  - `hooks/use-tasks.ts`
-  - `hooks/use-notes.ts`
-  - `hooks/use-calendar-events.ts`
-  - `hooks/use-reminders.ts`
-  - `hooks/use-profile.ts`
-  - `hooks/use-settings.ts`
-- Nueva capa de servicios de dominio:
-  - `lib/services/task-service.ts`
-  - `lib/services/note-service.ts`
-  - `lib/services/calendar-service.ts`
-  - `lib/services/reminder-service.ts`
-  - `lib/services/profile-service.ts`
-- Nuevas llaves centralizadas:
-  - `lib/storage-keys.ts`
-- Tipado Supabase inicial:
-  - `lib/supabase/database.types.ts`
-- Cliente Supabase tipado:
-  - `lib/supabase/client.ts`
-- Migración inicial sugerida:
-  - `supabase/migrations/0001_monkey_checks_core.sql`
-
-## Variables Vercel
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
+- Mantiene el diseño y la UI estable de v2.4.
+- Todas las pantallas principales pasan por hooks oficiales:
+  - `useTasks`
+  - `useCalendarEvents`
+  - `useNotes`
+  - `useReminders`
+  - `useProfile`
+  - `useSettings`
+  - `useAuth`
+- Centraliza storage keys en `lib/storage-keys.ts`.
+- Agrega migración local desde keys antiguas v2.2/v2.3 hacia keys v2.4.
+- Login/Register quedan como mock funcional con validaciones y sesión local.
+- Profile tiene logout mock y muestra estado de sesión local.
+- Servicios quedan listos para reemplazar localStorage por Supabase en v2.5.
 
 ## Validación
+
+Ejecutar:
 
 ```bash
 npm install
 npm run build
 ```
 
-## Próximo paso recomendado
+## Siguiente paso recomendado
 
-v2.5 / v3: activar Auth real, ejecutar migración en Supabase y cambiar hooks locales por consultas Supabase manteniendo la misma UI.
+v2.5 — Supabase Auth + DB real.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
@@ -11,15 +11,14 @@ import { FormSheet } from "@/components/form-sheet";
 import { Field } from "@/components/field";
 import { Toast, ToastState } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
-import { createId, useLocalStorageState } from "@/lib/local-storage";
-import { todaySeed } from "@/lib/mock-data";
+import { useTasks } from "@/hooks/use-tasks";
 import type { Task, TaskColor, TimeBlock } from "@/types";
 
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
 const colorLabels: Record<TaskColor, string> = { green: "Verde", blue: "Azul", orange: "Naranja", purple: "Morado", pink: "Rosa", yellow: "Amarillo" };
 
 export default function TodayPage() {
-  const [blocks, setBlocks] = useLocalStorageState<TimeBlock[]>("monkey.today.blocks.v23", todaySeed);
+  const { blocks, percent, toggleTask, createTask, editTask, deleteTask } = useTasks();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -33,22 +32,6 @@ export default function TodayPage() {
   function showToast(message: string) {
     setToast({ message, type: "success" });
     window.setTimeout(() => setToast(null), 2200);
-  }
-
-  const percent = useMemo(() => {
-    const tasks = blocks.flatMap((b) => b.tasks);
-    if (!tasks.length) return 0;
-    return Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100);
-  }, [blocks]);
-
-  function toggleTask(blockId: string, taskId: string) {
-    setBlocks((list) =>
-      list.map((block) =>
-        block.id === blockId
-          ? { ...block, tasks: block.tasks.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)) }
-          : block
-      )
-    );
   }
 
   function resetForm() {
@@ -66,36 +49,20 @@ export default function TodayPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    setBlocks((list) => {
-      const existing = list.find((block) => block.time === time);
-      if (existing) {
-        return list.map((block) =>
-          block.id === existing.id ? { ...block, tasks: [...block.tasks, { id: createId("task"), title: taskTitle.trim(), done: false }] } : block
-        );
-      }
-      const newBlock: TimeBlock = {
-        id: createId("block"),
-        time,
-        title: blockTitle.trim() || "Nuevo bloque",
-        color,
-        icon: "✨",
-        tasks: [{ id: createId("task"), title: taskTitle.trim(), done: false }]
-      };
-      return [...list, newBlock].sort((a, b) => a.time.localeCompare(b.time));
-    });
+    createTask({ title: taskTitle, time, blockTitle, color });
     setFormOpen(false);
     resetForm();
     showToast("Tarea creada con éxito");
   }
 
-  function editTask(blockId: string, taskId: string, title: string) {
+  function handleEditTask(blockId: string, taskId: string, title: string) {
     if (title.trim().length < 3) return;
-    setBlocks((list) => list.map((block) => block.id === blockId ? { ...block, tasks: block.tasks.map((task) => task.id === taskId ? { ...task, title: title.trim() } : task) } : block));
+    editTask(blockId, taskId, title);
     showToast("Tarea actualizada");
   }
 
-  function deleteTask(blockId: string, taskId: string) {
-    setBlocks((list) => list.map((block) => block.id === blockId ? { ...block, tasks: block.tasks.filter((task) => task.id !== taskId) } : block).filter((block) => block.tasks.length > 0));
+  function handleDeleteTask(blockId: string, taskId: string) {
+    deleteTask(blockId, taskId);
     setSelectedBlock(null);
     setSelectedTask(null);
     showToast("Tarea eliminada");
@@ -129,7 +96,7 @@ export default function TodayPage() {
         <Field label="Nombre del bloque" value={blockTitle} onChange={(e) => setBlockTitle(e.target.value)} placeholder="Estudiar" />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-3 gap-2">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 rounded-pill text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}>{colorLabels[item]}</button>)}</div></div>
       </FormSheet>
-      <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} />
+      <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onDelete={handleDeleteTask} />
     </AppShell>
   );
 }

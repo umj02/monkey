@@ -52,3 +52,11 @@ export type Settings = {
   sync: boolean;
   theme: "colorful" | "soft";
 };
+
+export type AuthSession = {
+  userId: string;
+  email: string;
+  name: string;
+  provider: "email" | "google" | "apple";
+  signedInAt: string;
+};

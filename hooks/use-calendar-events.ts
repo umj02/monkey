@@ -1,9 +1,17 @@
 import { useLocalStorageState } from "@/lib/local-storage";
 import { calendarSeed } from "@/lib/mock-data";
-import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from "@/lib/storage-keys";
+import { createCalendarEvent, sortCalendarEvents, type CalendarEventInput } from "@/lib/services/calendar-service";
 import type { CalendarEvent } from "@/types";
 
 export function useCalendarEvents() {
-  const [events, setEvents, ready] = useLocalStorageState<CalendarEvent[]>(STORAGE_KEYS.calendarEvents, calendarSeed);
-  return { events, setEvents, ready };
+  const [events, setEvents, ready] = useLocalStorageState<CalendarEvent[]>(STORAGE_KEYS.calendarEvents, calendarSeed, [...LEGACY_STORAGE_KEYS.calendarEvents]);
+  return {
+    events,
+    setEvents,
+    ready,
+    createEvent: (input: CalendarEventInput) => setEvents((list) => sortCalendarEvents([...list, createCalendarEvent(input)])),
+    updateEvent: (id: string, input: CalendarEventInput) => setEvents((list) => sortCalendarEvents(list.map((item) => item.id === id ? { ...item, ...input, title: input.title.trim() } : item))),
+    deleteEvent: (id: string) => setEvents((list) => list.filter((item) => item.id !== id))
+  };
 }

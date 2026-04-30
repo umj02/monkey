@@ -1,20 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronRight, Lock, Palette, Pencil } from "lucide-react";
+import { Bell, ChevronRight, Lock, LogOut, Palette, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { Toast, ToastState } from "@/components/toast";
-import { useLocalStorageState } from "@/lib/local-storage";
-import type { Profile } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
+import { validateEmail } from "@/lib/services/auth-service";
 import { useState } from "react";
 
-const initialProfile: Profile = { name: "Juan Pérez", email: "juanperez@email.com" };
-
 export default function ProfilePage() {
-  const [profile, setProfile] = useLocalStorageState<Profile>("monkey.profile.v23", initialProfile);
+  const { profile, setProfile } = useProfile();
+  const { session, logout } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
@@ -26,7 +26,7 @@ export default function ProfilePage() {
   function submit() {
     const nextErrors: { name?: string; email?: string } = {};
     if (name.trim().length < 2) nextErrors.name = "Agregá un nombre válido.";
-    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Agregá un email válido.";
+    if (!validateEmail(email)) nextErrors.email = "Agregá un email válido.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setProfile({ name: name.trim(), email: email.trim() });
@@ -38,7 +38,8 @@ export default function ProfilePage() {
     { label: "Editar información", icon: Pencil, action: openEdit },
     { label: "Cambiar contraseña", icon: Lock, action: () => notify("Flujo mock listo para conectar con Supabase Auth") },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
-    { label: "Tema", icon: Palette, href: "/settings" }
+    { label: "Tema", icon: Palette, href: "/settings" },
+    { label: session ? "Cerrar sesión mock" : "Sesión mock inactiva", icon: LogOut, action: () => { logout(); notify("Sesión local cerrada"); } }
   ];
 
   return (
@@ -50,6 +51,7 @@ export default function ProfilePage() {
           <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25"><MonkeyAvatar size={76} variant="face" /></div>
           <h2 className="mt-3 text-center text-xl font-black">{profile.name}</h2>
           <p className="text-center text-sm text-white/80">{profile.email}</p>
+          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Sesión local: ${session.provider}` : "Modo local sin sesión real"}</p>
         </section>
         <div className="mt-6 space-y-3">
           {rows.map((row) => {

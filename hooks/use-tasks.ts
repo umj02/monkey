@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { useLocalStorageState } from "@/lib/local-storage";
 import { todaySeed } from "@/lib/mock-data";
-import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from "@/lib/storage-keys";
 import { addTaskToBlocks, calculateTaskProgress, deleteTaskFromBlocks, editTaskInBlocks, toggleTaskInBlocks, type CreateTaskInput } from "@/lib/services/task-service";
 import type { TimeBlock } from "@/types";
 
 export function useTasks() {
-  const [blocks, setBlocks, ready] = useLocalStorageState<TimeBlock[]>(STORAGE_KEYS.taskBlocks, todaySeed);
+  const [blocks, setBlocks, ready] = useLocalStorageState<TimeBlock[]>(STORAGE_KEYS.taskBlocks, todaySeed, [...LEGACY_STORAGE_KEYS.taskBlocks]);
   const percent = useMemo(() => calculateTaskProgress(blocks), [blocks]);
 
   return {
