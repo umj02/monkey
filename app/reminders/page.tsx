@@ -1,59 +1,61 @@
 "use client";
 
+import { useState } from "react";
+import { Bell, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { ConfirmSheet } from "@/components/confirm-sheet";
+import { EmptyState } from "@/components/empty-state";
+import { Field } from "@/components/field";
+import { FormSheet } from "@/components/form-sheet";
+import { Toast, ToastState } from "@/components/toast";
 import { createId, useLocalStorageState } from "@/lib/local-storage";
 import { remindersSeed } from "@/lib/mock-data";
 import type { Reminder } from "@/types";
-import { Trash2 } from "lucide-react";
 
-const icons = ["💧", "📒", "🧘", "🌙", "✨"];
-const colors = ["bg-sky-100", "bg-yellow-100", "bg-pink-100", "bg-purple-100", "bg-green-100"];
+const repeatLabels: Record<Reminder["repeat"], string> = { daily: "Cada día", weekly: "Semanal", custom: "Personalizado" };
+const repeats: Reminder["repeat"][] = ["daily", "weekly", "custom"];
 
 export default function RemindersPage() {
-  const [items, setItems] = useLocalStorageState<Reminder[]>("monkey.reminders.v22", remindersSeed);
+  const [items, setItems] = useLocalStorageState<Reminder[]>("monkey.reminders.v23", remindersSeed);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<Reminder | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [time, setTime] = useState("08:00");
+  const [repeat, setRepeat] = useState<Reminder["repeat"]>("daily");
+  const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
+  const [toast, setToast] = useState<ToastState>(null);
 
-  function addReminder() {
-    const title = window.prompt("Nuevo recordatorio", "Beber agua")?.trim();
-    if (!title) return;
-    const time = window.prompt("Hora", "08:00")?.trim() || "08:00";
-    const newReminder: Reminder = { id: createId("reminder"), title, time, repeat: "daily", enabled: true };
-    setItems((list) => [...list, newReminder]);
-  }
-
-  function editReminder(item: Reminder) {
-    const title = window.prompt("Editar recordatorio", item.title)?.trim();
-    if (!title) return;
-    const time = window.prompt("Hora", item.time)?.trim() || item.time;
-    setItems((list) => list.map((x) => x.id === item.id ? { ...x, title, time } : x));
-  }
-
-  function removeReminder(id: string) {
-    if (!window.confirm("¿Eliminar recordatorio?")) return;
-    setItems((list) => list.filter((x) => x.id !== id));
+  function notify(message: string) { setToast({ message, type: "success" }); window.setTimeout(() => setToast(null), 2200); }
+  function openNew() { setEditing(null); setTitle(""); setTime("08:00"); setRepeat("daily"); setErrors({}); setSheetOpen(true); }
+  function openEdit(item: Reminder) { setEditing(item); setTitle(item.title); setTime(item.time); setRepeat(item.repeat); setErrors({}); setSheetOpen(true); }
+  function submit() {
+    const nextErrors: { title?: string; time?: string } = {};
+    if (title.trim().length < 3) nextErrors.title = "Agregá un título válido.";
+    if (!/^\d{2}:\d{2}$/.test(time)) nextErrors.time = "Usá formato HH:MM.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    if (editing) setItems((list) => list.map((item) => item.id === editing.id ? { ...item, title: title.trim(), time, repeat } : item));
+    else setItems((list) => [{ id: createId("reminder"), title: title.trim(), time, repeat, enabled: true }, ...list]);
+    setSheetOpen(false);
+    notify(editing ? "Recordatorio actualizado" : "Recordatorio creado");
   }
 
   return (
     <AppShell>
-      <section className="page-pad pt-8">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black">Recordatorios</h1>
-          <MonkeyAvatar size={38} variant="face" />
-        </header>
+      <Toast toast={toast} onClose={() => setToast(null)} />
+      <section className="page-pad pt-8"><div className="flex items-center justify-between"><h1 className="text-2xl font-black">Recordatorios</h1><button onClick={openNew} className="grid h-11 w-11 place-items-center rounded-full bg-monkey-green text-white shadow-float"><Plus /></button></div>
         <div className="mt-6 space-y-3">
-          {items.map((item, index) => (
-            <div key={item.id} className="group flex h-[68px] w-full items-center gap-3 rounded-card bg-white px-4 text-left shadow-card transition active:scale-[.98]">
-              <button onClick={() => editReminder(item)} className="flex flex-1 items-center gap-3 text-left">
-                <span className={`${colors[index % colors.length]} grid h-11 w-11 place-items-center rounded-[14px] text-xl`}>{icons[index % icons.length]}</span>
-                <span className="flex-1"><span className="block text-sm font-black">{item.title}</span><span className="block text-xs text-monkey-muted">Cada día · {item.time}</span></span>
-              </button>
-              <button onClick={() => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, enabled: !x.enabled } : x)))} className={`relative h-7 w-12 rounded-pill transition ${item.enabled ? "bg-monkey-green" : "bg-gray-300"}`} aria-label="Activar recordatorio"><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${item.enabled ? "left-6" : "left-1"}`} /></button>
-              <button onClick={() => removeReminder(item.id)} className="grid h-8 w-8 place-items-center rounded-full bg-pink-50 text-monkey-pink opacity-0 transition group-hover:opacity-100" aria-label="Eliminar"><Trash2 className="h-4 w-4" /></button>
-            </div>
-          ))}
+          {items.length === 0 ? <EmptyState title="Sin recordatorios" body="Agregá alertas para no perder tareas importantes." /> : null}
+          {items.map((item) => <div key={item.id} className="flex min-h-[68px] w-full items-center gap-3 rounded-card bg-white px-4 py-3 text-left shadow-card"><button onClick={() => openEdit(item)} className="flex flex-1 items-center gap-3 text-left"><span className="grid h-11 w-11 place-items-center rounded-[14px] bg-sky-100 text-sky-600"><Bell className="h-5 w-5" /></span><span className="flex-1"><span className="block text-sm font-black">{item.title}</span><span className="block text-xs text-monkey-muted">{repeatLabels[item.repeat]} - {item.time}</span></span></button><button onClick={() => setItems((list) => list.map((x) => x.id === item.id ? { ...x, enabled: !x.enabled } : x))} className={`relative h-7 w-12 rounded-pill transition ${item.enabled ? "bg-monkey-green" : "bg-gray-300"}`} aria-label="Activar recordatorio"><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${item.enabled ? "left-6" : "left-1"}`} /></button><button onClick={() => setDeleteId(item.id)} className="grid h-9 w-9 place-items-center rounded-full bg-pink-50 text-monkey-pink" aria-label="Eliminar recordatorio"><Trash2 className="h-4 w-4" /></button></div>)}
         </div>
-        <button onClick={addReminder} className="mt-8 h-14 w-full rounded-pill bg-monkey-green text-sm font-bold text-white shadow-float">+ Agregar recordatorio</button>
       </section>
+      <FormSheet open={sheetOpen} title={editing ? "Editar recordatorio" : "Nuevo recordatorio"} subtitle="Configurá una alerta visual para tu rutina." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel={editing ? "Guardar" : "Crear recordatorio"}>
+        <Field label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Beber agua" error={errors.title} />
+        <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="08:00" error={errors.time} />
+        <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Repetición</span><div className="grid grid-cols-3 gap-2">{repeats.map((item) => <button type="button" key={item} onClick={() => setRepeat(item)} className={`h-10 rounded-pill text-xs font-black ${repeat === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}>{repeatLabels[item]}</button>)}</div></div>
+      </FormSheet>
+      <ConfirmSheet open={!!deleteId} title="¿Eliminar recordatorio?" body="Se quitará de tu lista local de recordatorios." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) setItems((list) => list.filter((item) => item.id !== deleteId)); setDeleteId(null); notify("Recordatorio eliminado"); }} />
     </AppShell>
   );
 }

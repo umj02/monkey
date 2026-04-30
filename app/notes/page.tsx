@@ -1,7 +1,11 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell";
-import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { ConfirmSheet } from "@/components/confirm-sheet";
+import { EmptyState } from "@/components/empty-state";
+import { Field, TextAreaField } from "@/components/field";
+import { FormSheet } from "@/components/form-sheet";
+import { Toast, ToastState } from "@/components/toast";
 import { createId, useLocalStorageState } from "@/lib/local-storage";
 import { notesSeed } from "@/lib/mock-data";
 import type { Note } from "@/types";
@@ -12,52 +16,50 @@ const colorClass: Record<Note["color"], string> = { yellow: "bg-yellow-100", pin
 const colors: Note["color"][] = ["yellow", "pink", "green", "blue", "purple"];
 
 export default function NotesPage() {
-  const [notes, setNotes] = useLocalStorageState<Note[]>("monkey.notes.v22", notesSeed);
+  const [notes, setNotes] = useLocalStorageState<Note[]>("monkey.notes.v23", notesSeed);
   const [query, setQuery] = useState("");
-  const filtered = useMemo(() => notes.filter((note) => `${note.title} ${note.body}`.toLowerCase().includes(query.toLowerCase())), [notes, query]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<Note | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [color, setColor] = useState<Note["color"]>("yellow");
+  const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
+  const [toast, setToast] = useState<ToastState>(null);
 
-  function saveNote(target?: Note) {
-    const title = window.prompt("Título de la nota", target?.title ?? "Nueva nota")?.trim();
-    if (!title) return;
-    const body = window.prompt("Contenido", target?.body ?? "") ?? "";
-    const color = target?.color ?? colors[notes.length % colors.length];
-    if (target) {
-      setNotes((list) => list.map((note) => note.id === target.id ? { ...note, title, body } : note));
-      return;
-    }
-    setNotes((list) => [{ id: createId("note"), title, body, color, createdAt: new Date().toISOString() }, ...list]);
-  }
-
-  function deleteNote(id: string) {
-    if (!window.confirm("¿Eliminar esta nota?")) return;
-    setNotes((list) => list.filter((note) => note.id !== id));
+  const filteredNotes = useMemo(() => notes.filter((note) => `${note.title} ${note.body}`.toLowerCase().includes(query.toLowerCase())), [notes, query]);
+  function notify(message: string) { setToast({ message, type: "success" }); window.setTimeout(() => setToast(null), 2200); }
+  function openNew() { setEditing(null); setTitle(""); setBody(""); setColor("yellow"); setErrors({}); setSheetOpen(true); }
+  function openEdit(note: Note) { setEditing(note); setTitle(note.title); setBody(note.body); setColor(note.color); setErrors({}); setSheetOpen(true); }
+  function submit() {
+    const nextErrors: { title?: string; body?: string } = {};
+    if (title.trim().length < 2) nextErrors.title = "Agregá un título.";
+    if (body.trim().length < 3) nextErrors.body = "Escribí una nota un poco más completa.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    if (editing) setNotes((list) => list.map((note) => note.id === editing.id ? { ...note, title: title.trim(), body: body.trim(), color } : note));
+    else setNotes((list) => [{ id: createId("note"), title: title.trim(), body: body.trim(), color, createdAt: new Date().toISOString() }, ...list]);
+    setSheetOpen(false);
+    notify(editing ? "Nota actualizada" : "Nota creada");
   }
 
   return (
     <AppShell>
-      <section className="page-pad relative pt-8">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black tracking-tight">Mis Notas</h1>
-          <div className="flex gap-2">
-            <label className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm" aria-label="Buscar notas"><Search className="h-5 w-5" /></label>
-            <button onClick={() => saveNote()} className="grid h-11 w-11 place-items-center rounded-full bg-monkey-green text-white shadow-float" aria-label="Agregar nota"><Plus className="h-6 w-6" /></button>
-          </div>
-        </header>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nota..." className="mt-4 h-12 w-full rounded-[18px] border border-monkey-line bg-white px-4 text-sm outline-none focus:border-monkey-green focus:ring-4 focus:ring-green-100" />
+      <Toast toast={toast} onClose={() => setToast(null)} />
+      <section className="page-pad pt-8">
+        <header className="flex items-center justify-between"><h1 className="text-2xl font-black tracking-tight">Mis Notas</h1><div className="flex gap-2"><button className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm"><Search className="h-5 w-5" /></button><button onClick={openNew} className="grid h-11 w-11 place-items-center rounded-full bg-monkey-green text-white shadow-float"><Plus /></button></div></header>
+        <div className="mt-5 rounded-[18px] bg-white px-4 shadow-sm"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar nota..." className="h-12 w-full bg-transparent text-sm font-semibold outline-none placeholder:text-gray-400" /></div>
         <div className="mt-6 grid grid-cols-2 gap-4">
-          {filtered.length === 0 ? <div className="soft-card col-span-2 p-5 text-center text-sm font-semibold text-monkey-muted">No encontré notas. Tocá + para crear una.</div> : null}
-          {filtered.map((note) => (
-            <article key={note.id} className={`${colorClass[note.color]} group relative min-h-[145px] rounded-card p-4 shadow-card transition active:scale-[.98]`}>
-              <button onClick={() => saveNote(note)} className="block w-full text-left">
-                <h2 className="text-sm font-black text-monkey-ink">{note.title}</h2>
-                <p className="mt-3 whitespace-pre-line text-[13px] leading-5 text-gray-700">{note.body}</p>
-              </button>
-              <button onClick={() => deleteNote(note.id)} className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/70 text-monkey-pink opacity-0 shadow-sm transition group-hover:opacity-100" aria-label="Eliminar nota"><Trash2 className="h-4 w-4" /></button>
-            </article>
-          ))}
+          {filteredNotes.length === 0 ? <div className="col-span-2"><EmptyState title={query ? "Sin resultados" : "No hay notas"} body={query ? "Probá buscar con otra palabra." : "Creá tu primera nota rápida."} /></div> : null}
+          {filteredNotes.map((note) => <article key={note.id} className={`${colorClass[note.color]} min-h-[145px] rounded-card p-4 shadow-card transition active:scale-[.98]`}><button onClick={() => openEdit(note)} className="block w-full text-left"><h2 className="text-sm font-black text-monkey-ink">{note.title}</h2><p className="mt-3 whitespace-pre-line text-[13px] leading-5 text-gray-700">{note.body}</p></button><button onClick={() => setDeleteId(note.id)} className="mt-3 grid h-8 w-8 place-items-center rounded-full bg-white/70 text-monkey-pink" aria-label="Eliminar nota"><Trash2 className="h-4 w-4" /></button></article>)}
         </div>
-        <MonkeyAvatar size={118} variant="full" className="pointer-events-none absolute bottom-[78px] right-1" imageClassName="object-bottom" />
       </section>
+      <FormSheet open={sheetOpen} title={editing ? "Editar nota" : "Nueva nota"} subtitle="Guardá ideas, recordatorios o metas." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel={editing ? "Guardar nota" : "Crear nota"}>
+        <Field label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Ideas" error={errors.title} />
+        <TextAreaField label="Contenido" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escribí tu nota..." error={errors.body} />
+        <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-5 gap-2">{colors.map((item) => <button type="button" key={item} onClick={() => setColor(item)} className={`h-10 rounded-full ${colorClass[item]} ${color === item ? "ring-4 ring-monkey-green/25" : ""}`} aria-label={item} />)}</div></div>
+      </FormSheet>
+      <ConfirmSheet open={!!deleteId} title="¿Eliminar nota?" body="Esta nota se eliminará de tu almacenamiento local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) setNotes((list) => list.filter((note) => note.id !== deleteId)); setDeleteId(null); notify("Nota eliminada"); }} />
     </AppShell>
   );
 }

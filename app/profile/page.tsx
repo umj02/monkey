@@ -3,31 +3,47 @@
 import Link from "next/link";
 import { Bell, ChevronRight, Lock, Palette, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { Field } from "@/components/field";
+import { FormSheet } from "@/components/form-sheet";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { Toast, ToastState } from "@/components/toast";
 import { useLocalStorageState } from "@/lib/local-storage";
 import type { Profile } from "@/types";
+import { useState } from "react";
 
 const initialProfile: Profile = { name: "Juan Pérez", email: "juanperez@email.com" };
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useLocalStorageState<Profile>("monkey.profile.v22", initialProfile);
+  const [profile, setProfile] = useLocalStorageState<Profile>("monkey.profile.v23", initialProfile);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [name, setName] = useState(profile.name);
+  const [email, setEmail] = useState(profile.email);
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [toast, setToast] = useState<ToastState>(null);
 
-  function editProfile() {
-    const name = window.prompt("Nombre", profile.name)?.trim();
-    if (!name) return;
-    const email = window.prompt("Email", profile.email)?.trim() || profile.email;
-    setProfile({ name, email });
+  function notify(message: string) { setToast({ message, type: "success" }); window.setTimeout(() => setToast(null), 2200); }
+  function openEdit() { setName(profile.name); setEmail(profile.email); setErrors({}); setSheetOpen(true); }
+  function submit() {
+    const nextErrors: { name?: string; email?: string } = {};
+    if (name.trim().length < 2) nextErrors.name = "Agregá un nombre válido.";
+    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Agregá un email válido.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    setProfile({ name: name.trim(), email: email.trim() });
+    setSheetOpen(false);
+    notify("Perfil actualizado");
   }
 
   const rows = [
-    { label: "Editar información", icon: Pencil, action: editProfile },
-    { label: "Cambiar contraseña", icon: Lock, action: () => window.alert("Flujo mock listo. Luego lo conectamos con Supabase Auth.") },
+    { label: "Editar información", icon: Pencil, action: openEdit },
+    { label: "Cambiar contraseña", icon: Lock, action: () => notify("Flujo mock listo para conectar con Supabase Auth") },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
     { label: "Tema", icon: Palette, href: "/settings" }
   ];
 
   return (
     <AppShell>
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <section className="page-pad pt-8">
         <h1 className="text-2xl font-black">Mi Perfil</h1>
         <section className="mt-6 rounded-card bg-gradient-to-br from-monkey-purple to-monkey-green p-5 text-white shadow-soft">
@@ -43,6 +59,10 @@ export default function ProfilePage() {
           })}
         </div>
       </section>
+      <FormSheet open={sheetOpen} title="Editar perfil" subtitle="Estos datos quedan guardados localmente por ahora." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel="Guardar perfil">
+        <Field label="Nombre" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" error={errors.name} />
+        <Field label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" error={errors.email} />
+      </FormSheet>
     </AppShell>
   );
 }
