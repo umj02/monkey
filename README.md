@@ -31,3 +31,15 @@ npm run build
 ## Siguiente paso recomendado
 
 v2.5 — Supabase Auth + DB real.
+
+## v2.4.2 — Wallet + Calendar Month
+
+Base: v2.4.1 Architecture Cleanup.
+
+Cambios principales:
+- Nueva vista `/wallet` para finanzas personales: balance, ingresos, gastos, ahorros, presupuesto, categorías, consejo inteligente y meta de ahorro.
+- Nuevo hook `useWallet`, servicio `wallet-service`, seed local y storage key preparada para migración posterior a Supabase.
+- Bottom navigation actualizado con Wallet.
+- Calendario actualizado con switch real entre vista Semana y Mes.
+
+Nota: Wallet funciona con localStorage en esta versión. La persistencia en Supabase queda para v2.5.

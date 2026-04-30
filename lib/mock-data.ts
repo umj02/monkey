@@ -38,3 +38,23 @@ export const calendarSeed: CalendarEvent[] = [
   { id: "ev-5", time: "16:00", title: "📘 Proyecto", color: "purple" },
   { id: "ev-6", time: "18:00", title: "🌙 Descanso", color: "blue" }
 ];
+
+
+export const walletSeed = {
+  period: "weekly" as const,
+  balance: 420,
+  income: 1200,
+  expenses: 670,
+  savings: 530,
+  budgetLimit: 1200,
+  tip: "Has gastado un 20% más en entretenimiento esta semana. ¿Qué tal si intentás reducirlo un poco para ahorrar más?",
+  categories: [
+    { id: "food", name: "Comida", amount: 220, percent: 33, color: "orange" as const, icon: "🍕" },
+    { id: "transport", name: "Transporte", amount: 120, percent: 18, color: "yellow" as const, icon: "🚌" },
+    { id: "fun", name: "Entretenimiento", amount: 180, percent: 27, color: "purple" as const, icon: "🎮" },
+    { id: "shopping", name: "Compras", amount: 150, percent: 22, color: "pink" as const, icon: "🛍️" }
+  ],
+  goals: [
+    { id: "iphone", title: "iPhone 15", target: 900, current: 530, icon: "📱" }
+  ]
+};

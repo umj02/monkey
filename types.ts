@@ -60,3 +60,34 @@ export type AuthSession = {
   provider: "email" | "google" | "apple";
   signedInAt: string;
 };
+
+export type WalletPeriod = "weekly" | "biweekly" | "monthly";
+
+export type WalletCategory = {
+  id: string;
+  name: string;
+  amount: number;
+  percent: number;
+  color: "green" | "orange" | "purple" | "pink" | "blue" | "yellow";
+  icon: string;
+};
+
+export type WalletGoal = {
+  id: string;
+  title: string;
+  target: number;
+  current: number;
+  icon: string;
+};
+
+export type WalletData = {
+  period: WalletPeriod;
+  balance: number;
+  income: number;
+  expenses: number;
+  savings: number;
+  budgetLimit: number;
+  categories: WalletCategory[];
+  goals: WalletGoal[];
+  tip: string;
+};

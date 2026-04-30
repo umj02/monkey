@@ -5,7 +5,8 @@ export const STORAGE_KEYS = {
   reminders: "monkey.reminders.v24",
   profile: "monkey.profile.v24",
   settings: "monkey.settings.v24",
-  authSession: "monkey.authSession.v24"
+  authSession: "monkey.authSession.v24",
+  wallet: "monkey.wallet.v242"
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {
@@ -14,5 +15,6 @@ export const LEGACY_STORAGE_KEYS = {
   notes: ["monkey.notes.v23"],
   reminders: ["monkey.reminders.v23"],
   profile: ["monkey.profile.v23"],
-  settings: ["monkey.settings.v22"]
+  settings: ["monkey.settings.v22"],
+  wallet: ["monkey.wallet.v24"]
 } as const;
