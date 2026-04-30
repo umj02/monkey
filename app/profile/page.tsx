@@ -36,10 +36,10 @@ export default function ProfilePage() {
 
   const rows = [
     { label: "Editar información", icon: Pencil, action: openEdit },
-    { label: "Cambiar contraseña", icon: Lock, action: () => notify("Flujo mock listo para conectar con Supabase Auth") },
+    { label: "Cambiar contraseña", icon: Lock, action: () => notify("Función lista para activar recuperación con Supabase Auth") },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
     { label: "Tema", icon: Palette, href: "/settings" },
-    { label: session ? "Cerrar sesión mock" : "Sesión mock inactiva", icon: LogOut, action: () => { logout(); notify("Sesión local cerrada"); } }
+    { label: session ? "Cerrar sesión" : "Sesión inactiva", icon: LogOut, action: () => { logout(); notify("Sesión cerrada"); } }
   ];
 
   return (
@@ -51,7 +51,7 @@ export default function ProfilePage() {
           <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25"><MonkeyAvatar size={76} variant="face" /></div>
           <h2 className="mt-3 text-center text-xl font-black">{profile.name}</h2>
           <p className="text-center text-sm text-white/80">{profile.email}</p>
-          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Sesión local: ${session.provider}` : "Modo local sin sesión real"}</p>
+          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Sesión activa: ${session.provider}` : "Sin sesión activa"}</p>
         </section>
         <div className="mt-6 space-y-3">
           {rows.map((row) => {
@@ -61,7 +61,7 @@ export default function ProfilePage() {
           })}
         </div>
       </section>
-      <FormSheet open={sheetOpen} title="Editar perfil" subtitle="Estos datos quedan guardados localmente por ahora." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel="Guardar perfil">
+      <FormSheet open={sheetOpen} title="Editar perfil" subtitle="Estos datos se sincronizan con Supabase cuando hay sesión activa." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel="Guardar perfil">
         <Field label="Nombre" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" error={errors.name} />
         <Field label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" error={errors.email} />
       </FormSheet>
