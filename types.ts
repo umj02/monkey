@@ -33,3 +33,22 @@ export type Reminder = {
   enabled: boolean;
   taskId?: string | null;
 };
+
+export type CalendarEvent = {
+  id: string;
+  time: string;
+  title: string;
+  color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
+};
+
+export type Profile = {
+  name: string;
+  email: string;
+};
+
+export type Settings = {
+  darkMode: boolean;
+  sounds: boolean;
+  sync: boolean;
+  theme: "colorful" | "soft";
+};

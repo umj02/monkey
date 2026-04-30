@@ -7,50 +7,18 @@ import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { ProgressCard } from "@/components/progress-card";
 import { TimeBlockCard } from "@/components/time-block-card";
 import { TaskDetailSheet } from "@/components/task-detail-sheet";
-import type { TimeBlock } from "@/types";
-
-const seed: TimeBlock[] = [
-  {
-    id: "wake",
-    time: "06:00",
-    title: "Despertar",
-    color: "purple",
-    icon: "☀️",
-    tasks: [
-      { id: "a", title: "Lavarme los dientes", done: true },
-      { id: "b", title: "Tomar agua", done: true }
-    ]
-  },
-  {
-    id: "sport",
-    time: "07:00",
-    title: "Ejercicio",
-    color: "orange",
-    icon: "🏃‍♂️",
-    tasks: [
-      { id: "c", title: "Hacer estiramientos", done: false },
-      { id: "d", title: "Correr 20 min", done: false }
-    ]
-  },
-  {
-    id: "study",
-    time: "08:00",
-    title: "Estudiar",
-    color: "green",
-    icon: "📚",
-    tasks: [
-      { id: "e", title: "Matemáticas", done: false },
-      { id: "f", title: "Lectura", done: false }
-    ]
-  }
-];
+import { createId, useLocalStorageState } from "@/lib/local-storage";
+import { todaySeed } from "@/lib/mock-data";
+import type { Task, TimeBlock } from "@/types";
 
 export default function TodayPage() {
-  const [blocks, setBlocks] = useState(seed);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [blocks, setBlocks] = useLocalStorageState<TimeBlock[]>("monkey.today.blocks.v22", todaySeed);
+  const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const percent = useMemo(() => {
     const tasks = blocks.flatMap((b) => b.tasks);
+    if (!tasks.length) return 0;
     return Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100);
   }, [blocks]);
 
@@ -63,6 +31,33 @@ export default function TodayPage() {
       )
     );
   }
+
+  function addTask() {
+    const title = window.prompt("Nueva tarea")?.trim();
+    if (!title) return;
+    const time = window.prompt("Hora del bloque", "09:00")?.trim() || "09:00";
+    setBlocks((list) => {
+      const existing = list.find((block) => block.time === time);
+      if (existing) {
+        return list.map((block) => block.id === existing.id ? { ...block, tasks: [...block.tasks, { id: createId("task"), title, done: false }] } : block);
+      }
+      return [...list, { id: createId("block"), time, title: "Nuevo bloque", color: "blue", icon: "✨", tasks: [{ id: createId("task"), title, done: false }] }]
+        .sort((a, b) => a.time.localeCompare(b.time));
+    });
+  }
+
+  function editTask(blockId: string, taskId: string, title: string) {
+    setBlocks((list) => list.map((block) => block.id === blockId ? { ...block, tasks: block.tasks.map((task) => task.id === taskId ? { ...task, title } : task) } : block));
+  }
+
+  function deleteTask(blockId: string, taskId: string) {
+    setBlocks((list) => list.map((block) => block.id === blockId ? { ...block, tasks: block.tasks.filter((task) => task.id !== taskId) } : block).filter((block) => block.tasks.length > 0));
+    setSelectedBlock(null);
+    setSelectedTask(null);
+  }
+
+  const freshSelectedBlock = selectedBlock ? blocks.find((block) => block.id === selectedBlock.id) ?? null : null;
+  const freshSelectedTask = freshSelectedBlock && selectedTask ? freshSelectedBlock.tasks.find((task) => task.id === selectedTask.id) ?? null : null;
 
   return (
     <AppShell>
@@ -85,16 +80,23 @@ export default function TodayPage() {
         </div>
 
         <div className="mt-3 space-y-3">
+          {blocks.length === 0 ? <div className="soft-card p-5 text-center text-sm font-semibold text-monkey-muted">No hay tareas todavía. Tocá + para crear la primera.</div> : null}
           {blocks.map((block) => (
-            <TimeBlockCard key={block.id} block={block} onToggle={toggleTask} onOpen={() => setSheetOpen(true)} />
+            <TimeBlockCard
+              key={block.id}
+              block={block}
+              onToggle={toggleTask}
+              onOpen={(openedBlock) => { setSelectedBlock(openedBlock); setSelectedTask(openedBlock.tasks[0] ?? null); }}
+              onTaskOpen={(openedBlock, openedTask) => { setSelectedBlock(openedBlock); setSelectedTask(openedTask); }}
+            />
           ))}
         </div>
       </section>
 
-      <button className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95">
+      <button onClick={addTask} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar tarea">
         <Plus className="h-8 w-8" />
       </button>
-      <TaskDetailSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} />
     </AppShell>
   );
 }

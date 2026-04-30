@@ -1,55 +1,52 @@
-# Monkey Checks v2 — MASTER UI Full
+# Monkey Checks v2.2 — Functional Local App
 
-Versión completa visual tomando como base v1.1 Vercel Fix.
+Base: v2.1.2.
 
-## Incluye
-- Intro visual estilo mockup.
-- Register y Login premium mobile-first.
-- Dashboard Hoy con TimeBlocks, checks interactivos, ProgressCard y bottom sheet.
-- Calendario con semana, timeline pastel y FAB.
-- Notas tipo post-it con grid 2 columnas.
-- Recordatorios con toggles.
-- Perfil y Configuración.
-- Design tokens, Tailwind extendido y utilidades globales.
-- Fix Tailwind v4/PostCSS para Vercel.
+## Cambios principales
 
-## Stack
-- Next.js App Router
-- TypeScript
-- TailwindCSS
-- Supabase ready
-- Vercel ready
+- App conectada entre secciones con navegación funcional.
+- Dashboard Hoy funcional con `localStorage`:
+  - crear tareas desde el botón `+`
+  - marcar/desmarcar checks
+  - abrir detalle de tarea
+  - editar tarea
+  - eliminar tarea
+  - progreso persistente
+- Calendario funcional local:
+  - agregar evento
+  - editar evento
+  - eliminar evento
+  - persistencia local
+- Notas funcional local:
+  - agregar nota
+  - editar nota
+  - eliminar nota
+  - buscar notas
+  - persistencia local
+- Recordatorios funcional local:
+  - agregar recordatorio
+  - editar recordatorio
+  - eliminar recordatorio
+  - activar/desactivar toggle
+  - persistencia local
+- Perfil editable localmente.
+- Configuración con toggles persistentes.
+- Login/Register mock funcional antes de Supabase Auth.
 
-## Instalación
+## Deploy
 
 ```bash
 npm install
-cp .env.example .env.local
-npm run dev
+npm run build
 ```
 
-## Variables Vercel
+Variables existentes se mantienen igual para la siguiente etapa con Supabase:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_APP_URL=
 ```
 
-`NEXT_PUBLIC_APP_URL` puede agregarse después del primer deploy con la URL real de Vercel.
+## Siguiente fase recomendada
 
-## Rutas
-- `/` Intro
-- `/register`
-- `/login`
-- `/today`
-- `/calendar`
-- `/notes`
-- `/reminders`
-- `/profile`
-- `/settings`
-
-
-## v2.1.2
-- Reemplazo completo de emojis/íconos genéricos de mono por assets oficiales en header, progreso, notas, perfil, recordatorios, auth y detalle de tarea.
-- Base: v2.1.1 style fix.
+v2.3 UX Pro + validaciones visuales antes de conectar Supabase.

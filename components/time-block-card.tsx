@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import type { TimeBlock } from "@/types";
+import type { Task, TimeBlock } from "@/types";
 import { cn } from "@/lib/utils";
 
 const styleMap = {
@@ -16,11 +16,13 @@ const styleMap = {
 export function TimeBlockCard({
   block,
   onToggle,
-  onOpen
+  onOpen,
+  onTaskOpen
 }: {
   block: TimeBlock;
   onToggle: (blockId: string, taskId: string) => void;
   onOpen?: (block: TimeBlock) => void;
+  onTaskOpen?: (block: TimeBlock, task: Task) => void;
 }) {
   return (
     <article className={cn("animate-slideUp rounded-card border p-4 shadow-sm", styleMap[block.color])}>
@@ -35,7 +37,7 @@ export function TimeBlockCard({
               <button
                 key={task.id}
                 type="button"
-                onClick={() => onToggle(block.id, task.id)}
+                onClick={() => onTaskOpen ? onTaskOpen(block, task) : onToggle(block.id, task.id)}
                 className="flex min-h-9 w-full items-center justify-between rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
               >
                 <span className={cn(task.done && "text-gray-400 line-through")}>{task.title}</span>
@@ -44,6 +46,7 @@ export function TimeBlockCard({
                     "grid h-5 w-5 place-items-center rounded-md border transition",
                     task.done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white"
                   )}
+                  onClick={(event) => { event.stopPropagation(); onToggle(block.id, task.id); }}
                 >
                   {task.done ? <Check className="h-3.5 w-3.5" /> : null}
                 </span>
