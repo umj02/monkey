@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { createOptionalClient } from "@/lib/supabase/client";
 import { useLocalStorageState } from "@/lib/local-storage";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
-import { mapSupabaseUserToSession, signInWithEmail, signInWithOAuthProvider, signOut, signUpWithEmail } from "@/lib/services/auth-service";
-import type { AuthSession } from "@/types";
+import { createMockSession, createSocialMockSession, mapSupabaseUserToSession, signInWithEmail, signOut, signUpWithEmail } from "@/lib/services/auth-service";
+import type { AuthSession, Profile } from "@/types";
 import type { LoginInput, RegisterInput } from "@/lib/services/auth-service";
 
 export function useAuth() {
@@ -17,9 +17,7 @@ export function useAuth() {
   useEffect(() => {
     const supabase = createOptionalClient();
     if (!supabase) {
-      // No auth mock when Supabase is expected. This prevents false positives in production.
-      setSession(null);
-      setLocalSession(null);
+      setSession(localSession);
       setMode("local");
       setReady(localReady);
       return;
@@ -46,11 +44,11 @@ export function useAuth() {
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, [localReady, setLocalSession]);
+  }, [localReady, localSession?.userId]);
 
   async function login(input: LoginInput) {
     const result = await signInWithEmail(input);
-    if (result.error || !result.session) return result;
+    if (result.error) return result;
     setSession(result.session);
     setLocalSession(result.session);
     setMode(result.mode);
@@ -59,15 +57,11 @@ export function useAuth() {
 
   async function register(input: RegisterInput) {
     const result = await signUpWithEmail(input);
-    if (result.error || !result.session) return result;
+    if (result.error) return result;
     setSession(result.session);
     setLocalSession(result.session);
     setMode(result.mode);
     return result;
-  }
-
-  async function loginWithSocial(provider: "google" | "apple") {
-    return signInWithOAuthProvider(provider);
   }
 
   async function logout() {
@@ -83,7 +77,16 @@ export function useAuth() {
     isAuthenticated: Boolean(session),
     login,
     register,
-    loginWithSocial,
+    loginWithProfile: (profile: Profile) => {
+      const next = createMockSession(profile);
+      setSession(next);
+      setLocalSession(next);
+    },
+    loginWithSocial: (provider: AuthSession["provider"]) => {
+      const next = createSocialMockSession(provider);
+      setSession(next);
+      setLocalSession(next);
+    },
     logout
   };
 }

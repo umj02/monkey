@@ -48,15 +48,3 @@ npm install
 npm run build
 ```
 
-
-## v2.5.1 — Supabase Auth Strict Fix
-
-Correcciones sobre v2.5:
-
-- Login y registro ya no redirigen a `/today` sin sesión real de Supabase.
-- Si Supabase requiere confirmación de email, el registro muestra mensaje y no entra a la app hasta confirmar.
-- Google/Apple ya no crean sesión mock ni envían directo a `/today`; ahora usan OAuth real de Supabase o muestran error.
-- `AppShell` protege las rutas internas y redirige a `/login` si no hay sesión.
-- Se desactiva el falso fallback local para Auth cuando la app está en producción con Supabase.
-
-Nota: si querés que el usuario entre inmediatamente después de registrarse, en Supabase desactivá `Confirm email` en Authentication → Providers → Email. Si lo dejás activo, el flujo correcto es confirmar correo primero.
