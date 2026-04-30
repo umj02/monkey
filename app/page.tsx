@@ -30,7 +30,7 @@ export default function BrandLogoScreen() {
         ))}
 
         <div className="brand-copy">
-          <p>Welcome to</p>
+          <p>Bienvenido a</p>
           <h1>monkey</h1>
         </div>
 
@@ -46,9 +46,9 @@ export default function BrandLogoScreen() {
         </div>
 
         <section className="brand-card">
-          <h2>Plan your day, build good habits and have fun doing it!</h2>
+          <h2>Planificá tu día, crea buenos hábitos y disfrutá el proceso.</h2>
           <Link href="/register" className="brand-cta">
-            Get Started
+            Comenzar
           </Link>
           <div className="brand-dots" aria-label="Intro progress">
             <span className="active" />

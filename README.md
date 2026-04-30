@@ -1,4 +1,4 @@
-# Monkey Checks v2.4.7 — Assets Integration System
+# Monkey Checks v2.4.7 — Intro Safe Area + Hero Fix
 
 Base: v2.4.6 Wallet DB Contract Prep.
 
@@ -34,7 +34,7 @@ wallet-savings
 face-main
 ```
 
-## v2.4.8 — Badge / Asset Picker Mobile Overflow Fix
+## v2.4.9 — Badge / Asset Picker Mobile Overflow Fix
 - Corrige desbordes horizontales en bottom sheets de Hoy y Wallet.
 - El selector de iconos ahora usa scroll horizontal seguro dentro del modal.
 - Los segmented controls usan texto truncado y ancho flexible.
