@@ -29,9 +29,11 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
 
   if (!open || !block) return null;
 
+  const activeBlock = block;
+
   function saveTitle() {
     if (!selectedTask || title.trim().length < 3) return;
-    onEdit?.(block.id, selectedTask.id, title.trim());
+    onEdit?.(activeBlock.id, selectedTask.id, title.trim());
     setEditing(false);
   }
 
@@ -41,8 +43,8 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
         <section className="animate-pop rounded-[28px] bg-white p-5 shadow-soft">
           <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-gray-100" aria-label="Cerrar"><X className="h-5 w-5" /></button>
           <div className="flex justify-center"><MonkeyAvatar size={92} variant="full" imageClassName="object-bottom" /></div>
-          <h2 className="mt-2 text-2xl font-black">{block.title}</h2>
-          <p className="mt-1 text-sm font-semibold text-monkey-muted">{block.time}</p>
+          <h2 className="mt-2 text-2xl font-black">{activeBlock.title}</h2>
+          <p className="mt-1 text-sm font-semibold text-monkey-muted">{activeBlock.time}</p>
           {selectedTask ? (
             <div className="mt-4 rounded-[18px] bg-gray-50 p-3">
               <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Tarea seleccionada</p>
@@ -51,8 +53,8 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
             </div>
           ) : null}
           <div className="mt-4 space-y-2">
-            {block.tasks.map((item) => (
-              <button key={item.id} onClick={() => onToggle?.(block.id, item.id)} className="flex h-10 w-full items-center gap-3 rounded-[14px] px-2 text-left text-sm transition active:scale-[.98]">
+            {activeBlock.tasks.map((item) => (
+              <button key={item.id} onClick={() => onToggle?.(activeBlock.id, item.id)} className="flex h-10 w-full items-center gap-3 rounded-[14px] px-2 text-left text-sm transition active:scale-[.98]">
                 <span className={item.done ? "grid h-5 w-5 place-items-center rounded-md bg-monkey-green text-white" : "h-5 w-5 rounded-md border border-gray-300 bg-white"}>{item.done ? <Check className="h-3.5 w-3.5" /> : null}</span>
                 <span className={item.done ? "text-gray-400 line-through" : ""}>{item.title}</span>
               </button>
@@ -64,7 +66,7 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
           </div>
         </section>
       </div>
-      <ConfirmSheet open={confirmOpen} title="¿Eliminar tarea?" body="Esta acción quitará la tarea de tu día. Luego en Supabase podremos guardar historial si lo necesitás." onCancel={() => setConfirmOpen(false)} onConfirm={() => { if (selectedTask) onDelete?.(block.id, selectedTask.id); setConfirmOpen(false); }} />
+      <ConfirmSheet open={confirmOpen} title="¿Eliminar tarea?" body="Esta acción quitará la tarea de tu día. Luego en Supabase podremos guardar historial si lo necesitás." onCancel={() => setConfirmOpen(false)} onConfirm={() => { if (selectedTask) onDelete?.(activeBlock.id, selectedTask.id); setConfirmOpen(false); }} />
     </>
   );
 }
