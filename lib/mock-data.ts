@@ -56,5 +56,15 @@ export const walletSeed = {
   ],
   goals: [
     { id: "iphone", title: "iPhone 15", target: 900, current: 530, icon: "📱" }
+  ],
+  transactions: [
+    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 1200, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "💵" },
+    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 220, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "🍕" },
+    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 120, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "🚌" },
+    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 530, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "📱" }
+  ],
+  badges: [
+    { id: "badge-saving", label: "Buen ahorro", tone: "success" as const, icon: "🌱" },
+    { id: "badge-budget", label: "Presupuesto sano", tone: "info" as const, icon: "🛡️" }
   ]
 };

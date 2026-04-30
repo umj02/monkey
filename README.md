@@ -53,3 +53,17 @@ Nota: Wallet funciona con localStorage en esta versión. La persistencia en Supa
 - Agrega ajuste superior funcional.
 - Corrige el error TypeScript de días nulos en calendario.
 - Agrega `date` a CalendarEvent para preparar Supabase.
+
+## v2.4.5 — Wallet Inputs + Badges
+
+Base: v2.4.4.
+
+Cambios principales:
+- Wallet funcional con creación de movimientos: ingresos, gastos y ahorros.
+- Bottom sheet para agregar movimiento con monto, nombre, categoría y fecha.
+- Edición de presupuesto por periodo activo.
+- Creación de metas de ahorro.
+- Badges inteligentes automáticos según ahorro, presupuesto y actividad.
+- Historial reciente con eliminación de movimientos.
+- Categorías y consejo inteligente recalculados desde transacciones locales.
+- Preparado para mapear luego a tablas Supabase: wallet_transactions, wallet_budgets, wallet_goals y wallet_categories.

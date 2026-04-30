@@ -63,13 +63,15 @@ export type AuthSession = {
 };
 
 export type WalletPeriod = "weekly" | "biweekly" | "monthly";
+export type WalletTransactionType = "income" | "expense" | "saving";
+export type WalletColor = "green" | "orange" | "purple" | "pink" | "blue" | "yellow";
 
 export type WalletCategory = {
   id: string;
   name: string;
   amount: number;
   percent: number;
-  color: "green" | "orange" | "purple" | "pink" | "blue" | "yellow";
+  color: WalletColor;
   icon: string;
 };
 
@@ -78,6 +80,25 @@ export type WalletGoal = {
   title: string;
   target: number;
   current: number;
+  icon: string;
+};
+
+export type WalletTransaction = {
+  id: string;
+  type: WalletTransactionType;
+  title: string;
+  amount: number;
+  category: string;
+  date: string;
+  period: WalletPeriod;
+  color: WalletColor;
+  icon: string;
+};
+
+export type WalletBadge = {
+  id: string;
+  label: string;
+  tone: "success" | "warning" | "info";
   icon: string;
 };
 
@@ -90,5 +111,7 @@ export type WalletData = {
   budgetLimit: number;
   categories: WalletCategory[];
   goals: WalletGoal[];
+  transactions: WalletTransaction[];
+  badges: WalletBadge[];
   tip: string;
 };
