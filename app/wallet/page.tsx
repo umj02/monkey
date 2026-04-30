@@ -6,6 +6,9 @@ import { AppShell } from "@/components/app-shell";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { AssetPicker } from "@/components/asset-picker";
+import { AssetThumb } from "@/components/asset-thumb";
+import { getWalletAssetsByType } from "@/lib/asset-library";
 import { Toast, type ToastState } from "@/components/toast";
 import { useWallet } from "@/hooks/use-wallet";
 import { cn } from "@/lib/utils";
@@ -85,22 +88,26 @@ export default function WalletPage() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Comida");
   const [date, setDate] = useState(today());
+  const [icon, setIcon] = useState("wallet-food");
   const [budget, setBudget] = useState(String(wallet.budgetLimit));
   const [goalTitle, setGoalTitle] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
   const [goalCurrent, setGoalCurrent] = useState("0");
+  const [goalIcon, setGoalIcon] = useState("wallet-savings");
 
   const budgetPercent = Math.min(100, Math.round((wallet.expenses / wallet.budgetLimit) * 100));
   const firstGoal = wallet.goals[0];
   const goalPercent = firstGoal ? Math.min(100, Math.round((firstGoal.current / firstGoal.target) * 100)) : 0;
   const recentTransactions = useMemo(() => wallet.transactions.slice(0, 4), [wallet.transactions]);
   const activeCategories = type === "income" ? incomeCategories : type === "saving" ? savingCategories : expenseCategories;
+  const activeWalletAssets = getWalletAssetsByType(type);
 
   function openMovement(nextType: WalletTransactionType = "expense") {
     setType(nextType);
     setTitle("");
     setAmount("");
     setCategory(nextType === "income" ? "Mesada" : nextType === "saving" ? "Ahorro" : "Comida");
+    setIcon(nextType === "income" ? "wallet-income" : nextType === "saving" ? "wallet-savings" : "wallet-food");
     setDate(today());
     setMovementOpen(true);
   }
@@ -115,7 +122,7 @@ export default function WalletPage() {
       setToast({ message: "Ingresá un monto válido mayor a 0.", type: "error" });
       return;
     }
-    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, date, period: wallet.period, currency: wallet.currency });
+    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, date, period: wallet.period, currency: wallet.currency, icon });
     setMovementOpen(false);
     setToast({ message: `${transactionLabels[type]} agregado correctamente.`, type: "success" });
   }
@@ -142,11 +149,12 @@ export default function WalletPage() {
       setToast({ message: "La meta necesita un monto objetivo mayor a 0.", type: "error" });
       return;
     }
-    addGoal({ title: goalTitle.trim(), target: parsedTarget, current: Number.isFinite(parsedCurrent) ? parsedCurrent : 0, currency: wallet.currency, icon: "🎯" });
+    addGoal({ title: goalTitle.trim(), target: parsedTarget, current: Number.isFinite(parsedCurrent) ? parsedCurrent : 0, currency: wallet.currency, icon: goalIcon });
     setGoalOpen(false);
     setGoalTitle("");
     setGoalTarget("");
     setGoalCurrent("0");
+    setGoalIcon("wallet-savings");
     setToast({ message: "Meta de ahorro creada.", type: "success" });
   }
 
@@ -186,7 +194,7 @@ export default function WalletPage() {
               <strong className="mt-2 block text-[34px] font-black tracking-tight text-monkey-ink">{money(wallet.balance, wallet.currency)}</strong>
               <span className="mt-2 inline-flex rounded-pill bg-green-100 px-3 py-1 text-xs font-black text-monkey-greenDark">{wallet.savings > 0 ? `+${money(wallet.savings, wallet.currency)} ahorrado` : "Agregá tu primer ahorro"}</span>
             </div>
-            <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-green-50 text-[46px] shadow-sm">💵</div>
+            <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-green-50 shadow-sm"><AssetThumb icon="wallet-income" size={62} /></div>
           </div>
         </section>
 
@@ -242,7 +250,7 @@ export default function WalletPage() {
           <div className="mt-3 space-y-3 rounded-card bg-white p-4 shadow-card">
             {wallet.categories.length > 0 ? wallet.categories.map((category) => (
               <article key={category.id} className="grid grid-cols-[44px_1fr_auto] items-center gap-3">
-                <span className={`${colorMap[category.color]} grid h-11 w-11 place-items-center rounded-[16px] text-lg`}>{category.icon}</span>
+                <span className={`${colorMap[category.color]} grid h-11 w-11 place-items-center rounded-[16px]`}><AssetThumb icon={category.icon} size={32} /></span>
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-black">{category.name}</h3>
@@ -276,7 +284,7 @@ export default function WalletPage() {
           </div>
           {firstGoal ? (
             <div className="mt-4 grid grid-cols-[48px_1fr_auto] items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-purple-100 text-xl">{firstGoal.icon}</span>
+              <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-purple-100"><AssetThumb icon={firstGoal.icon} size={34} /></span>
               <div>
                 <p className="text-sm font-black">{firstGoal.title}</p>
                 <div className="mt-2 h-2 overflow-hidden rounded-pill bg-gray-100"><div className="h-full rounded-pill bg-monkey-green" style={{ width: `${goalPercent}%` }} /></div>
@@ -294,7 +302,7 @@ export default function WalletPage() {
           <div className="mt-3 space-y-2">
             {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
               <article key={transaction.id} className="grid grid-cols-[40px_1fr_auto_36px] items-center gap-2 rounded-[16px] bg-gray-50 p-2">
-                <span className={cn("grid h-10 w-10 place-items-center rounded-[14px] text-lg", colorMap[transaction.color])}>{transaction.icon}</span>
+                <span className={cn("grid h-10 w-10 place-items-center rounded-[14px]", colorMap[transaction.color])}><AssetThumb icon={transaction.icon} size={30} /></span>
                 <div>
                   <p className="text-sm font-black">{transaction.title}</p>
                   <p className="text-[11px] font-semibold text-monkey-muted">{transaction.category} · {transaction.date}</p>
@@ -314,13 +322,14 @@ export default function WalletPage() {
       <FormSheet open={movementOpen} title="Agregar movimiento" subtitle="Registrá un ingreso, gasto o ahorro en segundos." submitLabel="Guardar movimiento" onClose={() => setMovementOpen(false)} onSubmit={submitMovement}>
         <div className="grid grid-cols-3 gap-2 rounded-pill bg-gray-100 p-1 text-xs font-black">
           {(["income", "expense", "saving"] as WalletTransactionType[]).map((item) => (
-            <button key={item} type="button" onClick={() => { setType(item); setCategory(item === "income" ? "Mesada" : item === "saving" ? "Ahorro" : "Comida"); }} className={cn("rounded-pill py-2", type === item ? "bg-monkey-green text-white" : "text-monkey-muted")}>{transactionLabels[item]}</button>
+            <button key={item} type="button" onClick={() => { setType(item); setCategory(item === "income" ? "Mesada" : item === "saving" ? "Ahorro" : "Comida"); setIcon(item === "income" ? "wallet-income" : item === "saving" ? "wallet-savings" : "wallet-food"); }} className={cn("rounded-pill py-2", type === item ? "bg-monkey-green text-white" : "text-monkey-muted")}>{transactionLabels[item]}</button>
           ))}
         </div>
         <Field label="Nombre" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. Almuerzo, mesada, ahorro" />
         <Field label="Monto" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" type="number" min="0" step="1" />
         <SelectField label="Categoría" value={category} options={activeCategories} onChange={setCategory} />
         <Field label="Fecha" value={date} onChange={(event) => setDate(event.target.value)} type="date" />
+        <AssetPicker label="Ícono del movimiento" assets={activeWalletAssets} value={icon} onChange={setIcon} />
       </FormSheet>
 
       <FormSheet open={budgetOpen} title="Editar presupuesto" subtitle={`Definí tu límite para ${periodLabels[wallet.period].toLowerCase()}.`} submitLabel="Guardar presupuesto" onClose={() => setBudgetOpen(false)} onSubmit={submitBudget}>
@@ -329,6 +338,7 @@ export default function WalletPage() {
 
       <FormSheet open={goalOpen} title="Nueva meta" subtitle="Separá dinero para algo importante." submitLabel="Guardar meta" onClose={() => setGoalOpen(false)} onSubmit={submitGoal}>
         <div className="grid place-items-center rounded-card bg-green-50 p-4 text-monkey-green"><Target className="h-8 w-8" /><span className="mt-2 text-xs font-black">Meta de ahorro</span></div>
+        <AssetPicker label="Ícono de la meta" assets={getWalletAssetsByType("saving")} value={goalIcon} onChange={setGoalIcon} />
         <Field label="Nombre" value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} placeholder="Ej. Viaje, teléfono, emergencia" />
         <Field label="Monto objetivo" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} type="number" min="1" step="1" />
         <Field label="Monto actual" value={goalCurrent} onChange={(event) => setGoalCurrent(event.target.value)} type="number" min="0" step="1" />

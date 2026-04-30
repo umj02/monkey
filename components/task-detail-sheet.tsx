@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Trash2, X } from "lucide-react";
-import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { AssetThumb } from "@/components/asset-thumb";
 import { ConfirmSheet } from "@/components/confirm-sheet";
 import type { Task, TimeBlock } from "@/types";
 
@@ -42,7 +42,7 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
       <div className="fixed inset-0 z-50 mx-auto max-w-[430px] bg-black/55 px-5 pb-6 pt-20">
         <section className="animate-pop rounded-[28px] bg-white p-5 shadow-soft">
           <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-gray-100" aria-label="Cerrar"><X className="h-5 w-5" /></button>
-          <div className="flex justify-center"><MonkeyAvatar size={92} variant="full" imageClassName="object-bottom" /></div>
+          <div className="flex justify-center"><AssetThumb icon={activeBlock.icon} size={92} className="rounded-[26px] bg-green-50 p-2" /></div>
           <h2 className="mt-2 text-2xl font-black">{activeBlock.title}</h2>
           <p className="mt-1 text-sm font-semibold text-monkey-muted">{activeBlock.time}</p>
           {selectedTask ? (

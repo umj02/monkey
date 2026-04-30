@@ -15,7 +15,7 @@ export function MonkeyAvatar({
   imageClassName = "",
   priority = false
 }: MonkeyAvatarProps) {
-  const src = variant === "full" ? "/images/monkey-mascot-full.png" : "/images/monkey-face.png";
+  const src = variant === "full" ? "/assets/monkey/hero/sentado.png" : "/assets/monkey/faces/face-main.png";
 
   return (
     <span

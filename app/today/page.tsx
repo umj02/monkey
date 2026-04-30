@@ -11,6 +11,8 @@ import { FormSheet } from "@/components/form-sheet";
 import { Field } from "@/components/field";
 import { Toast, ToastState } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
+import { AssetPicker } from "@/components/asset-picker";
+import { activityAssets } from "@/lib/asset-library";
 import { useTasks } from "@/hooks/use-tasks";
 import type { Task, TaskColor, TimeBlock } from "@/types";
 
@@ -26,6 +28,7 @@ export default function TodayPage() {
   const [blockTitle, setBlockTitle] = useState("Nuevo bloque");
   const [time, setTime] = useState("09:00");
   const [color, setColor] = useState<TaskColor>("green");
+  const [icon, setIcon] = useState("activity-study");
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -39,6 +42,7 @@ export default function TodayPage() {
     setBlockTitle("Nuevo bloque");
     setTime("09:00");
     setColor("green");
+    setIcon("activity-study");
     setErrors({});
   }
 
@@ -49,7 +53,7 @@ export default function TodayPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    createTask({ title: taskTitle, time, blockTitle, color });
+    createTask({ title: taskTitle, time, blockTitle, color, icon });
     setFormOpen(false);
     resetForm();
     showToast("Tarea creada con éxito");
@@ -95,6 +99,7 @@ export default function TodayPage() {
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
         <Field label="Nombre del bloque" value={blockTitle} onChange={(e) => setBlockTitle(e.target.value)} placeholder="Estudiar" />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-3 gap-2">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 rounded-pill text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}>{colorLabels[item]}</button>)}</div></div>
+        <AssetPicker label="Ícono de actividad" assets={activityAssets} value={icon} onChange={setIcon} />
       </FormSheet>
       <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onDelete={handleDeleteTask} />
     </AppShell>

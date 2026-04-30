@@ -1,15 +1,15 @@
 import type { CalendarEvent, Note, Reminder, TimeBlock } from "@/types";
 
 export const todaySeed: TimeBlock[] = [
-  { id: "wake", time: "06:00", title: "Despertar", color: "purple", icon: "☀️", tasks: [
+  { id: "wake", time: "06:00", title: "Despertar", color: "purple", icon: "activity-care", tasks: [
     { id: "a", title: "Lavarme los dientes", done: true },
     { id: "b", title: "Tomar agua", done: true }
   ]},
-  { id: "sport", time: "07:00", title: "Ejercicio", color: "orange", icon: "🏃‍♂️", tasks: [
+  { id: "sport", time: "07:00", title: "Ejercicio", color: "orange", icon: "activity-gym", tasks: [
     { id: "c", title: "Hacer estiramientos", done: false },
     { id: "d", title: "Correr 20 min", done: false }
   ]},
-  { id: "study", time: "08:00", title: "Estudiar", color: "green", icon: "📚", tasks: [
+  { id: "study", time: "08:00", title: "Estudiar", color: "green", icon: "activity-study", tasks: [
     { id: "e", title: "Matemáticas", done: false },
     { id: "f", title: "Lectura", done: false }
   ]}
@@ -50,19 +50,19 @@ export const walletSeed = {
   budgetLimit: 45000,
   tip: "Has gastado un 20% más en entretenimiento esta semana. ¿Qué tal si intentás reducirlo un poco para ahorrar más?",
   categories: [
-    { id: "food", name: "Comida", amount: 8000, percent: 33, color: "orange" as const, icon: "🍕" },
-    { id: "transport", name: "Transporte", amount: 4500, percent: 18, color: "yellow" as const, icon: "🚌" },
-    { id: "fun", name: "Entretenimiento", amount: 6500, percent: 27, color: "purple" as const, icon: "🎮" },
-    { id: "shopping", name: "Compras", amount: 4000, percent: 22, color: "pink" as const, icon: "🛍️" }
+    { id: "food", name: "Comida", amount: 8000, percent: 33, color: "orange" as const, icon: "wallet-food" },
+    { id: "transport", name: "Transporte", amount: 4500, percent: 18, color: "yellow" as const, icon: "wallet-transport" },
+    { id: "fun", name: "Entretenimiento", amount: 6500, percent: 27, color: "purple" as const, icon: "wallet-fun" },
+    { id: "shopping", name: "Compras", amount: 4000, percent: 22, color: "pink" as const, icon: "wallet-shop" }
   ],
   goals: [
-    { id: "iphone", title: "iPhone 15", target: 250000, current: 15000, currency: "CRC" as const, icon: "📱" }
+    { id: "iphone", title: "iPhone 15", target: 250000, current: 15000, currency: "CRC" as const, icon: "wallet-phone" }
   ],
   transactions: [
-    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "💵" },
-    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "🍕" },
-    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 4500, currency: "CRC" as const, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "🚌" },
-    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 15000, currency: "CRC" as const, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "📱" }
+    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "wallet-income" },
+    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "wallet-food" },
+    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 4500, currency: "CRC" as const, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "wallet-transport" },
+    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 15000, currency: "CRC" as const, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "wallet-phone" }
   ],
   badges: [
     { id: "badge-saving", label: "Buen ahorro", tone: "success" as const, icon: "🌱" },

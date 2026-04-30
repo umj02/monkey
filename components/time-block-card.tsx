@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { AssetThumb } from "@/components/asset-thumb";
 import type { Task, TimeBlock } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +31,7 @@ export function TimeBlockCard({
         <div className="pt-1 text-[13px] font-black">{block.time}</div>
         <div>
           <button type="button" onClick={() => onOpen?.(block)} className="text-left text-[15px] font-black text-monkey-ink">
-            <span className="mr-2">{block.icon}</span>{block.title}
+            <AssetThumb icon={block.icon} size={28} className="mr-2 inline-flex align-middle rounded-[10px] bg-white/60 p-1" />{block.title}
           </button>
           <div className="mt-2 space-y-2">
             {block.tasks.map((task) => (

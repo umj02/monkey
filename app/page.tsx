@@ -36,7 +36,7 @@ export default function BrandLogoScreen() {
 
         <div className="brand-monkey" aria-hidden="true">
           <Image
-            src="/images/monkey-mascot-full.png"
+            src="/assets/monkey/intro/check.png"
             alt="Mascota Monkey Checks"
             fill
             priority

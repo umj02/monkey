@@ -34,7 +34,7 @@ create table if not exists public.wallet_goals (
   current_amount numeric(12,2) not null default 0 check (current_amount >= 0),
   currency text not null default 'CRC' check (currency in ('CRC', 'USD')),
   target_date date,
-  icon text default '🎯',
+  icon text default 'wallet-savings',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -71,14 +71,14 @@ create policy "wallet_categories owner update" on public.wallet_categories for u
 create policy "wallet_categories owner delete" on public.wallet_categories for delete using (auth.uid() = user_id);
 
 insert into public.wallet_categories (user_id, name, type, color, icon, sort_order) values
-  (null, 'Comida', 'expense', 'orange', '🍕', 10),
-  (null, 'Transporte', 'expense', 'yellow', '🚌', 20),
-  (null, 'Entretenimiento', 'expense', 'purple', '🎮', 30),
-  (null, 'Compras', 'expense', 'pink', '🛍️', 40),
-  (null, 'Escuela', 'expense', 'blue', '📚', 50),
-  (null, 'Mesada', 'income', 'green', '💵', 10),
-  (null, 'Trabajo', 'income', 'green', '💼', 20),
-  (null, 'Regalo', 'income', 'green', '🎁', 30),
-  (null, 'Venta', 'income', 'green', '🧾', 40),
-  (null, 'Ahorro', 'saving', 'purple', '🌱', 10)
+  (null, 'Comida', 'expense', 'orange', 'wallet-food', 10),
+  (null, 'Transporte', 'expense', 'yellow', 'wallet-transport', 20),
+  (null, 'Entretenimiento', 'expense', 'purple', 'wallet-fun', 30),
+  (null, 'Compras', 'expense', 'pink', 'wallet-shop', 40),
+  (null, 'Escuela', 'expense', 'blue', 'wallet-study', 50),
+  (null, 'Mesada', 'income', 'green', 'wallet-income', 10),
+  (null, 'Trabajo', 'income', 'green', 'wallet-income', 20),
+  (null, 'Regalo', 'income', 'green', 'wallet-gift', 30),
+  (null, 'Venta', 'income', 'green', 'wallet-extras', 40),
+  (null, 'Ahorro', 'saving', 'purple', 'wallet-savings', 10)
 on conflict (user_id, name, type) do nothing;

@@ -12,7 +12,7 @@ import type {
 } from "@/types";
 
 export type WalletUpdateInput = Partial<Pick<WalletData, "income" | "expenses" | "savings" | "budgetLimit" | "balance" | "tip" | "currency">>;
-export type WalletTransactionInput = Omit<WalletTransaction, "id" | "color" | "icon" | "currency"> & { currency?: WalletCurrency };
+export type WalletTransactionInput = Omit<WalletTransaction, "id" | "color" | "icon" | "currency"> & { currency?: WalletCurrency; icon?: string };
 export type WalletGoalInput = Omit<WalletGoal, "id" | "icon" | "currency"> & { icon?: string; currency?: WalletCurrency };
 
 export const WALLET_DEFAULT_CURRENCY: WalletCurrency = "CRC";
@@ -23,17 +23,17 @@ export const walletCurrencyLabels: Record<WalletCurrency, string> = {
 };
 
 const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
-  Comida: { color: "orange", icon: "🍕" },
-  Transporte: { color: "yellow", icon: "🚌" },
-  Entretenimiento: { color: "purple", icon: "🎮" },
-  Compras: { color: "pink", icon: "🛍️" },
-  Escuela: { color: "blue", icon: "📚" },
-  Mesada: { color: "green", icon: "💵" },
-  Trabajo: { color: "green", icon: "💼" },
-  Regalo: { color: "green", icon: "🎁" },
-  Venta: { color: "green", icon: "🧾" },
-  Ahorro: { color: "purple", icon: "🌱" },
-  Otro: { color: "blue", icon: "✨" }
+  Comida: { color: "orange", icon: "wallet-food" },
+  Transporte: { color: "yellow", icon: "wallet-transport" },
+  Entretenimiento: { color: "purple", icon: "wallet-fun" },
+  Compras: { color: "pink", icon: "wallet-shop" },
+  Escuela: { color: "blue", icon: "wallet-study" },
+  Mesada: { color: "green", icon: "wallet-income" },
+  Trabajo: { color: "green", icon: "wallet-income" },
+  Regalo: { color: "green", icon: "wallet-gift" },
+  Venta: { color: "green", icon: "wallet-extras" },
+  Ahorro: { color: "purple", icon: "wallet-savings" },
+  Otro: { color: "blue", icon: "wallet-extras" }
 };
 
 function getCategoryMeta(category: string, type: WalletTransactionType) {
@@ -53,7 +53,7 @@ function buildCategories(transactions: WalletTransaction[], period: WalletPeriod
   const grouped = expenses.reduce<Record<string, WalletCategory>>((acc, tx) => {
     const key = tx.category || "Otro";
     const meta = getCategoryMeta(key, "expense");
-    if (!acc[key]) acc[key] = { id: key.toLowerCase().replace(/\s+/g, "-"), name: key, amount: 0, percent: 0, color: meta.color, icon: meta.icon };
+    if (!acc[key]) acc[key] = { id: key.toLowerCase().replace(/\s+/g, "-"), name: key, amount: 0, percent: 0, color: meta.color, icon: tx.icon || meta.icon };
     acc[key].amount += tx.amount;
     return acc;
   }, {});
@@ -134,7 +134,7 @@ export function addWalletTransaction(data: WalletData, input: WalletTransactionI
     amount: Math.max(0, Number(input.amount) || 0),
     currency: input.currency || data.currency || WALLET_DEFAULT_CURRENCY,
     color: meta.color,
-    icon: meta.icon
+    icon: input.icon || meta.icon
   };
   return normalizeWallet({ ...data, transactions: [transaction, ...(data.transactions || [])] });
 }
@@ -151,7 +151,7 @@ export function addWalletGoal(data: WalletData, input: WalletGoalInput): WalletD
     current: Math.max(0, Number(input.current) || 0),
     currency: input.currency || data.currency || WALLET_DEFAULT_CURRENCY,
     targetDate: input.targetDate || null,
-    icon: input.icon || "🎯"
+    icon: input.icon || "wallet-savings"
   };
   return normalizeWallet({ ...data, goals: [goal, ...data.goals] });
 }

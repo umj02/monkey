@@ -1,7 +1,7 @@
 import { createId } from "@/lib/local-storage";
 import type { Task, TaskColor, TimeBlock } from "@/types";
 
-export type CreateTaskInput = { title: string; time: string; blockTitle: string; color: TaskColor };
+export type CreateTaskInput = { title: string; time: string; blockTitle: string; color: TaskColor; icon?: string };
 
 export function calculateTaskProgress(blocks: TimeBlock[]) {
   const tasks = blocks.flatMap((block) => block.tasks);
@@ -28,7 +28,7 @@ export function addTaskToBlocks(blocks: TimeBlock[], input: CreateTaskInput) {
     time: input.time,
     title: input.blockTitle.trim() || "Nuevo bloque",
     color: input.color,
-    icon: "✨",
+    icon: input.icon || "activity-study",
     tasks: [task]
   };
   return [...blocks, block].sort((a, b) => a.time.localeCompare(b.time));
