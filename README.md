@@ -43,3 +43,15 @@ Cambios principales:
 - Calendario actualizado con switch real entre vista Semana y Mes.
 
 Nota: Wallet funciona con localStorage en esta versión. La persistencia en Supabase queda para v2.5.
+
+## v2.4.3 — Calendar Navigation Fix
+
+Base: v2.4.2 / v2.4.1 architecture.
+
+Cambios incluidos:
+- Botón de mes funcional con selector mensual.
+- Navegación de mes anterior / siguiente.
+- Selección real de días en la tira semanal.
+- Vista mensual con días seleccionables y marcadores de eventos.
+- Botón de ajustes superior funcional con opciones rápidas.
+- Eventos asociados a fecha para preparar Supabase.

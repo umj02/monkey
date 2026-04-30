@@ -36,6 +36,7 @@ export type Reminder = {
 
 export type CalendarEvent = {
   id: string;
+  date: string;
   time: string;
   title: string;
   color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
