@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { Plus, Search } from "lucide-react";
 
 const notes = [
@@ -27,7 +28,7 @@ export default function NotesPage() {
               <p className="mt-3 whitespace-pre-line text-[13px] leading-5 text-gray-700">{note.body}</p>
             </article>
           ))}
-          <div className="pointer-events-none absolute bottom-[86px] right-4 text-[100px] leading-none">🐵</div>
+          <MonkeyAvatar size={118} variant="full" className="pointer-events-none absolute bottom-[78px] right-1" imageClassName="object-bottom" />
         </div>
       </section>
     </AppShell>

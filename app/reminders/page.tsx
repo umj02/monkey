@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { MonkeyAvatar } from "@/components/monkey-avatar";
 
 const base = [
   { id: "water", title: "Beber agua", subtitle: "Cada día · 08:00", icon: "💧", color: "bg-sky-100", on: true },
@@ -18,7 +19,7 @@ export default function RemindersPage() {
       <section className="page-pad pt-8">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-black">Recordatorios</h1>
-          <span className="text-3xl">🐵</span>
+          <MonkeyAvatar size={38} variant="face" />
         </header>
         <div className="mt-6 space-y-3">
           {items.map((item) => (

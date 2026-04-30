@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { ProgressCard } from "@/components/progress-card";
 import { TimeBlockCard } from "@/components/time-block-card";
 import { TaskDetailSheet } from "@/components/task-detail-sheet";
@@ -71,7 +72,7 @@ export default function TodayPage() {
             <p className="text-sm font-medium text-monkey-muted">¡Hola! 👋</p>
             <h1 className="text-[22px] font-black tracking-tight">Hoy es un gran día</h1>
           </div>
-          <button className="grid h-12 w-12 place-items-center rounded-full bg-white text-2xl shadow-card">🐵</button>
+          <button className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-card"><MonkeyAvatar size={34} variant="face" /></button>
         </header>
 
         <div className="mt-5"><ProgressCard percent={percent} /></div>

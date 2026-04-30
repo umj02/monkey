@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bell, ChevronRight, Lock, Palette, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { MonkeyAvatar } from "@/components/monkey-avatar";
 
 const rows = [
   { label: "Editar información", icon: Pencil, href: "#" },
@@ -15,7 +16,7 @@ export default function ProfilePage() {
       <section className="page-pad pt-8">
         <h1 className="text-2xl font-black">Mi Perfil</h1>
         <section className="mt-6 rounded-card bg-gradient-to-br from-monkey-purple to-monkey-green p-5 text-white shadow-soft">
-          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25 text-6xl">🐵</div>
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25"><MonkeyAvatar size={76} variant="face" /></div>
           <h2 className="mt-3 text-center text-xl font-black">Juan Pérez</h2>
           <p className="text-center text-sm text-white/80">juanperez@email.com</p>
         </section>

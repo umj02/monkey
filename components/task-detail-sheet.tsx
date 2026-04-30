@@ -1,4 +1,5 @@
 import { Check, Trash2, X } from "lucide-react";
+import { MonkeyAvatar } from "@/components/monkey-avatar";
 
 export function TaskDetailSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
@@ -9,7 +10,7 @@ export function TaskDetailSheet({ open, onClose }: { open: boolean; onClose: () 
         <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-gray-100">
           <X className="h-5 w-5" />
         </button>
-        <div className="text-center text-[78px] leading-none">🐵</div>
+        <div className="flex justify-center"><MonkeyAvatar size={92} variant="full" imageClassName="object-bottom" /></div>
         <h2 className="mt-2 text-2xl font-black">Ejercicio 💪</h2>
         <p className="mt-1 text-sm font-semibold text-monkey-muted">07:00 - 08:00</p>
         <div className="mt-4 space-y-2">

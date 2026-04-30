@@ -48,3 +48,8 @@ NEXT_PUBLIC_APP_URL=
 - `/reminders`
 - `/profile`
 - `/settings`
+
+
+## v2.1.2
+- Reemplazo completo de emojis/íconos genéricos de mono por assets oficiales en header, progreso, notas, perfil, recordatorios, auth y detalle de tarea.
+- Base: v2.1.1 style fix.
