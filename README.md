@@ -33,3 +33,9 @@ wallet-food
 wallet-savings
 face-main
 ```
+
+## v2.4.8 — Badge / Asset Picker Mobile Overflow Fix
+- Corrige desbordes horizontales en bottom sheets de Hoy y Wallet.
+- El selector de iconos ahora usa scroll horizontal seguro dentro del modal.
+- Los segmented controls usan texto truncado y ancho flexible.
+- El FormSheet tiene max-height, overflow vertical y bloquea overflow-x.

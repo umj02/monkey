@@ -175,14 +175,14 @@ export default function WalletPage() {
           <MonkeyAvatar size={54} className="rounded-full bg-white shadow-card" />
         </header>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 rounded-pill bg-gray-100 p-1 text-[12px] font-black">
+        <div className="mt-5 grid min-w-0 grid-cols-3 gap-1 rounded-pill bg-gray-100 p-1 text-[11px] font-black">
           {(Object.keys(periodLabels) as WalletPeriod[]).map((period) => (
             <button
               key={period}
               onClick={() => changePeriod(period)}
-              className={cn("rounded-pill py-2 transition", wallet.period === period ? "bg-monkey-green text-white shadow-sm" : "text-monkey-muted")}
+              className={cn("min-w-0 rounded-pill px-1 py-2 transition", wallet.period === period ? "bg-monkey-green text-white shadow-sm" : "text-monkey-muted")}
             >
-              {periodLabels[period]}
+              <span className="block truncate">{periodLabels[period]}</span>
             </button>
           ))}
         </div>
@@ -320,9 +320,9 @@ export default function WalletPage() {
       </button>
 
       <FormSheet open={movementOpen} title="Agregar movimiento" subtitle="Registrá un ingreso, gasto o ahorro en segundos." submitLabel="Guardar movimiento" onClose={() => setMovementOpen(false)} onSubmit={submitMovement}>
-        <div className="grid grid-cols-3 gap-2 rounded-pill bg-gray-100 p-1 text-xs font-black">
+        <div className="grid min-w-0 grid-cols-3 gap-1 rounded-pill bg-gray-100 p-1 text-[11px] font-black">
           {(["income", "expense", "saving"] as WalletTransactionType[]).map((item) => (
-            <button key={item} type="button" onClick={() => { setType(item); setCategory(item === "income" ? "Mesada" : item === "saving" ? "Ahorro" : "Comida"); setIcon(item === "income" ? "wallet-income" : item === "saving" ? "wallet-savings" : "wallet-food"); }} className={cn("rounded-pill py-2", type === item ? "bg-monkey-green text-white" : "text-monkey-muted")}>{transactionLabels[item]}</button>
+            <button key={item} type="button" onClick={() => { setType(item); setCategory(item === "income" ? "Mesada" : item === "saving" ? "Ahorro" : "Comida"); setIcon(item === "income" ? "wallet-income" : item === "saving" ? "wallet-savings" : "wallet-food"); }} className={cn("min-w-0 rounded-pill px-1 py-2", type === item ? "bg-monkey-green text-white" : "text-monkey-muted")}><span className="block truncate">{transactionLabels[item]}</span></button>
           ))}
         </div>
         <Field label="Nombre" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. Almuerzo, mesada, ahorro" />
