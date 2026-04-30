@@ -33,10 +33,10 @@ export const remindersSeed: Reminder[] = [
 export const calendarSeed: CalendarEvent[] = [
   { id: "ev-1", date: "2026-05-14", time: "06:00", title: "😊 Ejercicio", color: "yellow" },
   { id: "ev-2", date: "2026-05-14", time: "08:00", title: "🏃‍♂️ Estudiar", color: "blue" },
-  { id: "ev-3", date: "2026-05-15", time: "12:00", title: "🌱 Clases", color: "green" },
+  { id: "ev-3", date: "2026-05-14", time: "12:00", title: "🌱 Clases", color: "green" },
   { id: "ev-4", date: "2026-05-14", time: "14:00", title: "🍽️ Almuerzo", color: "pink" },
-  { id: "ev-5", date: "2026-05-18", time: "16:00", title: "📘 Proyecto", color: "purple" },
-  { id: "ev-6", date: "2026-05-19", time: "18:00", title: "🌙 Descanso", color: "blue" }
+  { id: "ev-5", date: "2026-05-14", time: "16:00", title: "📘 Proyecto", color: "purple" },
+  { id: "ev-6", date: "2026-05-15", time: "18:00", title: "🌙 Descanso", color: "blue" }
 ];
 
 

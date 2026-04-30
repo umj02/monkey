@@ -32,7 +32,7 @@ npm run build
 
 v2.5 — Supabase Auth + DB real.
 
-## v2.4.2 — Wallet + Calendar Month
+## v2.4.4 — Wallet + Calendar Month
 
 Base: v2.4.1 Architecture Cleanup.
 
@@ -44,14 +44,12 @@ Cambios principales:
 
 Nota: Wallet funciona con localStorage en esta versión. La persistencia en Supabase queda para v2.5.
 
-## v2.4.3 — Calendar Navigation Fix
 
-Base: v2.4.2 / v2.4.1 architecture.
+## v2.4.4 Calendar Navigation Build Fix
 
-Cambios incluidos:
-- Botón de mes funcional con selector mensual.
-- Navegación de mes anterior / siguiente.
-- Selección real de días en la tira semanal.
-- Vista mensual con días seleccionables y marcadores de eventos.
-- Botón de ajustes superior funcional con opciones rápidas.
-- Eventos asociados a fecha para preparar Supabase.
+- Toma como base v2.4.2.
+- Corrige navegación de mes desde el header.
+- Permite seleccionar días en semana y mes.
+- Agrega ajuste superior funcional.
+- Corrige el error TypeScript de días nulos en calendario.
+- Agrega `date` a CalendarEvent para preparar Supabase.

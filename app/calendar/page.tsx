@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ConfirmSheet } from "@/components/confirm-sheet";
 import { EmptyState } from "@/components/empty-state";
@@ -13,9 +13,8 @@ import type { CalendarEvent } from "@/types";
 import { cn } from "@/lib/utils";
 
 const colors: CalendarEvent["color"][] = ["green", "blue", "yellow", "pink", "purple", "orange"];
-const weekNames = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const weekdayShort = ["L", "M", "M", "J", "V", "S", "D"];
 const eventClass: Record<CalendarEvent["color"], string> = {
   yellow: "bg-yellow-100 text-orange-600",
   blue: "bg-sky-100 text-sky-700",
@@ -25,56 +24,71 @@ const eventClass: Record<CalendarEvent["color"], string> = {
   orange: "bg-orange-100 text-orange-700"
 };
 
-function pad(value: number) {
-  return String(value).padStart(2, "0");
+type CalendarSettingsMode = "closed" | "month" | "filters";
+
+type MonthCell = {
+  key: string;
+  day: number | null;
+  dateKey: string | null;
+};
+
+function toDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function toDateKey(year: number, monthIndex: number, day: number) {
-  return `${year}-${pad(monthIndex + 1)}-${pad(day)}`;
+function fromDateKey(dateKey: string) {
+  const [year = "2026", month = "05", day = "14"] = dateKey.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
-function getDaysInMonth(year: number, monthIndex: number) {
-  return new Date(year, monthIndex + 1, 0).getDate();
+function addMonths(date: Date, amount: number) {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
-function getWeekDays(year: number, monthIndex: number, selectedDay: number) {
-  const current = new Date(year, monthIndex, selectedDay);
-  const mondayIndex = (current.getDay() + 6) % 7;
-  const start = new Date(current);
-  start.setDate(current.getDate() - mondayIndex);
+function getMonday(date: Date) {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  return copy;
+}
+
+function getWeekDates(date: Date) {
+  const monday = getMonday(date);
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return {
-      label: weekNames[index],
-      day: date.getDate(),
-      monthIndex: date.getMonth(),
-      year: date.getFullYear(),
-      dateKey: toDateKey(date.getFullYear(), date.getMonth(), date.getDate())
-    };
+    const next = new Date(monday);
+    next.setDate(monday.getDate() + index);
+    return next;
   });
 }
 
-function getMonthGrid(year: number, monthIndex: number) {
-  const firstDay = new Date(year, monthIndex, 1);
-  const mondayOffset = (firstDay.getDay() + 6) % 7;
-  const totalDays = getDaysInMonth(year, monthIndex);
-  return Array.from({ length: 42 }, (_, index) => {
-    const dayNumber = index - mondayOffset + 1;
-    const inMonth = dayNumber >= 1 && dayNumber <= totalDays;
-    return { day: inMonth ? dayNumber : null };
+function getMonthCells(date: Date): MonthCell[] {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const day = index - startOffset + 1;
+    if (day < 1 || day > daysInMonth) return { key: `empty-${index}`, day: null, dateKey: null };
+    return { key: `${year}-${month}-${day}`, day, dateKey: toDateKey(new Date(year, month, day)) };
   });
+}
+
+function normalizeEventDate(event: CalendarEvent, fallbackDateKey: string) {
+  return event.date || fallbackDateKey;
 }
 
 export default function CalendarPage() {
   const { events, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
-  const [year, setYear] = useState(2026);
-  const [monthIndex, setMonthIndex] = useState(4);
-  const [selectedDay, setSelectedDay] = useState(14);
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showCalendarSettings, setShowCalendarSettings] = useState(false);
-  const [showAllMonthEvents, setShowAllMonthEvents] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 4, 14));
+  const [settingsMode, setSettingsMode] = useState<CalendarSettingsMode>("closed");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -84,51 +98,45 @@ export default function CalendarPage() {
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
 
-  const selectedDateKey = toDateKey(year, monthIndex, selectedDay);
-  const weekDays = useMemo(() => getWeekDays(year, monthIndex, selectedDay), [year, monthIndex, selectedDay]);
-  const monthGrid = useMemo(() => getMonthGrid(year, monthIndex), [year, monthIndex]);
-  const monthEventDays = useMemo(() => {
-    const set = new Set<number>();
-    events.forEach((event) => {
-      const [eventYear, eventMonth, eventDay] = event.date.split("-").map(Number);
-      if (eventYear === year && eventMonth === monthIndex + 1) set.add(eventDay);
-    });
-    return set;
-  }, [events, monthIndex, year]);
+  const selectedDateKey = toDateKey(selectedDate);
+  const visibleMonth = monthNames[selectedDate.getMonth()];
+  const visibleYear = selectedDate.getFullYear();
+  const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
+  const monthCells = useMemo(() => getMonthCells(selectedDate), [selectedDate]);
 
-  const visibleEvents = useMemo(() => {
-    if (showAllMonthEvents) return events.filter((event) => event.date.startsWith(`${year}-${pad(monthIndex + 1)}-`));
-    return events.filter((event) => event.date === selectedDateKey);
-  }, [events, monthIndex, selectedDateKey, showAllMonthEvents, year]);
+  const eventsForSelectedDate = useMemo(() => {
+    return events.filter((event) => normalizeEventDate(event, "2026-05-14") === selectedDateKey);
+  }, [events, selectedDateKey]);
+
+  const eventDays = useMemo(() => {
+    const days = new Set<string>();
+    events.forEach((event) => days.add(normalizeEventDate(event, "2026-05-14")));
+    return days;
+  }, [events]);
 
   function notify(message: string) {
     setToast({ message, type: "success" });
     window.setTimeout(() => setToast(null), 2200);
   }
 
-  function changeMonth(direction: -1 | 1) {
-    const next = new Date(year, monthIndex + direction, 1);
-    const nextYear = next.getFullYear();
-    const nextMonth = next.getMonth();
-    const maxDay = getDaysInMonth(nextYear, nextMonth);
-    setYear(nextYear);
-    setMonthIndex(nextMonth);
-    setSelectedDay((day) => Math.min(day, maxDay));
+  function selectDay(date: Date) {
+    setSelectedDate(date);
+    setViewMode("week");
   }
 
-  function selectMonth(nextMonth: number) {
-    const maxDay = getDaysInMonth(year, nextMonth);
-    setMonthIndex(nextMonth);
-    setSelectedDay((day) => Math.min(day, maxDay));
-    setShowMonthPicker(false);
-    notify(`Calendario actualizado a ${monthNames[nextMonth]}`);
+  function selectDateKey(dateKey: string) {
+    setSelectedDate(fromDateKey(dateKey));
   }
 
-  function selectDay(day: number, nextMonthIndex = monthIndex, nextYear = year) {
-    setYear(nextYear);
-    setMonthIndex(nextMonthIndex);
-    setSelectedDay(day);
-    setShowAllMonthEvents(false);
+  function moveMonth(amount: number) {
+    const nextMonth = addMonths(selectedDate, amount);
+    setSelectedDate(nextMonth);
+  }
+
+  function goToday() {
+    setSelectedDate(new Date(2026, 4, 14));
+    setViewMode("week");
+    setSettingsMode("closed");
   }
 
   function openNew() {
@@ -155,8 +163,10 @@ export default function CalendarPage() {
     if (!/^\d{2}:\d{2}$/.test(time)) nextErrors.time = "Usá formato HH:MM.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    if (editing) updateEvent(editing.id, { date: editing.date, title, time, color });
-    else createEvent({ date: selectedDateKey, title, time, color });
+
+    const payload = { title, time, color, date: selectedDateKey };
+    if (editing) updateEvent(editing.id, payload);
+    else createEvent(payload);
     setSheetOpen(false);
     notify(editing ? "Evento actualizado" : "Evento creado");
   }
@@ -166,24 +176,31 @@ export default function CalendarPage() {
       <Toast toast={toast} onClose={() => setToast(null)} />
       <section className="page-pad pt-8">
         <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button onClick={() => changeMonth(-1)} className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm" aria-label="Mes anterior"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={() => setShowMonthPicker(true)} className="rounded-pill px-1 text-2xl font-black transition active:scale-95" aria-label="Cambiar mes">{monthNames[monthIndex]}⌄</button>
-            <button onClick={() => changeMonth(1)} className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm" aria-label="Mes siguiente"><ChevronRight className="h-4 w-4" /></button>
-          </div>
-          <button onClick={() => setShowCalendarSettings(true)} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Ajustes de calendario">
+          <button onClick={() => setSettingsMode("month")} className="flex items-center gap-1 text-2xl font-black tracking-tight" aria-label="Cambiar mes">
+            {visibleMonth}<span className="text-base">⌄</span>
+          </button>
+          <button onClick={() => setSettingsMode("filters")} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm" aria-label="Ajustes de calendario">
             <SlidersHorizontal className="h-5 w-5" />
           </button>
         </header>
 
         <div className="mt-5 grid grid-cols-7 gap-2">
-          {weekDays.map((day) => {
-            const active = day.dateKey === selectedDateKey;
-            const muted = day.monthIndex !== monthIndex;
+          {weekDates.map((dayDate, index) => {
+            const dateKey = toDateKey(dayDate);
+            const active = dateKey === selectedDateKey;
+            const hasEvent = eventDays.has(dateKey);
             return (
-              <button key={day.dateKey} onClick={() => selectDay(day.day, day.monthIndex, day.year)} className={cn("rounded-[18px] py-3 text-center shadow-sm transition active:scale-95", active ? "bg-monkey-green text-white shadow-card" : "bg-white text-monkey-ink", muted && !active ? "opacity-50" : "")}> 
-                <p className="text-[10px] font-bold opacity-70">{day.label}</p>
-                <p className="text-base font-black">{day.day}</p>
+              <button
+                key={dateKey}
+                onClick={() => selectDay(dayDate)}
+                className={cn(
+                  "relative rounded-[18px] py-3 text-center shadow-sm transition active:scale-95",
+                  active ? "bg-monkey-green text-white shadow-card" : "bg-white text-monkey-ink"
+                )}
+              >
+                <p className="text-[10px] font-bold opacity-70">{weekLabels[index]}</p>
+                <p className="text-base font-black">{dayDate.getDate()}</p>
+                {hasEvent ? <span className={cn("absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full", active ? "bg-white" : "bg-monkey-green")} /> : null}
               </button>
             );
           })}
@@ -194,14 +211,17 @@ export default function CalendarPage() {
           <button onClick={() => setViewMode("month")} className={cn("rounded-pill transition", viewMode === "month" ? "bg-monkey-green text-white shadow-sm" : "text-monkey-muted")}>Mes</button>
         </div>
 
-        <p className="mt-4 text-center text-xs font-bold text-monkey-muted">
-          {showAllMonthEvents ? `Mostrando eventos de ${monthNames[monthIndex]}` : `Día seleccionado: ${selectedDay} de ${monthNames[monthIndex]}`}
-        </p>
-
         {viewMode === "week" ? (
-          <div className="relative mt-4 min-h-[480px] rounded-card bg-white p-4 shadow-card">
-            {visibleEvents.length === 0 ? <EmptyState title="Día libre" body="Agregá eventos para ver tu rutina en orden." /> : null}
-            {visibleEvents.map((event) => (
+          <div className="relative mt-6 min-h-[480px] rounded-card bg-white p-4 shadow-card">
+            <div className="mb-4 flex items-center justify-between rounded-[18px] bg-gray-50 px-4 py-3">
+              <div>
+                <p className="text-xs font-bold text-monkey-muted">Día seleccionado</p>
+                <p className="text-sm font-black text-monkey-ink">{selectedDate.getDate()} de {visibleMonth} {visibleYear}</p>
+              </div>
+              <button onClick={() => setViewMode("month")} className="rounded-pill bg-white px-4 py-2 text-xs font-black text-monkey-greenDark shadow-sm">Ver mes</button>
+            </div>
+            {eventsForSelectedDate.length === 0 ? <EmptyState title="Día libre" body="Agregá eventos para este día o seleccioná otra fecha." /> : null}
+            {eventsForSelectedDate.map((event) => (
               <div key={event.id} className="mb-4 grid grid-cols-[54px_1fr_32px] items-center gap-2">
                 <span className="text-[11px] font-bold text-monkey-muted">{event.time}</span>
                 <button onClick={() => openEdit(event)} className={`${eventClass[event.color]} rounded-[14px] px-4 py-3 text-left text-sm font-bold transition active:scale-[.98]`}>{event.title}</button>
@@ -210,18 +230,31 @@ export default function CalendarPage() {
             ))}
           </div>
         ) : (
-          <div className="mt-4 rounded-card bg-white p-4 shadow-card">
+          <div className="mt-6 rounded-card bg-white p-4 shadow-card">
+            <div className="mb-4 flex items-center justify-between">
+              <button onClick={() => moveMonth(-1)} className="grid h-10 w-10 place-items-center rounded-full bg-gray-50 text-monkey-ink" aria-label="Mes anterior"><ChevronLeft className="h-5 w-5" /></button>
+              <p className="text-sm font-black text-monkey-ink">{visibleMonth} {visibleYear}</p>
+              <button onClick={() => moveMonth(1)} className="grid h-10 w-10 place-items-center rounded-full bg-gray-50 text-monkey-ink" aria-label="Mes siguiente"><ChevronRight className="h-5 w-5" /></button>
+            </div>
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-monkey-muted">
-              {weekdayShort.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}
+              {["L", "M", "M", "J", "V", "S", "D"].map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}
             </div>
             <div className="mt-3 grid grid-cols-7 gap-2">
-              {monthGrid.map((cell, index) => {
-                if (!cell.day) return <span key={`blank-${index}`} className="h-11" />;
-                const isActive = cell.day === selectedDay;
-                const hasEvent = monthEventDays.has(cell.day);
+              {monthCells.map((cell) => {
+                const isActive = cell.dateKey === selectedDateKey;
+                const hasEvent = cell.dateKey ? eventDays.has(cell.dateKey) : false;
                 return (
-                  <button key={cell.day} onClick={() => selectDay(cell.day)} className={cn("relative grid h-11 place-items-center rounded-[14px] text-sm font-black transition active:scale-95", isActive ? "bg-monkey-green text-white shadow-card" : "bg-gray-50 text-monkey-ink")}> 
-                    {cell.day}
+                  <button
+                    key={cell.key}
+                    type="button"
+                    disabled={!cell.dateKey}
+                    onClick={() => { if (cell.dateKey) selectDateKey(cell.dateKey); }}
+                    className={cn(
+                      "relative grid h-11 place-items-center rounded-[14px] text-sm font-black transition active:scale-95 disabled:pointer-events-none disabled:opacity-0",
+                      isActive ? "bg-monkey-green text-white shadow-card" : "bg-gray-50 text-monkey-ink"
+                    )}
+                  >
+                    {cell.day ?? ""}
                     {hasEvent ? <span className={cn("absolute bottom-1 h-1.5 w-1.5 rounded-full", isActive ? "bg-white" : "bg-monkey-green")} /> : null}
                   </button>
                 );
@@ -229,7 +262,7 @@ export default function CalendarPage() {
             </div>
             <div className="mt-5 rounded-[18px] bg-green-50 p-4">
               <p className="text-sm font-black text-monkey-greenDark">Resumen del mes</p>
-              <p className="mt-1 text-xs leading-5 text-monkey-muted">Los puntos verdes marcan días con eventos. Tocá un día para seleccionarlo y luego agregá una actividad.</p>
+              <p className="mt-1 text-xs leading-5 text-monkey-muted">Seleccioná cualquier día para ver o agregar eventos. Los puntos verdes marcan actividad.</p>
             </div>
           </div>
         )}
@@ -237,41 +270,28 @@ export default function CalendarPage() {
 
       <button onClick={openNew} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar evento"><Plus /></button>
 
-      {showMonthPicker ? (
-        <div className="fixed inset-0 z-50 mx-auto grid max-w-[430px] place-items-end bg-black/50 px-5 pb-6 pt-16">
-          <section className="w-full animate-slideUp rounded-[28px] bg-white p-5 shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div><h2 className="text-xl font-black tracking-tight text-monkey-ink">Cambiar mes</h2><p className="mt-1 text-sm leading-5 text-monkey-muted">Elegí el mes que querés revisar.</p></div>
-              <button type="button" onClick={() => setShowMonthPicker(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-100" aria-label="Cerrar"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              {monthNames.map((month, index) => <button key={month} onClick={() => selectMonth(index)} className={cn("h-11 rounded-pill text-sm font-black transition active:scale-95", index === monthIndex ? "bg-monkey-green text-white shadow-sm" : "bg-gray-100 text-monkey-muted")}>{month.slice(0, 3)}</button>)}
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      {showCalendarSettings ? (
-        <div className="fixed inset-0 z-50 mx-auto grid max-w-[430px] place-items-end bg-black/50 px-5 pb-6 pt-16">
-          <section className="w-full animate-slideUp rounded-[28px] bg-white p-5 shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div><h2 className="text-xl font-black tracking-tight text-monkey-ink">Ajustes de calendario</h2><p className="mt-1 text-sm leading-5 text-monkey-muted">Control rápido para navegar y filtrar tus actividades.</p></div>
-              <button type="button" onClick={() => setShowCalendarSettings(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-100" aria-label="Cerrar"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="mt-5 space-y-3">
-              <button onClick={() => { setShowAllMonthEvents((value) => !value); notify(showAllMonthEvents ? "Mostrando día seleccionado" : "Mostrando todo el mes"); }} className="flex h-14 w-full items-center justify-between rounded-[18px] bg-gray-50 px-4 text-left text-sm font-black transition active:scale-[.98]"><span>{showAllMonthEvents ? "Ver solo día seleccionado" : "Ver todos los eventos del mes"}</span><span className="text-monkey-greenDark">›</span></button>
-              <button onClick={() => { setViewMode("month"); setShowCalendarSettings(false); }} className="flex h-14 w-full items-center justify-between rounded-[18px] bg-gray-50 px-4 text-left text-sm font-black transition active:scale-[.98]"><span>Abrir vista mensual</span><span className="text-monkey-greenDark">›</span></button>
-              <button onClick={() => { setYear(2026); setMonthIndex(4); setSelectedDay(14); setShowAllMonthEvents(false); setShowCalendarSettings(false); notify("Volviste al día base"); }} className="flex h-14 w-full items-center justify-between rounded-[18px] bg-green-50 px-4 text-left text-sm font-black text-monkey-greenDark transition active:scale-[.98]"><span>Volver a hoy</span><span>✓</span></button>
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      <FormSheet open={sheetOpen} title={editing ? "Editar evento" : "Nuevo evento"} subtitle={editing ? "Ajustá el bloque seleccionado." : `Se agregará al ${selectedDay} de ${monthNames[monthIndex]}.`} onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel={editing ? "Guardar evento" : "Crear evento"}>
+      <FormSheet open={sheetOpen} title={editing ? "Editar evento" : "Nuevo evento"} subtitle={`Se guardará para el ${selectedDate.getDate()} de ${visibleMonth}.`} onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel={editing ? "Guardar evento" : "Crear evento"}>
         <Field label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Clase de inglés" error={errors.title} />
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-3 gap-2">{colors.map((item) => <button type="button" key={item} onClick={() => setColor(item)} className={`h-10 rounded-pill text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}>{item}</button>)}</div></div>
       </FormSheet>
+
+      <FormSheet open={settingsMode !== "closed"} title={settingsMode === "month" ? "Cambiar mes" : "Ajustes de calendario"} subtitle={settingsMode === "month" ? "Movete entre meses sin perder tus eventos." : "Controlá cómo querés ver tu agenda."} onClose={() => setSettingsMode("closed")} onSubmit={() => setSettingsMode("closed")} submitLabel="Listo">
+        <div className="flex items-center justify-between rounded-[20px] bg-gray-50 p-3">
+          <button type="button" onClick={() => moveMonth(-1)} className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm"><ChevronLeft className="h-5 w-5" /></button>
+          <div className="text-center">
+            <p className="text-lg font-black text-monkey-ink">{visibleMonth}</p>
+            <p className="text-xs font-bold text-monkey-muted">{visibleYear}</p>
+          </div>
+          <button type="button" onClick={() => moveMonth(1)} className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm"><ChevronRight className="h-5 w-5" /></button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" onClick={() => setViewMode("week")} className={cn("h-12 rounded-pill text-sm font-black", viewMode === "week" ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted")}>Vista semana</button>
+          <button type="button" onClick={() => setViewMode("month")} className={cn("h-12 rounded-pill text-sm font-black", viewMode === "month" ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted")}>Vista mes</button>
+        </div>
+        <button type="button" onClick={goToday} className="h-12 w-full rounded-pill bg-green-50 text-sm font-black text-monkey-greenDark">Volver al día principal</button>
+      </FormSheet>
+
       <ConfirmSheet open={!!deleteId} title="¿Eliminar evento?" body="El evento se quitará de esta vista local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) deleteEvent(deleteId); setDeleteId(null); notify("Evento eliminado"); }} />
     </AppShell>
   );
