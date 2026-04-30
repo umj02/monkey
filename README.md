@@ -29,3 +29,16 @@ npm run dev
 ## Supabase
 El starter incluye cliente Supabase en `lib/supabase/client.ts`.
 Cuando conectes DB/Auth, agrega tus variables en `.env.local`.
+
+## Versión 1.1 — Vercel Deploy Fix
+
+Esta versión corrige el error de build de Tailwind CSS en Vercel usando el plugin oficial `@tailwindcss/postcss` para Tailwind v4.
+
+Variables necesarias en Vercel:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+`NEXT_PUBLIC_APP_URL` es opcional y puede agregarse después del primer deploy con la URL real de Vercel.
