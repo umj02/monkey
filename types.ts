@@ -63,6 +63,7 @@ export type AuthSession = {
 };
 
 export type WalletPeriod = "weekly" | "biweekly" | "monthly";
+export type WalletCurrency = "CRC" | "USD";
 export type WalletTransactionType = "income" | "expense" | "saving";
 export type WalletColor = "green" | "orange" | "purple" | "pink" | "blue" | "yellow";
 
@@ -75,11 +76,20 @@ export type WalletCategory = {
   icon: string;
 };
 
+export type WalletBudget = {
+  id: string;
+  period: WalletPeriod;
+  limit: number;
+  currency: WalletCurrency;
+};
+
 export type WalletGoal = {
   id: string;
   title: string;
   target: number;
   current: number;
+  currency?: WalletCurrency;
+  targetDate?: string | null;
   icon: string;
 };
 
@@ -88,6 +98,7 @@ export type WalletTransaction = {
   type: WalletTransactionType;
   title: string;
   amount: number;
+  currency: WalletCurrency;
   category: string;
   date: string;
   period: WalletPeriod;
@@ -104,6 +115,7 @@ export type WalletBadge = {
 
 export type WalletData = {
   period: WalletPeriod;
+  currency: WalletCurrency;
   balance: number;
   income: number;
   expenses: number;
@@ -114,4 +126,26 @@ export type WalletData = {
   transactions: WalletTransaction[];
   badges: WalletBadge[];
   tip: string;
+};
+
+export type WalletDbTransaction = Omit<WalletTransaction, "color" | "icon"> & {
+  userId: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type WalletDbBudget = {
+  id: string;
+  userId: string;
+  period: WalletPeriod;
+  limit: number;
+  currency: WalletCurrency;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type WalletDbGoal = WalletGoal & {
+  userId: string;
+  createdAt?: string;
+  updatedAt?: string;
 };

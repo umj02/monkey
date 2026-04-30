@@ -42,26 +42,27 @@ export const calendarSeed: CalendarEvent[] = [
 
 export const walletSeed = {
   period: "weekly" as const,
-  balance: 420,
-  income: 1200,
-  expenses: 670,
-  savings: 530,
-  budgetLimit: 1200,
+  currency: "CRC" as const,
+  balance: 22000,
+  income: 60000,
+  expenses: 23000,
+  savings: 15000,
+  budgetLimit: 45000,
   tip: "Has gastado un 20% más en entretenimiento esta semana. ¿Qué tal si intentás reducirlo un poco para ahorrar más?",
   categories: [
-    { id: "food", name: "Comida", amount: 220, percent: 33, color: "orange" as const, icon: "🍕" },
-    { id: "transport", name: "Transporte", amount: 120, percent: 18, color: "yellow" as const, icon: "🚌" },
-    { id: "fun", name: "Entretenimiento", amount: 180, percent: 27, color: "purple" as const, icon: "🎮" },
-    { id: "shopping", name: "Compras", amount: 150, percent: 22, color: "pink" as const, icon: "🛍️" }
+    { id: "food", name: "Comida", amount: 8000, percent: 33, color: "orange" as const, icon: "🍕" },
+    { id: "transport", name: "Transporte", amount: 4500, percent: 18, color: "yellow" as const, icon: "🚌" },
+    { id: "fun", name: "Entretenimiento", amount: 6500, percent: 27, color: "purple" as const, icon: "🎮" },
+    { id: "shopping", name: "Compras", amount: 4000, percent: 22, color: "pink" as const, icon: "🛍️" }
   ],
   goals: [
-    { id: "iphone", title: "iPhone 15", target: 900, current: 530, icon: "📱" }
+    { id: "iphone", title: "iPhone 15", target: 250000, current: 15000, currency: "CRC" as const, icon: "📱" }
   ],
   transactions: [
-    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 1200, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "💵" },
-    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 220, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "🍕" },
-    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 120, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "🚌" },
-    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 530, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "📱" }
+    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "💵" },
+    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "🍕" },
+    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 4500, currency: "CRC" as const, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "🚌" },
+    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 15000, currency: "CRC" as const, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "📱" }
   ],
   badges: [
     { id: "badge-saving", label: "Buen ahorro", tone: "success" as const, icon: "🌱" },

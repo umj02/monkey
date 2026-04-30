@@ -51,8 +51,8 @@ const badgeMap = {
   info: "bg-sky-100 text-sky-700"
 } as const;
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value);
+function money(value: number, currency = "CRC") {
+  return new Intl.NumberFormat("es-CR", { style: "currency", currency, maximumFractionDigits: currency === "CRC" ? 0 : 2 }).format(value);
 }
 
 function today() {
@@ -115,7 +115,7 @@ export default function WalletPage() {
       setToast({ message: "Ingresá un monto válido mayor a 0.", type: "error" });
       return;
     }
-    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, date, period: wallet.period });
+    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, date, period: wallet.period, currency: wallet.currency });
     setMovementOpen(false);
     setToast({ message: `${transactionLabels[type]} agregado correctamente.`, type: "success" });
   }
@@ -142,7 +142,7 @@ export default function WalletPage() {
       setToast({ message: "La meta necesita un monto objetivo mayor a 0.", type: "error" });
       return;
     }
-    addGoal({ title: goalTitle.trim(), target: parsedTarget, current: Number.isFinite(parsedCurrent) ? parsedCurrent : 0, icon: "🎯" });
+    addGoal({ title: goalTitle.trim(), target: parsedTarget, current: Number.isFinite(parsedCurrent) ? parsedCurrent : 0, currency: wallet.currency, icon: "🎯" });
     setGoalOpen(false);
     setGoalTitle("");
     setGoalTarget("");
@@ -183,8 +183,8 @@ export default function WalletPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-black text-monkey-ink">Balance disponible</p>
-              <strong className="mt-2 block text-[34px] font-black tracking-tight text-monkey-ink">{money(wallet.balance)}</strong>
-              <span className="mt-2 inline-flex rounded-pill bg-green-100 px-3 py-1 text-xs font-black text-monkey-greenDark">{wallet.savings > 0 ? `+${money(wallet.savings)} ahorrado` : "Agregá tu primer ahorro"}</span>
+              <strong className="mt-2 block text-[34px] font-black tracking-tight text-monkey-ink">{money(wallet.balance, wallet.currency)}</strong>
+              <span className="mt-2 inline-flex rounded-pill bg-green-100 px-3 py-1 text-xs font-black text-monkey-greenDark">{wallet.savings > 0 ? `+${money(wallet.savings, wallet.currency)} ahorrado` : "Agregá tu primer ahorro"}</span>
             </div>
             <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-green-50 text-[46px] shadow-sm">💵</div>
           </div>
@@ -193,17 +193,17 @@ export default function WalletPage() {
         <section className="mt-3 grid grid-cols-3 gap-2">
           <button onClick={() => openMovement("income")} className="rounded-[18px] bg-white p-3 text-left shadow-card transition active:scale-[.98]">
             <p className="text-[11px] font-bold text-monkey-muted">Ingresos</p>
-            <strong className="mt-2 block text-sm font-black">{money(wallet.income)}</strong>
+            <strong className="mt-2 block text-sm font-black">{money(wallet.income, wallet.currency)}</strong>
             <ArrowUp className="mt-2 h-4 w-4 text-monkey-green" />
           </button>
           <button onClick={() => openMovement("expense")} className="rounded-[18px] bg-white p-3 text-left shadow-card transition active:scale-[.98]">
             <p className="text-[11px] font-bold text-monkey-muted">Gastos</p>
-            <strong className="mt-2 block text-sm font-black">{money(wallet.expenses)}</strong>
+            <strong className="mt-2 block text-sm font-black">{money(wallet.expenses, wallet.currency)}</strong>
             <ArrowDown className="mt-2 h-4 w-4 text-monkey-pink" />
           </button>
           <button onClick={() => openMovement("saving")} className="rounded-[18px] bg-white p-3 text-left shadow-card transition active:scale-[.98]">
             <p className="text-[11px] font-bold text-monkey-muted">Ahorros</p>
-            <strong className="mt-2 block text-sm font-black">{money(wallet.savings)}</strong>
+            <strong className="mt-2 block text-sm font-black">{money(wallet.savings, wallet.currency)}</strong>
             <ArrowUp className="mt-2 h-4 w-4 text-monkey-purple" />
           </button>
         </section>
@@ -215,7 +215,7 @@ export default function WalletPage() {
           </div>
           <div className="mt-4 flex items-center justify-between text-sm font-semibold text-monkey-muted">
             <span>{budgetPercent}% utilizado</span>
-            <span>{money(wallet.expenses)} / {money(wallet.budgetLimit)}</span>
+            <span>{money(wallet.expenses, wallet.currency)} / {money(wallet.budgetLimit, wallet.currency)}</span>
           </div>
           <div className="mt-3 h-3 overflow-hidden rounded-pill bg-gray-100">
             <div className={cn("h-full rounded-pill transition-all duration-500", budgetPercent > 85 ? "bg-monkey-pink" : "bg-monkey-green")} style={{ width: `${budgetPercent}%` }} />
@@ -246,7 +246,7 @@ export default function WalletPage() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-black">{category.name}</h3>
-                    <span className="text-xs font-black">{money(category.amount)}</span>
+                    <span className="text-xs font-black">{money(category.amount, wallet.currency)}</span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-pill bg-gray-100">
                     <div className={`${barMap[category.color]} h-full rounded-pill`} style={{ width: `${category.percent}%` }} />
@@ -281,7 +281,7 @@ export default function WalletPage() {
                 <p className="text-sm font-black">{firstGoal.title}</p>
                 <div className="mt-2 h-2 overflow-hidden rounded-pill bg-gray-100"><div className="h-full rounded-pill bg-monkey-green" style={{ width: `${goalPercent}%` }} /></div>
               </div>
-              <div className="text-right text-xs font-black"><p>{money(firstGoal.current)} / {money(firstGoal.target)}</p><p className="mt-1 text-monkey-muted">{goalPercent}%</p></div>
+              <div className="text-right text-xs font-black"><p>{money(firstGoal.current, wallet.currency)} / {money(firstGoal.target, wallet.currency)}</p><p className="mt-1 text-monkey-muted">{goalPercent}%</p></div>
             </div>
           ) : <p className="mt-3 text-sm font-semibold text-monkey-muted">Creá una meta para separar tus ahorros.</p>}
         </section>
@@ -299,7 +299,7 @@ export default function WalletPage() {
                   <p className="text-sm font-black">{transaction.title}</p>
                   <p className="text-[11px] font-semibold text-monkey-muted">{transaction.category} · {transaction.date}</p>
                 </div>
-                <strong className={cn("text-xs", transaction.type === "expense" ? "text-monkey-pink" : "text-monkey-greenDark")}>{transaction.type === "expense" ? "-" : "+"}{money(transaction.amount)}</strong>
+                <strong className={cn("text-xs", transaction.type === "expense" ? "text-monkey-pink" : "text-monkey-greenDark")}>{transaction.type === "expense" ? "-" : "+"}{money(transaction.amount, wallet.currency)}</strong>
                 <button onClick={() => removeTransaction(transaction.id)} className="grid h-8 w-8 place-items-center rounded-full bg-pink-50 text-monkey-pink" aria-label="Eliminar movimiento"><Trash2 className="h-4 w-4" /></button>
               </article>
             )) : <p className="py-3 text-center text-sm font-semibold text-monkey-muted">No hay movimientos todavía.</p>}
@@ -318,20 +318,20 @@ export default function WalletPage() {
           ))}
         </div>
         <Field label="Nombre" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. Almuerzo, mesada, ahorro" />
-        <Field label="Monto" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" type="number" min="0" step="0.01" />
+        <Field label="Monto" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" type="number" min="0" step="1" />
         <SelectField label="Categoría" value={category} options={activeCategories} onChange={setCategory} />
         <Field label="Fecha" value={date} onChange={(event) => setDate(event.target.value)} type="date" />
       </FormSheet>
 
       <FormSheet open={budgetOpen} title="Editar presupuesto" subtitle={`Definí tu límite para ${periodLabels[wallet.period].toLowerCase()}.`} submitLabel="Guardar presupuesto" onClose={() => setBudgetOpen(false)} onSubmit={submitBudget}>
-        <Field label="Presupuesto" value={budget} onChange={(event) => setBudget(event.target.value)} type="number" min="1" step="0.01" />
+        <Field label="Presupuesto" value={budget} onChange={(event) => setBudget(event.target.value)} type="number" min="1" step="1" />
       </FormSheet>
 
       <FormSheet open={goalOpen} title="Nueva meta" subtitle="Separá dinero para algo importante." submitLabel="Guardar meta" onClose={() => setGoalOpen(false)} onSubmit={submitGoal}>
         <div className="grid place-items-center rounded-card bg-green-50 p-4 text-monkey-green"><Target className="h-8 w-8" /><span className="mt-2 text-xs font-black">Meta de ahorro</span></div>
         <Field label="Nombre" value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} placeholder="Ej. Viaje, teléfono, emergencia" />
-        <Field label="Monto objetivo" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} type="number" min="1" step="0.01" />
-        <Field label="Monto actual" value={goalCurrent} onChange={(event) => setGoalCurrent(event.target.value)} type="number" min="0" step="0.01" />
+        <Field label="Monto objetivo" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} type="number" min="1" step="1" />
+        <Field label="Monto actual" value={goalCurrent} onChange={(event) => setGoalCurrent(event.target.value)} type="number" min="0" step="1" />
       </FormSheet>
     </AppShell>
   );

@@ -1,9 +1,26 @@
 import { createId } from "@/lib/local-storage";
-import type { WalletBadge, WalletCategory, WalletColor, WalletData, WalletGoal, WalletPeriod, WalletTransaction, WalletTransactionType } from "@/types";
+import type {
+  WalletBadge,
+  WalletCategory,
+  WalletColor,
+  WalletCurrency,
+  WalletData,
+  WalletGoal,
+  WalletPeriod,
+  WalletTransaction,
+  WalletTransactionType
+} from "@/types";
 
-export type WalletUpdateInput = Partial<Pick<WalletData, "income" | "expenses" | "savings" | "budgetLimit" | "balance" | "tip">>;
-export type WalletTransactionInput = Omit<WalletTransaction, "id" | "color" | "icon">;
-export type WalletGoalInput = Omit<WalletGoal, "id" | "icon"> & { icon?: string };
+export type WalletUpdateInput = Partial<Pick<WalletData, "income" | "expenses" | "savings" | "budgetLimit" | "balance" | "tip" | "currency">>;
+export type WalletTransactionInput = Omit<WalletTransaction, "id" | "color" | "icon" | "currency"> & { currency?: WalletCurrency };
+export type WalletGoalInput = Omit<WalletGoal, "id" | "icon" | "currency"> & { icon?: string; currency?: WalletCurrency };
+
+export const WALLET_DEFAULT_CURRENCY: WalletCurrency = "CRC";
+
+export const walletCurrencyLabels: Record<WalletCurrency, string> = {
+  CRC: "Colones",
+  USD: "Dólares"
+};
 
 const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
   Comida: { color: "orange", icon: "🍕" },
@@ -73,7 +90,8 @@ function buildTip(income: number, expenses: number, savings: number, budgetLimit
 }
 
 export function normalizeWallet(data: WalletData): WalletData {
-  const transactions = Array.isArray(data.transactions) ? data.transactions : [];
+  const currency: WalletCurrency = data.currency || WALLET_DEFAULT_CURRENCY;
+  const transactions = Array.isArray(data.transactions) ? data.transactions.map((tx) => ({ ...tx, currency: tx.currency || currency })) : [];
   const income = transactions.filter((tx) => tx.type === "income" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.income) ? data.income : 0);
   const expenses = transactions.filter((tx) => tx.type === "expense" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.expenses) ? data.expenses : 0);
   const savings = transactions.filter((tx) => tx.type === "saving" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.savings) ? data.savings : Math.max(income - expenses, 0));
@@ -81,11 +99,12 @@ export function normalizeWallet(data: WalletData): WalletData {
   const budgetLimit = Number.isFinite(data.budgetLimit) && data.budgetLimit > 0 ? data.budgetLimit : 1;
   const categories = buildCategories(transactions, data.period);
   const safeCategories = categories.length > 0 ? categories : data.categories.map((category) => ({ ...category, amount: Number.isFinite(category.amount) ? category.amount : 0, percent: Math.max(0, Math.min(100, Number.isFinite(category.percent) ? category.percent : 0)) }));
-  const goals = data.goals.map((goal) => ({ ...goal, current: Math.max(0, Number.isFinite(goal.current) ? goal.current : 0), target: Math.max(1, Number.isFinite(goal.target) ? goal.target : 1) }));
+  const goals = data.goals.map((goal) => ({ ...goal, currency: goal.currency || currency, current: Math.max(0, Number.isFinite(goal.current) ? goal.current : 0), target: Math.max(1, Number.isFinite(goal.target) ? goal.target : 1), targetDate: goal.targetDate || null }));
   const badges = buildBadges(income, expenses, savings, budgetLimit, transactions);
 
   return {
     ...data,
+    currency,
     income,
     expenses,
     savings,
@@ -113,6 +132,7 @@ export function addWalletTransaction(data: WalletData, input: WalletTransactionI
     ...input,
     id: createId("wallet-tx"),
     amount: Math.max(0, Number(input.amount) || 0),
+    currency: input.currency || data.currency || WALLET_DEFAULT_CURRENCY,
     color: meta.color,
     icon: meta.icon
   };
@@ -129,6 +149,8 @@ export function addWalletGoal(data: WalletData, input: WalletGoalInput): WalletD
     title: input.title.trim(),
     target: Math.max(1, Number(input.target) || 1),
     current: Math.max(0, Number(input.current) || 0),
+    currency: input.currency || data.currency || WALLET_DEFAULT_CURRENCY,
+    targetDate: input.targetDate || null,
     icon: input.icon || "🎯"
   };
   return normalizeWallet({ ...data, goals: [goal, ...data.goals] });
