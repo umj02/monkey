@@ -50,3 +50,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ## Siguiente fase recomendada
 
 v2.3 UX Pro + validaciones visuales antes de conectar Supabase.
+
+## v2.2.1 Build Fix
+- Corrige tipos estrictos en CalendarEvent al crear eventos locales.
+- Corrige tipos estrictos en TimeBlock al crear nuevos bloques desde Hoy.
+- Corrige tipos estrictos en Reminder al crear recordatorios.
+- Actualiza tsconfig a jsx react-jsx para evitar modificación automática en Vercel.

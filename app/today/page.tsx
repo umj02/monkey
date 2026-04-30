@@ -41,8 +41,8 @@ export default function TodayPage() {
       if (existing) {
         return list.map((block) => block.id === existing.id ? { ...block, tasks: [...block.tasks, { id: createId("task"), title, done: false }] } : block);
       }
-      return [...list, { id: createId("block"), time, title: "Nuevo bloque", color: "blue", icon: "✨", tasks: [{ id: createId("task"), title, done: false }] }]
-        .sort((a, b) => a.time.localeCompare(b.time));
+      const newBlock: TimeBlock = { id: createId("block"), time, title: "Nuevo bloque", color: "blue", icon: "✨", tasks: [{ id: createId("task"), title, done: false }] };
+      return [...list, newBlock].sort((a, b) => a.time.localeCompare(b.time));
     });
   }
 

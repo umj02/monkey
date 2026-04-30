@@ -1,4 +1,4 @@
-import type { Note, Reminder, TimeBlock } from "@/types";
+import type { CalendarEvent, Note, Reminder, TimeBlock } from "@/types";
 
 export const todaySeed: TimeBlock[] = [
   { id: "wake", time: "06:00", title: "Despertar", color: "purple", icon: "☀️", tasks: [
@@ -30,7 +30,7 @@ export const remindersSeed: Reminder[] = [
   { id: "sleep", title: "Dormir", time: "22:30", repeat: "daily", enabled: false }
 ];
 
-export const calendarSeed = [
+export const calendarSeed: CalendarEvent[] = [
   { id: "ev-1", time: "06:00", title: "😊 Ejercicio", color: "yellow" },
   { id: "ev-2", time: "08:00", title: "🏃‍♂️ Estudiar", color: "blue" },
   { id: "ev-3", time: "12:00", title: "🌱 Clases", color: "green" },

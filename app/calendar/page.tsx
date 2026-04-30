@@ -23,7 +23,8 @@ export default function CalendarPage() {
     const title = window.prompt("Nombre del evento", "✨ Nuevo evento")?.trim();
     if (!title) return;
     const time = window.prompt("Hora", "09:00")?.trim() || "09:00";
-    setEvents((list) => [...list, { id: createId("event"), title, time, color: "green" }].sort((a, b) => a.time.localeCompare(b.time)));
+    const newEvent: CalendarEvent = { id: createId("event"), title, time, color: "green" };
+    setEvents((list) => [...list, newEvent].sort((a, b) => a.time.localeCompare(b.time)));
   }
 
   function editEvent(event: CalendarEvent) {

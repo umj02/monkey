@@ -17,7 +17,8 @@ export default function RemindersPage() {
     const title = window.prompt("Nuevo recordatorio", "Beber agua")?.trim();
     if (!title) return;
     const time = window.prompt("Hora", "08:00")?.trim() || "08:00";
-    setItems((list) => [...list, { id: createId("reminder"), title, time, repeat: "daily", enabled: true }]);
+    const newReminder: Reminder = { id: createId("reminder"), title, time, repeat: "daily", enabled: true };
+    setItems((list) => [...list, newReminder]);
   }
 
   function editReminder(item: Reminder) {
