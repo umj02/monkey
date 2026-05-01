@@ -87,7 +87,7 @@ export function useAuth() {
     },
     loginWithSocial: async (_provider: AuthSession["provider"]): Promise<AuthResult> => ({
       session: null,
-      error: "Google/Apple se activan después desde Supabase Auth Providers.",
+      error: "Estamos preparando este inicio de sesión. Por ahora usá tu correo y contraseña.",
       mode,
     }),
     resendConfirmation: resendConfirmationEmail,
