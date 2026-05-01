@@ -1,8 +1,9 @@
-import { createOptionalClient } from "@/lib/supabase/client";
+import { createOptionalClient, hasSupabaseEnv } from "@/lib/supabase/client";
 import type { AuthSession, Profile } from "@/types";
 
 export type LoginInput = { email: string; password: string };
 export type RegisterInput = { name: string; email: string; password: string };
+export type AuthResult = { session: AuthSession | null; error: string | null; mode: "local" | "supabase"; needsEmailConfirmation?: boolean };
 
 export function createMockSession(profile: Profile): AuthSession {
   return {
@@ -55,22 +56,62 @@ export function mapSupabaseUserToSession(user: { id: string; email?: string | nu
   };
 }
 
-export async function signInWithEmail(input: LoginInput) {
-  const supabase = createOptionalClient();
-  if (!supabase) return { session: createMockSession({ name: "Juan", email: input.email.trim() }), error: null, mode: "local" as const };
-  const { data, error } = await supabase.auth.signInWithPassword({ email: input.email.trim(), password: input.password });
-  return { session: mapSupabaseUserToSession(data.user), error: error?.message || null, mode: "supabase" as const };
+export function mapSupabaseSessionToAppSession(authSession: { user?: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null } | null | undefined): AuthSession | null {
+  return mapSupabaseUserToSession(authSession?.user ?? null);
 }
 
-export async function signUpWithEmail(input: RegisterInput) {
+export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
-  if (!supabase) return { session: createMockSession({ name: input.name.trim(), email: input.email.trim() }), error: null, mode: "local" as const };
+  if (!supabase) {
+    return { session: createMockSession({ name: "Juan", email: input.email.trim() }), error: null, mode: "local" };
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email: input.email.trim(), password: input.password });
+  if (error) return { session: null, error: error.message, mode: "supabase" };
+
+  const session = mapSupabaseSessionToAppSession(data.session);
+  if (!session) return { session: null, error: "No se pudo iniciar sesión. Revisá tu correo o credenciales.", mode: "supabase" };
+  return { session, error: null, mode: "supabase" };
+}
+
+export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult> {
+  const supabase = createOptionalClient();
+  if (!supabase) {
+    return { session: createMockSession({ name: input.name.trim(), email: input.email.trim() }), error: null, mode: "local" };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email: input.email.trim(),
     password: input.password,
     options: { data: { display_name: input.name.trim(), name: input.name.trim() } }
   });
-  return { session: mapSupabaseUserToSession(data.user), error: error?.message || null, mode: "supabase" as const };
+
+  if (error) return { session: null, error: error.message, mode: "supabase" };
+
+  const session = mapSupabaseSessionToAppSession(data.session);
+  if (!session) {
+    return {
+      session: null,
+      error: null,
+      mode: "supabase",
+      needsEmailConfirmation: true
+    };
+  }
+
+  return { session, error: null, mode: "supabase" };
+}
+
+export async function signInWithOAuthProvider(provider: "google" | "apple") {
+  if (!hasSupabaseEnv()) {
+    return { error: "OAuth requiere Supabase configurado.", mode: "local" as const };
+  }
+
+  const supabase = createOptionalClient();
+  if (!supabase) return { error: "Supabase no está configurado.", mode: "supabase" as const };
+
+  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/today` : undefined;
+  const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+  return { error: error?.message || null, mode: "supabase" as const };
 }
 
 export async function signOut() {

@@ -35,9 +35,9 @@ export default function LoginPage() {
     router.push("/today");
   }
 
-  function social(provider: "google" | "apple") {
-    loginWithSocial(provider);
-    router.push("/today");
+  async function social(provider: "google" | "apple") {
+    const result = await loginWithSocial(provider);
+    if (result?.error) setToast({ message: result.error, type: "error" });
   }
 
   return (

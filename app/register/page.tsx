@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Apple } from "lucide-react";
 import { MonkeyLogo } from "@/components/monkey-logo";
 import { AppInput } from "@/components/app-input";
+import { Toast, ToastState } from "@/components/toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { validateRegister } from "@/lib/services/auth-service";
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [toast, setToast] = useState<ToastState>(null);
 
   async function submit() {
     const nextErrors = validateRegister({ name, email, password });
@@ -32,17 +34,22 @@ export default function RegisterPage() {
       setErrors({ email: result.error });
       return;
     }
+    if (result.needsEmailConfirmation) {
+      setToast({ message: "Revisá tu correo y confirmá tu cuenta antes de entrar.", type: "success" });
+      return;
+    }
     setProfile(profile);
     router.push("/today");
   }
 
-  function social(provider: "google" | "apple") {
-    loginWithSocial(provider);
-    router.push("/today");
+  async function social(provider: "google" | "apple") {
+    const result = await loginWithSocial(provider);
+    if (result?.error) setToast({ message: result.error, type: "error" });
   }
 
   return (
     <main className="app-screen px-6 py-10">
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <section className="mx-auto max-w-[360px] text-center">
         <div className="mx-auto w-fit"><MonkeyLogo size={72} /></div>
         <h1 className="mt-5 text-2xl font-black tracking-tight">Create Account</h1>

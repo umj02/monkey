@@ -1,7 +1,8 @@
 import { createOptionalClient } from "@/lib/supabase/client";
-import type { Profile } from "@/types";
+import type { Profile, Settings } from "@/types";
 
 export const initialProfile: Profile = { name: "Juan Pérez", email: "juanperez@email.com" };
+export const initialSettings: Settings = { darkMode: false, sounds: true, sync: true, theme: "colorful" };
 
 export async function fetchSupabaseProfile(userId: string, fallbackEmail = ""): Promise<Profile | null> {
   const supabase = createOptionalClient() as any;
