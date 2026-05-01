@@ -2,13 +2,13 @@
 
 Base: v2.5 estable.
 
-Cambios:
-- Corrige export faltante `initialSettings` en `profile-service`.
-- Login y register solo redirigen a `/today` cuando existe sesión real.
-- Registro con confirmación de email muestra aviso y no entra a la app.
-- Google/Apple usan Supabase OAuth y ya no hacen redirect mock.
-- `AppShell` protege rutas internas y redirige a `/login` si no hay sesión.
+Cambios incluidos:
+- Login y registro requieren respuesta real de Supabase antes de entrar a `/today`.
+- Google y Apple ya no hacen redirect mock; si OAuth no está configurado muestran error.
+- Rutas internas protegidas con `AppShell`.
+- `use-settings.ts` ya no depende de `initialSettings` exportado desde `profile-service`, evitando el error de Turbopack/Vercel.
+- Validación estática de imports/exports OK en 54 archivos TS/TSX.
 
-Notas:
-- Si Supabase Email Confirmation está activado, el usuario debe confirmar correo antes de entrar.
-- Google/Apple requieren configurar proveedores OAuth en Supabase para funcionar.
+Nota:
+- En este entorno `npm install` no completó por timeout antes de crear `node_modules`, así que no se pudo ejecutar `next build` localmente aquí.
+- El error exacto reportado por Vercel (`initialSettings doesn't exist`) fue eliminado de raíz quitando ese import.
