@@ -4,15 +4,21 @@ import type { Profile, Settings } from "@/types";
 export const initialProfile: Profile = { name: "Juan Pérez", email: "juanperez@email.com" };
 export const initialSettings: Settings = { darkMode: false, sounds: true, sync: true, theme: "colorful" };
 
+type ProfileRow = {
+  display_name: string | null;
+  email: string | null;
+};
+
 export async function fetchSupabaseProfile(userId: string, fallbackEmail = ""): Promise<Profile | null> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return null;
   const { data, error } = await supabase.from("profiles").select("display_name, email").eq("id", userId).maybeSingle();
   if (error) return null;
-  return { name: data?.display_name || "Juan", email: data?.email || fallbackEmail };
+  const row = data as ProfileRow | null;
+  return { name: row?.display_name || "Juan", email: row?.email || fallbackEmail };
 }
 
-export async function upsertSupabaseProfile(userId: string, profile: Profile) {
+export async function upsertSupabaseProfile(userId: string, profile: Profile): Promise<void> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return;
   await supabase.from("profiles").upsert({ id: userId, display_name: profile.name, email: profile.email }, { onConflict: "id" });

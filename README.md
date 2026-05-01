@@ -1,50 +1,21 @@
-# Monkey Checks v2.5 — Supabase Auth + DB Real
+# Monkey Checks v2.5.2 — Full Supabase Stable
 
-Base: v2.4.9 Intro Safe Area + Hero Fix.
+Base limpia tomada de v2.5.
 
-## Qué incluye
+## Incluye
+- Auth real con Supabase.
+- Login/Register sin redirección mock.
+- Google/Apple no entran directo hasta configurar providers reales.
+- Protección de rutas internas con sesión obligatoria.
+- `supabase-data-service.ts` tipado para evitar `implicit any` en Vercel.
+- `initialSettings` corregido.
+- Migración full para base vacía en `supabase/migrations/0001_v25_full_schema.sql`.
 
-- Auth real con Supabase Email + Password.
-- Fallback local si no existen variables de Supabase.
-- Perfil sincronizable con Supabase.
-- CRUD preparado/conectado para:
-  - Hoy / tareas por bloques de hora.
-  - Calendario.
-  - Notas.
-  - Recordatorios.
-  - Wallet / Finanzas.
-- Migración única para base de datos vacía:
-  - `supabase/migrations/0001_v25_full_schema.sql`
-- RLS por usuario en todas las tablas.
-- Trigger automático para crear perfil al registrar usuario.
-
-## Antes de correr la app con DB
-
-1. En Supabase, abrir **SQL Editor**.
-2. Crear un nuevo query.
-3. Pegar el contenido completo de:
-
-```txt
-supabase/migrations/0001_v25_full_schema.sql
-```
-
-4. Dar **Run**.
-
-## Variables en Vercel
-
+## Variables requeridas en Vercel
 ```env
-NEXT_PUBLIC_SUPABASE_URL=TU_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-## Nota importante de Auth
-
-Para probar rápido, en Supabase Auth podés desactivar temporalmente la confirmación de email. Si la dejás activa, el usuario deberá confirmar el correo antes de tener sesión completa.
-
-## Build
-
-```bash
-npm install
-npm run build
-```
-
+## Importante
+Si tenés confirmación de email activada en Supabase, el registro muestra mensaje para confirmar correo y no entra a `/today` hasta que exista sesión real.
