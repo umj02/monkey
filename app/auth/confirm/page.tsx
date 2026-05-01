@@ -6,6 +6,12 @@ import { Check, ShieldCheck } from "lucide-react";
 import { createOptionalClient } from "@/lib/supabase/client";
 
 type ConfirmState = "checking" | "success" | "error";
+type EmailOtpType = "signup" | "invite" | "magiclink" | "recovery" | "email_change" | "email";
+
+function normalizeOtpType(value: string | null): EmailOtpType {
+  const validTypes: EmailOtpType[] = ["signup", "invite", "magiclink", "recovery", "email_change", "email"];
+  return validTypes.includes(value as EmailOtpType) ? (value as EmailOtpType) : "email";
+}
 
 export default function ConfirmAccountPage() {
   const router = useRouter();
@@ -22,10 +28,22 @@ export default function ConfirmAccountPage() {
       try {
         const supabase = createOptionalClient();
         const currentUrl = typeof window !== "undefined" ? new URL(window.location.href) : null;
-        const code = currentUrl?.searchParams.get("code");
+        const code = currentUrl?.searchParams.get("code") ?? null;
+        const tokenHash = currentUrl?.searchParams.get("token_hash") ?? null;
+        const otpType = normalizeOtpType(currentUrl?.searchParams.get("type") ?? null);
 
-        if (supabase && code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!supabase) {
+          setState("error");
+          setMessage("No se pudo conectar con Supabase. Revisá las variables de entorno en Vercel.");
+          return;
+        }
+
+        if (tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: otpType,
+          });
+
           if (error) {
             setState("error");
             setMessage("No pudimos validar el enlace. Intentá iniciar sesión o solicitá un nuevo correo.");
@@ -33,10 +51,28 @@ export default function ConfirmAccountPage() {
           }
 
           await supabase.auth.signOut();
+          setState("success");
+          setMessage("Tu cuenta fue confirmada.");
+          return;
         }
 
-        setState("success");
-        setMessage("Tu cuenta fue confirmada.");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error) {
+            setState("error");
+            setMessage("No pudimos validar el enlace. Intentá iniciar sesión o solicitá un nuevo correo.");
+            return;
+          }
+
+          await supabase.auth.signOut();
+          setState("success");
+          setMessage("Tu cuenta fue confirmada.");
+          return;
+        }
+
+        setState("error");
+        setMessage("El enlace de confirmación no incluye un código válido. Solicitá un nuevo correo de confirmación.");
       } catch {
         setState("error");
         setMessage("Ocurrió un problema al confirmar tu cuenta. Intentá iniciar sesión nuevamente.");
