@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Apple, Eye } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { MonkeyLogo } from "@/components/monkey-logo";
 import { AppInput } from "@/components/app-input";
 import { Toast, ToastState } from "@/components/toast";
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const { profile } = useProfile();
   const [email, setEmail] = useState(profile.email);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
@@ -51,8 +52,21 @@ export default function LoginPage() {
           <div><AppInput placeholder="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /><p className="mt-1 min-h-4 text-xs font-bold text-monkey-pink">{errors.email}</p></div>
           <div>
             <div className="relative">
-              <AppInput placeholder="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-              <Eye className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-monkey-muted" />
+              <AppInput
+                placeholder="Contraseña"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="pr-12"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-monkey-muted transition hover:bg-gray-100 active:scale-95"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             <p className="mt-1 min-h-4 text-xs font-bold text-monkey-pink">{errors.password}</p>
           </div>
@@ -61,8 +75,8 @@ export default function LoginPage() {
         </form>
         <div className="my-5 flex items-center gap-4 text-xs text-monkey-muted"><span className="h-px flex-1 bg-gray-200" />o<span className="h-px flex-1 bg-gray-200" /></div>
         <div className="space-y-3">
-          <button onClick={() => social("google")} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[18px] border border-gray-200 bg-white text-sm font-semibold shadow-sm"><span className="text-lg">G</span>Continuar con Google</button>
-          <button onClick={() => social("apple")} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[18px] border border-gray-200 bg-white text-sm font-semibold shadow-sm"><Apple className="h-5 w-5" />Continuar con Apple</button>
+          <button type="button" onClick={() => social("google")} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[18px] border border-gray-200 bg-white text-sm font-semibold shadow-sm transition active:scale-[.98]"><img src="/assets/icons/google.png" alt="Google" className="h-5 w-5 object-contain" />Continuar con Google</button>
+          <button type="button" onClick={() => social("apple")} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[18px] border border-gray-200 bg-white text-sm font-semibold shadow-sm transition active:scale-[.98]"><img src="/assets/icons/apple.png" alt="Apple" className="h-5 w-5 object-contain" />Continuar con Apple</button>
         </div>
         <p className="mt-6 text-center text-sm text-gray-500">¿No tenés cuenta? <Link href="/register" className="font-bold text-monkey-green">Registrarme</Link></p>
       </section>

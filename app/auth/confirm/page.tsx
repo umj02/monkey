@@ -118,8 +118,8 @@ export default function ConfirmAccountPage() {
         </div>
 
         <img
-          src="/assets/monkey/success/aprobacion.png"
-          alt="Mono celebrando"
+          src="/assets/monkey/faces/face-alt.png"
+          alt="Mono Monkey Checks"
           className="mt-8 h-[150px] w-auto object-contain drop-shadow-[0_18px_24px_rgba(17,24,39,.14)] animate-floaty"
         />
 
