@@ -102,6 +102,25 @@ export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult>
   return { session, error: null, mode: "supabase" };
 }
 
+export async function resendConfirmationEmail(email: string): Promise<{ error: string | null; mode: "local" | "supabase" }> {
+  const supabase = createOptionalClient();
+  if (!supabase) {
+    if (hasSupabaseEnv()) return { error: "No se pudo inicializar Supabase.", mode: "supabase" };
+    return { error: null, mode: "local" };
+  }
+
+  const emailRedirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined;
+
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim(),
+    options: { emailRedirectTo },
+  });
+
+  if (error) return { error: error.message, mode: "supabase" };
+  return { error: null, mode: "supabase" };
+}
+
 export async function signOut(): Promise<void> {
   const supabase = createOptionalClient();
   if (supabase) await supabase.auth.signOut();

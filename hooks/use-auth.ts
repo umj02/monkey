@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createOptionalClient } from "@/lib/supabase/client";
 import { useLocalStorageState } from "@/lib/local-storage";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
-import { createMockSession, mapSupabaseUserToSession, signInWithEmail, signOut, signUpWithEmail } from "@/lib/services/auth-service";
+import { createMockSession, mapSupabaseUserToSession, resendConfirmationEmail, signInWithEmail, signOut, signUpWithEmail } from "@/lib/services/auth-service";
 import type { AuthSession, Profile } from "@/types";
 import type { AuthResult, LoginInput, RegisterInput } from "@/lib/services/auth-service";
 
@@ -90,6 +90,7 @@ export function useAuth() {
       error: "Google/Apple se activan después desde Supabase Auth Providers.",
       mode,
     }),
+    resendConfirmation: resendConfirmationEmail,
     logout,
   };
 }

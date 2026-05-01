@@ -33,3 +33,9 @@ El registro envía `emailRedirectTo` a `/auth/confirm`. En Supabase debe configu
 - Redirect URL permitida: `https://tu-app.vercel.app/auth/confirm`
 
 Después de confirmar, la pantalla muestra contador y redirige a `/login`.
+
+## v2.5.6 — Register Confirmation UX
+- Después de crear cuenta, el formulario queda bloqueado y la contraseña se limpia.
+- Se agrega panel de “Correo enviado”.
+- Se agrega botón “Reenviar correo” con contador de 60 segundos.
+- El reenvío usa Supabase Auth `resend` con redirect a `/auth/confirm`.
