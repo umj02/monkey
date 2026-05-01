@@ -39,3 +39,12 @@ Después de confirmar, la pantalla muestra contador y redirige a `/login`.
 - Se agrega panel de “Correo enviado”.
 - Se agrega botón “Reenviar correo” con contador de 60 segundos.
 - El reenvío usa Supabase Auth `resend` con redirect a `/auth/confirm`.
+
+
+## v2.5.7 — Smart Email Control
+
+- Cooldown de reenvío ampliado a 120 segundos.
+- Detección de rate limit de Supabase Auth.
+- Bloqueo dinámico de 180 segundos cuando Supabase limita correos.
+- Mensajes UX más claros para registro y reenvío.
+- Mantiene confirm flow y Supabase Auth estable.

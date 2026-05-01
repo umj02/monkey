@@ -11,7 +11,12 @@ import { useProfile } from "@/hooks/use-profile";
 import { validateRegister } from "@/lib/services/auth-service";
 import { useEffect, useState } from "react";
 
-const RESEND_SECONDS = 60;
+const RESEND_COOLDOWN_SECONDS = 120;
+const RATE_LIMIT_COOLDOWN_SECONDS = 180;
+
+function isRateLimitError(message: string) {
+  return /rate.?limit|too many|exceeded|over email send rate/i.test(message);
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,6 +31,8 @@ export default function RegisterPage() {
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [confirmedEmail, setConfirmedEmail] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [lastEmailStatus, setLastEmailStatus] = useState<"idle" | "sent" | "resent" | "rate-limited">("idle");
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -51,6 +58,18 @@ export default function RegisterPage() {
     setSubmitting(false);
 
     if (result.error) {
+      if (isRateLimitError(result.error)) {
+        setConfirmedEmail(profile.email);
+        setPassword("");
+        setShowPassword(false);
+        setErrors({});
+        setPendingConfirmation(true);
+        setRateLimited(true);
+        setLastEmailStatus("rate-limited");
+        setResendCooldown(RATE_LIMIT_COOLDOWN_SECONDS);
+        setToast({ message: "Supabase limitó temporalmente los correos. Esperá unos minutos antes de volver a intentar.", type: "error" });
+        return;
+      }
       setErrors({ email: result.error });
       return;
     }
@@ -61,8 +80,10 @@ export default function RegisterPage() {
       setShowPassword(false);
       setErrors({});
       setPendingConfirmation(true);
-      setResendCooldown(RESEND_SECONDS);
-      setToast({ message: "Revisá tu correo para confirmar la cuenta antes de entrar.", type: "success" });
+      setRateLimited(false);
+      setLastEmailStatus("sent");
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setToast({ message: "Correo enviado. Revisá tu bandeja antes de pedir otro enlace.", type: "success" });
       return;
     }
 
@@ -77,19 +98,39 @@ export default function RegisterPage() {
     setResending(false);
 
     if (result.error) {
+      if (isRateLimitError(result.error)) {
+        setRateLimited(true);
+        setLastEmailStatus("rate-limited");
+        setResendCooldown(RATE_LIMIT_COOLDOWN_SECONDS);
+        setToast({ message: "Supabase limitó temporalmente los correos. Probá de nuevo en unos minutos.", type: "error" });
+        return;
+      }
       setToast({ message: result.error, type: "error" });
       return;
     }
 
-    setResendCooldown(RESEND_SECONDS);
-    setToast({ message: "Te reenviamos el correo de confirmación.", type: "success" });
+    setRateLimited(false);
+    setLastEmailStatus("resent");
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    setToast({ message: "Te reenviamos el correo de confirmación. Esperá un momento antes de pedir otro.", type: "success" });
   }
 
   function editEmail() {
     setPendingConfirmation(false);
     setConfirmedEmail("");
     setResendCooldown(0);
+    setRateLimited(false);
+    setLastEmailStatus("idle");
     setToast(null);
+  }
+
+  function resendButtonLabel() {
+    if (resending) return "Reenviando...";
+    if (resendCooldown > 0) {
+      return rateLimited ? `Reintentar en ${resendCooldown}s` : `Reenviar correo en ${resendCooldown}s`;
+    }
+    if (lastEmailStatus === "resent") return "Reenviar correo otra vez";
+    return "Reenviar correo";
   }
 
   async function social(provider: "google" | "apple") {
@@ -119,11 +160,21 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-[18px] bg-green-50 p-4 text-sm font-semibold leading-5 text-green-800">
+            <div className={`mt-4 rounded-[18px] p-4 text-sm font-semibold leading-5 ${rateLimited ? "bg-orange-50 text-orange-800" : "bg-green-50 text-green-800"}`}>
               <div className="flex gap-2">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>Confirmá tu correo para activar tu cuenta. Después vas a poder entrar desde Login.</span>
+                <span>
+                  {rateLimited
+                    ? "Hicimos muchas solicitudes de correo en poco tiempo. Por seguridad, esperá a que termine el contador."
+                    : "Confirmá tu correo para activar tu cuenta. Después vas a poder entrar desde Login."}
+                </span>
               </div>
+            </div>
+
+            <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold leading-5 text-monkey-muted">
+              {resendCooldown > 0
+                ? `Protección anti-spam activa: podés reenviar en ${resendCooldown}s.`
+                : "Ya podés solicitar un nuevo enlace si no llegó el correo."}
             </div>
 
             <button
@@ -133,7 +184,7 @@ export default function RegisterPage() {
               className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-pill bg-monkey-green px-4 text-sm font-black text-white shadow-float transition active:scale-95 disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
             >
               <RotateCcw className="h-4 w-4" />
-              {resending ? "Reenviando..." : resendCooldown > 0 ? `Reenviar correo en ${resendCooldown}s` : "Reenviar correo"}
+              {resendButtonLabel()}
             </button>
 
             <button
