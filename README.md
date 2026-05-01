@@ -19,3 +19,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ## Importante
 Si tenés confirmación de email activada en Supabase, el registro muestra mensaje para confirmar correo y no entra a `/today` hasta que exista sesión real.
+
+
+## v2.5.3 — Confirm Flow
+
+Nueva ruta de confirmación de cuenta:
+
+- `/auth/confirm`
+
+El registro envía `emailRedirectTo` a `/auth/confirm`. En Supabase debe configurarse:
+
+- Site URL: URL real de Vercel
+- Redirect URL permitida: `https://tu-app.vercel.app/auth/confirm`
+
+Después de confirmar, la pantalla muestra contador y redirige a `/login`.

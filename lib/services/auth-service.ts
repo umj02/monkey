@@ -75,10 +75,15 @@ export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult>
     return { session: createMockSession({ name: input.name.trim(), email: input.email.trim() }), error: null, mode: "local" };
   }
 
+  const emailRedirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined;
+
   const { data, error } = await supabase.auth.signUp({
     email: input.email.trim(),
     password: input.password,
-    options: { data: { display_name: input.name.trim(), name: input.name.trim() } },
+    options: {
+      data: { display_name: input.name.trim(), name: input.name.trim() },
+      emailRedirectTo,
+    },
   });
 
   if (error) return { session: null, error: error.message, mode: "supabase" };
