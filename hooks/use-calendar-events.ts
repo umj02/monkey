@@ -17,6 +17,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import type { CalendarEvent } from "@/types";
 
+export type SyncStatus = "idle" | "loading" | "saving" | "synced" | "error";
+
 export function useCalendarEvents() {
   const { session, mode } = useAuth();
   const [events, setEvents, ready] = useLocalStorageState<CalendarEvent[]>(
@@ -25,14 +27,31 @@ export function useCalendarEvents() {
     [...LEGACY_STORAGE_KEYS.calendarEvents],
   );
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session || mode !== "supabase") return;
     let cancelled = false;
     setSyncing(true);
+    setSyncStatus("loading");
+    setLastError(null);
     fetchCalendarEvents()
       .then((remote) => {
-        if (!cancelled && remote) setEvents(remote);
+        if (cancelled) return;
+        if (remote) {
+          setEvents(remote);
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("error");
+          setLastError("No se pudo cargar el calendario.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSyncStatus("error");
+          setLastError("No se pudo cargar el calendario.");
+        }
       })
       .finally(() => {
         if (!cancelled) setSyncing(false);
@@ -42,32 +61,68 @@ export function useCalendarEvents() {
     };
   }, [session?.userId, mode, setEvents]);
 
-  function createEvent(input: CalendarEventInput) {
+  async function createEvent(input: CalendarEventInput): Promise<CalendarEvent> {
     const event = createCalendarEvent(input);
     setEvents((list) => sortCalendarEvents([...list, event]));
+
     if (session && mode === "supabase") {
-      void upsertCalendarEvent(event).then((remote) => {
-        if (!remote) return;
+      setSyncStatus("saving");
+      setLastError(null);
+      const remote = await upsertCalendarEvent(event);
+      if (remote) {
         setEvents((list) =>
           sortCalendarEvents(
             list.map((item) => (item.id === event.id ? remote : item)),
           ),
         );
-      });
+        setSyncStatus("synced");
+        return remote;
+      }
+      setSyncStatus("error");
+      setLastError("La actividad quedó local, pero no se pudo sincronizar.");
     }
+
+    return event;
   }
 
-  function updateEvent(id: string, input: CalendarEventInput) {
+  async function updateEvent(id: string, input: CalendarEventInput): Promise<CalendarEvent> {
     const event = { id, ...input, title: input.title.trim() };
     setEvents((list) =>
       sortCalendarEvents(list.map((item) => (item.id === id ? event : item))),
     );
-    if (session && mode === "supabase") void upsertCalendarEvent(event);
+
+    if (session && mode === "supabase") {
+      setSyncStatus("saving");
+      setLastError(null);
+      const remote = await upsertCalendarEvent(event);
+      if (remote) {
+        setEvents((list) => sortCalendarEvents(list.map((item) => (item.id === id ? remote : item))));
+        setSyncStatus("synced");
+        return remote;
+      }
+      setSyncStatus("error");
+      setLastError("La actividad quedó local, pero no se pudo sincronizar.");
+    }
+
+    return event;
   }
 
-  function deleteEvent(id: string) {
+  async function deleteEvent(id: string): Promise<void> {
+    const previous = events;
     setEvents((list) => list.filter((item) => item.id !== id));
-    if (session && mode === "supabase") void deleteCalendarEventRemote(id);
+
+    if (session && mode === "supabase") {
+      setSyncStatus("saving");
+      setLastError(null);
+      try {
+        await deleteCalendarEventRemote(id);
+        setSyncStatus("synced");
+      } catch {
+        setEvents(previous);
+        setSyncStatus("error");
+        setLastError("No se pudo eliminar la actividad.");
+      }
+    }
   }
 
   return {
@@ -75,6 +130,8 @@ export function useCalendarEvents() {
     setEvents,
     ready,
     syncing,
+    syncStatus,
+    lastError,
     createEvent,
     updateEvent,
     deleteEvent,

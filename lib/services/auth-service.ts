@@ -40,6 +40,11 @@ export function validateRegister(input: RegisterInput) {
   return errors;
 }
 
+
+function allowLocalAuthFallback() {
+  return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_ALLOW_LOCAL_AUTH === "true";
+}
+
 export function mapSupabaseUserToSession(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null): AuthSession | null {
   if (!user) return null;
   const metadataName = user.user_metadata?.display_name ?? user.user_metadata?.name;
@@ -56,7 +61,7 @@ export function mapSupabaseUserToSession(user: { id: string; email?: string | nu
 export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv()) return { session: null, error: "No se pudo inicializar Supabase.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
     return { session: createMockSession({ name: "Juan", email: input.email.trim() }), error: null, mode: "local" };
   }
 
@@ -71,7 +76,7 @@ export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
 export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv()) return { session: null, error: "No se pudo inicializar Supabase.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
     return { session: createMockSession({ name: input.name.trim(), email: input.email.trim() }), error: null, mode: "local" };
   }
 
@@ -105,7 +110,7 @@ export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult>
 export async function resendConfirmationEmail(email: string): Promise<{ error: string | null; mode: "local" | "supabase" }> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv()) return { error: "No se pudo inicializar Supabase.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { error: "Supabase no está configurado para producción.", mode: "supabase" };
     return { error: null, mode: "local" };
   }
 

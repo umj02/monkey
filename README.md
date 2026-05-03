@@ -107,3 +107,39 @@ Incluye:
 - Feedback de sincronización en calendario cuando Supabase está cargando datos.
 - Bottom sheets con botón principal sticky para mejorar uso en móvil.
 - Preparado para correr `npm run typecheck` y `npm run build` antes del despliegue final.
+
+## v2.12.1 — Production Readiness Real Fix
+
+Base: v2.12 Production Readiness + Calendar Stability.
+
+Cambios incluidos:
+- Divide la vista de calendario en componentes reutilizables bajo `components/calendar/`:
+  - `calendar-header.tsx`
+  - `calendar-view-toggle.tsx`
+  - `calendar-week-strip.tsx`
+  - `calendar-day-summary.tsx`
+  - `calendar-month-view.tsx`
+  - `calendar-timeline.tsx`
+- Fija versiones exactas en `package.json` para evitar builds rotos por dependencias `latest`.
+- Agrega estados de sincronización en calendario: cargando, guardando, sincronizado y error.
+- Liga alertas creadas desde calendario con su evento mediante `calendarEventId`.
+- Al eliminar una actividad de calendario, elimina también su alerta relacionada.
+- Agrega migración obligatoria `0004_v2121_calendar_event_reminders.sql` para `reminders.calendar_event_id`.
+- Endurece el fallback local: en producción no se crea sesión mock/local si Supabase no está configurado.
+- Mantiene las mejoras de v2.12 para assets reales, sheets móviles y validación de conflictos.
+
+### Migración obligatoria para v2.12.1
+
+Correr en Supabase SQL Editor después de `0003_v210_calendar_end_time.sql`:
+
+```txt
+supabase/migrations/0004_v2121_calendar_event_reminders.sql
+```
+
+### Validación recomendada
+
+```bash
+npm install
+npm run typecheck
+npm run build
+```

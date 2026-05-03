@@ -32,6 +32,7 @@ export type Reminder = {
   repeat: "daily" | "weekly" | "custom";
   enabled: boolean;
   taskId?: string | null;
+  calendarEventId?: string | null;
 };
 
 export type ReminderStatus = "today" | "upcoming" | "overdue" | "inactive";
@@ -48,6 +49,7 @@ export type ReminderPanelItem = {
   repeat?: Reminder["repeat"];
   reminderId?: string | null;
   taskId?: string | null;
+  calendarEventId?: string | null;
   blockId?: string | null;
   blockTitle?: string | null;
   blockTime?: string | null;

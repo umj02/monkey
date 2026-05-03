@@ -3,12 +3,10 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import {
   Bell,
-  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  ListFilter,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -23,6 +21,12 @@ import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useReminders } from "@/hooks/use-reminders";
 import type { CalendarEvent, Reminder } from "@/types";
 import { cn } from "@/lib/utils";
+import { CalendarHeader } from "@/components/calendar/calendar-header";
+import { CalendarViewToggle, type CalendarViewMode } from "@/components/calendar/calendar-view-toggle";
+import { CalendarWeekStrip } from "@/components/calendar/calendar-week-strip";
+import { CalendarDaySummary } from "@/components/calendar/calendar-day-summary";
+import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import { CalendarTimeline } from "@/components/calendar/calendar-timeline";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "M", "J", "V", "S", "D"];
@@ -61,7 +65,6 @@ const timelineHours = [
 const DEFAULT_DURATION_MINUTES = 60;
 const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
 
-type CalendarViewMode = "week" | "month";
 type CalendarSheetMode = "closed" | "event" | "settings" | "month";
 type CalendarCategory = "exercise" | "study" | "class" | "food" | "project" | "rest" | "other";
 type AlertOption = "none" | "exact" | "5" | "15" | "30";
@@ -385,8 +388,8 @@ function ActivityTypeSelect({
 }
 
 export default function CalendarPage() {
-  const { events, syncing, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
-  const { createReminder } = useReminders();
+  const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
+  const { upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [sheetMode, setSheetMode] = useState<CalendarSheetMode>("closed");
@@ -480,7 +483,7 @@ export default function CalendarPage() {
     setSheetMode("event");
   }
 
-  function submitEvent() {
+  async function submitEvent() {
     const nextErrors: CalendarFormErrors = {};
     const cleanTitle = title.trim();
     const cleanEndTime = endTime.trim();
@@ -516,16 +519,18 @@ export default function CalendarPage() {
       date: selectedDateKey,
     } satisfies Omit<CalendarEvent, "id">;
 
-    if (editing) updateEvent(editing.id, payload);
-    else createEvent(payload);
+    const savedEvent = editing ? await updateEvent(editing.id, payload) : await createEvent(payload);
 
     const alertTime = createReminderTime(selectedDateKey, time, alertOption);
     if (alertTime) {
-      createReminder({
+      upsertCalendarReminder(savedEvent.id, {
         title: `Alerta: ${cleanTitle}`,
         time: alertTime,
         repeat: "custom" as Reminder["repeat"],
+        calendarEventId: savedEvent.id,
       });
+    } else if (editing) {
+      deleteCalendarEventReminders(editing.id);
     }
 
     setSheetMode("closed");
@@ -536,218 +541,57 @@ export default function CalendarPage() {
     <AppShell>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <section className="page-pad pb-28 pt-8">
-        <header className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setSheetMode("month")}
-            className="flex items-center gap-2 text-[26px] font-black tracking-[-0.04em] text-monkey-ink transition active:scale-95"
-            aria-label="Cambiar mes"
-          >
-            {visibleMonth}
-            <ChevronDown className="h-5 w-5" />
-          </button>
+        <CalendarHeader
+          month={visibleMonth}
+          onOpenMonth={() => setSheetMode("month")}
+          onOpenSettings={() => setSheetMode("settings")}
+          onAdd={openNew}
+        />
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSheetMode("settings")}
-              className="grid h-10 w-10 place-items-center rounded-full bg-white text-monkey-ink shadow-sm transition active:scale-95"
-              aria-label="Configurar calendario y alertas"
-            >
-              <ListFilter className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={openNew}
-              className="grid h-10 w-10 place-items-center rounded-full bg-white text-monkey-ink shadow-sm transition active:scale-95"
-              aria-label="Agregar actividad"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
-        <div className="mt-5 rounded-[22px] border border-green-100 bg-white p-2 shadow-sm">
-          <div className="grid h-10 grid-cols-2 rounded-[18px] bg-gray-100 p-1 text-xs font-black">
-            <button
-              type="button"
-              onClick={() => setViewMode("week")}
-              className={cn("rounded-[16px] transition active:scale-95", viewMode === "week" ? "bg-monkey-green text-white shadow-sm" : "text-monkey-muted")}
-            >
-              Semana
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("month")}
-              className={cn("rounded-[16px] transition active:scale-95", viewMode === "month" ? "bg-monkey-green text-white shadow-sm" : "text-monkey-muted")}
-            >
-              Mes
-            </button>
-          </div>
-        </div>
+        <CalendarViewToggle value={viewMode} onChange={setViewMode} />
 
         {viewMode === "week" ? (
           <>
-            <div className="mt-4 grid grid-cols-7 gap-2">
-              {weekDates.map((dayDate, index) => {
-                const dateKey = toDateKey(dayDate);
-                const active = dateKey === selectedDateKey;
-                const hasEvent = eventDays.has(dateKey);
-                return (
-                  <button
-                    key={dateKey}
-                    type="button"
-                    onClick={() => selectDay(dayDate)}
-                    className={cn(
-                      "relative min-w-0 rounded-[18px] py-3 text-center transition active:scale-95",
-                      active ? "bg-monkey-green text-white shadow-card" : "bg-white text-monkey-ink shadow-sm",
-                    )}
-                  >
-                    <p className="text-[10px] font-black opacity-70">{weekLabels[index]}</p>
-                    <p className="mt-1 text-base font-black leading-none">{dayDate.getDate()}</p>
-                    {hasEvent ? <span className={cn("absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full", active ? "bg-white" : "bg-monkey-green")} /> : null}
-                  </button>
-                );
-              })}
-            </div>
+            <CalendarWeekStrip
+              dates={weekDates}
+              selectedDateKey={selectedDateKey}
+              eventDays={eventDays}
+              getDateKey={toDateKey}
+              onSelect={selectDay}
+            />
 
-            <div className="mt-5 flex items-center justify-between rounded-[20px] bg-white px-4 py-3 shadow-sm">
-              <div className="min-w-0 flex-1 pr-3">
-                <p className="text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">Día seleccionado</p>
-                <p className="mt-1 truncate text-sm font-black capitalize text-monkey-ink">{formatLongDate(selectedDate)}</p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-monkey-greenDark">
-                  {eventsForSelectedDate.length} act.
-                </span>
-                {syncing ? <span className="rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-black text-monkey-muted">Sync</span> : null}
-              </div>
-            </div>
+            <CalendarDaySummary
+              label={formatLongDate(selectedDate)}
+              count={eventsForSelectedDate.length}
+              syncStatus={syncStatus}
+            />
 
-            {eventsForSelectedDate.length === 0 ? (
-              <div className="mt-5">
-                <div className="rounded-[26px] bg-white p-6 shadow-card">
-                  <EmptyState title="Día libre" body="Agregá una actividad con el botón verde o elegí otro día." />
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
-                <div className="grid grid-cols-[56px_1fr] gap-3">
-                  {visibleTimelineHours.map((hour) => {
-                    const hiddenByLongEvent = isCoveredByPreviousLongEvent(eventsForSelectedDate, hour);
-                    if (hiddenByLongEvent) return null;
-
-                    const slotKey = `${selectedDateKey}-${hour}`;
-                    const slotEvents = eventsForHour(eventsForSelectedDate, hour);
-                    const isExpanded = expandedHourKey === slotKey;
-                    const visibleEvents = isExpanded ? slotEvents : slotEvents.slice(0, MAX_VISIBLE_EVENTS_PER_HOUR);
-                    const extraCount = !isExpanded ? Math.max(0, slotEvents.length - MAX_VISIBLE_EVENTS_PER_HOUR) : 0;
-                    const rowHeight = visibleEvents.length > 1 ? Math.max(128, visibleEvents.length * 62 + 18) : visibleEvents.length === 1 ? 76 : 58;
-
-                    return (
-                      <div key={hour} className="contents">
-                        <div className="flex items-start pt-2" style={{ minHeight: rowHeight }}>
-                          <p className="text-[12px] font-black text-monkey-muted">{hour}</p>
-                        </div>
-                        <div className="relative border-b border-gray-100 pb-2 pt-1 last:border-b-0" style={{ minHeight: rowHeight }}>
-                          <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
-                          {visibleEvents.length ? (
-                            <div className="space-y-2">
-                              {visibleEvents.map((event) => {
-                                const meta = categoryFromEvent(event);
-                                const long = isLongEvent(event);
-                                return (
-                                  <button
-                                    key={event.id}
-                                    type="button"
-                                    onClick={() => openEdit(event)}
-                                    className={cn(
-                                      "flex min-h-[52px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]",
-                                      meta.pillClass,
-                                    )}
-                                  >
-                                    <AssetThumb icon={meta.iconKey} size={30} className="rounded-[10px] bg-white/40" />
-                                    <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
-                                    <span className="shrink-0 rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80">
-                                      {long ? eventRangeLabel(event) : event.time}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                              {extraCount ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedHourKey(slotKey)}
-                                  className="h-8 rounded-full bg-gray-100 px-3 text-[11px] font-black text-monkey-muted transition active:scale-95"
-                                >
-                                  +{extraCount} más en esta hora
-                                </button>
-                              ) : null}
-                              {isExpanded && slotEvents.length > MAX_VISIBLE_EVENTS_PER_HOUR ? (
-                                <p className="px-1 text-[10px] font-bold text-monkey-muted">Mostrando todas. Se contrae automáticamente si no editás nada.</p>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <CalendarTimeline
+              events={eventsForSelectedDate}
+              hours={visibleTimelineHours}
+              selectedDateKey={selectedDateKey}
+              expandedHourKey={expandedHourKey}
+              maxVisibleEventsPerHour={MAX_VISIBLE_EVENTS_PER_HOUR}
+              categoryFromEvent={categoryFromEvent}
+              stripEmoji={stripEmoji}
+              isLongEvent={isLongEvent}
+              eventRangeLabel={eventRangeLabel}
+              eventsForHour={eventsForHour}
+              isCoveredByPreviousLongEvent={isCoveredByPreviousLongEvent}
+              onEdit={openEdit}
+              onExpandHour={setExpandedHourKey}
+            />
           </>
         ) : (
-          <div className="mt-5 rounded-[26px] bg-white p-4 shadow-card">
-            <div className="mb-4 flex items-center justify-between">
-              <button type="button" onClick={() => moveMonth(-1)} className="grid h-10 w-10 place-items-center rounded-full bg-gray-50 text-monkey-ink transition active:scale-95" aria-label="Mes anterior">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div className="text-center">
-                <p className="text-sm font-black text-monkey-ink">{visibleMonth} {visibleYear}</p>
-                <p className="text-[11px] font-bold text-monkey-muted">Tocá un día para ver su agenda</p>
-              </div>
-              <button type="button" onClick={() => moveMonth(1)} className="grid h-10 w-10 place-items-center rounded-full bg-gray-50 text-monkey-ink transition active:scale-95" aria-label="Mes siguiente">
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-monkey-muted">
-              {dayLetters.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}
-            </div>
-
-            <div className="mt-3 grid grid-cols-7 gap-2">
-              {monthCells.map((cell) => {
-                const isActive = cell.dateKey === selectedDateKey;
-                const hasEvent = cell.dateKey ? eventDays.has(cell.dateKey) : false;
-                return (
-                  <button
-                    key={cell.key}
-                    type="button"
-                    disabled={!cell.dateKey}
-                    onClick={() => { if (cell.dateKey) selectDateKey(cell.dateKey); }}
-                    className={cn(
-                      "relative grid h-11 place-items-center rounded-[14px] text-sm font-black transition active:scale-95 disabled:pointer-events-none disabled:opacity-0",
-                      isActive ? "bg-monkey-green text-white shadow-card" : "bg-gray-50 text-monkey-ink",
-                    )}
-                    aria-label={cell.dateKey ? `Ver actividades del ${cell.day}` : undefined}
-                  >
-                    {cell.day ?? ""}
-                    {hasEvent ? <span className={cn("absolute bottom-1 h-1.5 w-1.5 rounded-full", isActive ? "bg-white" : "bg-monkey-green")} /> : null}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 rounded-[18px] bg-green-50 p-4">
-              <div className="flex items-start gap-3">
-                <CalendarDays className="mt-0.5 h-5 w-5 text-monkey-greenDark" />
-                <div>
-                  <p className="text-sm font-black text-monkey-greenDark">Navegación rápida</p>
-                  <p className="mt-1 text-xs leading-5 text-monkey-muted">Al seleccionar un día en el mes, volvés automáticamente a la vista semanal con sus actividades.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CalendarMonthView
+            month={visibleMonth}
+            year={visibleYear}
+            cells={monthCells}
+            selectedDateKey={selectedDateKey}
+            eventDays={eventDays}
+            onMoveMonth={moveMonth}
+            onSelectDateKey={selectDateKey}
+          />
         )}
       </section>
 
@@ -820,7 +664,7 @@ export default function CalendarPage() {
         <button type="button" onClick={goToday} className="h-12 w-full rounded-pill bg-green-50 text-sm font-black text-monkey-greenDark">Volver a hoy</button>
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {syncing ? "Sincronizando con Supabase..." : "Calendario listo."}</p>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError ? lastError : syncing ? "Sincronizando con Supabase..." : syncStatus === "saving" ? "Guardando cambios..." : syncStatus === "synced" ? "Sincronizado." : "Calendario listo."}</p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">
           <p className="text-sm font-black text-monkey-greenDark">Tip de alertas</p>
@@ -853,7 +697,10 @@ export default function CalendarPage() {
         body="La actividad se quitará del calendario."
         onCancel={() => setDeleteId(null)}
         onConfirm={() => {
-          if (deleteId) deleteEvent(deleteId);
+          if (deleteId) {
+            void deleteEvent(deleteId);
+            deleteCalendarEventReminders(deleteId);
+          }
           setDeleteId(null);
           setSheetMode("closed");
           notify("Actividad eliminada");

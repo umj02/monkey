@@ -5,7 +5,12 @@ import { useLocalStorageState } from "@/lib/local-storage";
 import { remindersSeed } from "@/lib/mock-data";
 import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from "@/lib/storage-keys";
 import { createReminder, type ReminderInput } from "@/lib/services/reminder-service";
-import { deleteReminderRemote, fetchReminders, upsertReminder } from "@/lib/services/supabase-data-service";
+import {
+  deleteReminderRemote,
+  deleteRemindersByCalendarEventRemote,
+  fetchReminders,
+  upsertReminder,
+} from "@/lib/services/supabase-data-service";
 import { useAuth } from "@/hooks/use-auth";
 import type { Reminder } from "@/types";
 
@@ -16,24 +21,63 @@ export function useReminders() {
 
   useEffect(() => {
     if (!session || mode !== "supabase") return;
+    let cancelled = false;
     setSyncing(true);
     fetchReminders().then((remote) => {
-      if (remote && remote.length) setItems(remote);
-      setSyncing(false);
+      if (!cancelled && remote) setItems(remote);
+      if (!cancelled) setSyncing(false);
     });
-  }, [session?.userId, mode]);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.userId, mode, setItems]);
 
   function create(input: ReminderInput) {
     const item = createReminder(input);
     setItems((list) => [item, ...list]);
     if (session && mode === "supabase") void upsertReminder(item);
+    return item;
   }
 
   function update(id: string, input: ReminderInput) {
     const nextItem = items.find((item) => item.id === id);
-    const merged = nextItem ? { ...nextItem, title: input.title.trim(), time: input.time, repeat: input.repeat } : null;
-    setItems((list) => list.map((item) => item.id === id ? { ...item, title: input.title.trim(), time: input.time, repeat: input.repeat } : item));
+    const merged = nextItem
+      ? {
+          ...nextItem,
+          title: input.title.trim(),
+          time: input.time,
+          repeat: input.repeat,
+          taskId: input.taskId ?? nextItem.taskId ?? null,
+          calendarEventId: input.calendarEventId ?? nextItem.calendarEventId ?? null,
+        }
+      : null;
+    setItems((list) => list.map((item) => (item.id === id ? merged ?? item : item)));
     if (merged && session && mode === "supabase") void upsertReminder(merged);
+  }
+
+  function upsertCalendarReminder(calendarEventId: string, input: ReminderInput) {
+    const existing = items.find((item) => item.calendarEventId === calendarEventId);
+    const merged: Reminder = existing
+      ? {
+          ...existing,
+          title: input.title.trim(),
+          time: input.time,
+          repeat: input.repeat,
+          calendarEventId,
+        }
+      : createReminder({ ...input, calendarEventId });
+
+    setItems((list) => {
+      if (existing) return list.map((item) => (item.id === existing.id ? merged : item));
+      return [merged, ...list];
+    });
+    if (session && mode === "supabase") void upsertReminder(merged);
+    return merged;
+  }
+
+  function deleteCalendarEventReminders(calendarEventId: string) {
+    setItems((list) => list.filter((item) => item.calendarEventId !== calendarEventId));
+    if (session && mode === "supabase") void deleteRemindersByCalendarEventRemote(calendarEventId);
   }
 
   function toggle(id: string) {
@@ -48,5 +92,16 @@ export function useReminders() {
     if (session && mode === "supabase") void deleteReminderRemote(id);
   }
 
-  return { items, setItems, ready, syncing, createReminder: create, updateReminder: update, toggleReminder: toggle, deleteReminder: remove };
+  return {
+    items,
+    setItems,
+    ready,
+    syncing,
+    createReminder: create,
+    updateReminder: update,
+    upsertCalendarReminder,
+    deleteCalendarEventReminders,
+    toggleReminder: toggle,
+    deleteReminder: remove,
+  };
 }

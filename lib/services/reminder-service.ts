@@ -1,10 +1,10 @@
 import { createId } from "@/lib/local-storage";
 import type { Reminder, ReminderPanelItem, ReminderStatus, TimeBlock } from "@/types";
 
-export type ReminderInput = Pick<Reminder, "title" | "time" | "repeat">;
+export type ReminderInput = Pick<Reminder, "title" | "time" | "repeat"> & { taskId?: string | null; calendarEventId?: string | null };
 
 export function createReminder(input: ReminderInput): Reminder {
-  return { id: createId("reminder"), title: input.title.trim(), time: input.time, repeat: input.repeat, enabled: true };
+  return { id: createId("reminder"), title: input.title.trim(), time: input.time, repeat: input.repeat, enabled: true, taskId: input.taskId ?? null, calendarEventId: input.calendarEventId ?? null };
 }
 
 export function isValidReminderTime(value: string) {
@@ -116,6 +116,8 @@ export function mapStandaloneRemindersToItems(reminders: Reminder[]): ReminderPa
       reminderAt,
       enabled: item.enabled,
       repeat: item.repeat,
+      taskId: item.taskId ?? null,
+      calendarEventId: item.calendarEventId ?? null,
       status,
       dateLabel: item.enabled ? formatReminderDateLabel(reminderAt) : "Inactivo",
     };

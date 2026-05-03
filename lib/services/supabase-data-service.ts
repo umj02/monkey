@@ -45,7 +45,7 @@ type CalendarEventRow = Pick<
 >;
 type ReminderRow = Pick<
   TableRow<"reminders">,
-  "id" | "title" | "remind_time" | "repeat_rule" | "enabled" | "task_id"
+  "id" | "title" | "remind_time" | "repeat_rule" | "enabled" | "task_id" | "calendar_event_id"
 >;
 type WalletTransactionRow = Pick<
   TableRow<"wallet_transactions">,
@@ -168,7 +168,7 @@ export async function upsertTimeBlocks(
     const savedBlock = await saveTimeBlockRemote(block, index, today);
     if (!savedBlock) continue;
 
-    const savedTasks = [];
+    const savedTasks: TimeBlock["tasks"] = [];
     for (const [taskIndex, task] of block.tasks.entries()) {
       const savedTask = await saveTaskRemote(savedBlock.id, task, taskIndex);
       if (savedTask) savedTasks.push(savedTask);
@@ -648,7 +648,7 @@ export async function fetchReminders(): Promise<Reminder[] | null> {
 
   const { data, error } = await supabase
     .from("reminders")
-    .select("id,title,remind_time,repeat_rule,enabled,task_id")
+    .select("id,title,remind_time,repeat_rule,enabled,task_id,calendar_event_id")
     .eq("user_id", userId)
     .order("remind_time", { ascending: true });
 
@@ -663,6 +663,7 @@ export async function fetchReminders(): Promise<Reminder[] | null> {
       repeat: (item.repeat_rule || "daily") as Reminder["repeat"],
       enabled: Boolean(item.enabled),
       taskId: item.task_id,
+      calendarEventId: item.calendar_event_id,
     }),
   );
 }
@@ -679,9 +680,16 @@ export async function upsertReminder(item: Reminder): Promise<void> {
     repeat_rule: item.repeat,
     enabled: item.enabled,
     task_id: item.taskId || null,
+    calendar_event_id: item.calendarEventId && isUuid(item.calendarEventId) ? item.calendarEventId : null,
   };
 
   if (!isTemporaryId(item.id, "reminder-")) payload.id = item.id;
+
+  if (payload.calendar_event_id) {
+    await supabase.from("reminders").upsert(payload, { onConflict: "calendar_event_id" });
+    return;
+  }
+
   await supabase.from("reminders").upsert(payload);
 }
 
@@ -689,6 +697,13 @@ export async function deleteReminderRemote(id: string): Promise<void> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return;
   await supabase.from("reminders").delete().eq("id", id);
+}
+
+export async function deleteRemindersByCalendarEventRemote(calendarEventId: string): Promise<void> {
+  if (!isUuid(calendarEventId)) return;
+  const supabase = createOptionalClient() as any;
+  if (!supabase) return;
+  await supabase.from("reminders").delete().eq("calendar_event_id", calendarEventId);
 }
 
 export async function fetchWallet(): Promise<WalletData | null> {

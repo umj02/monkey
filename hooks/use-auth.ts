@@ -18,7 +18,8 @@ export function useAuth() {
     const supabase = createOptionalClient();
 
     if (!supabase) {
-      setSession(localSession);
+      const allowLocal = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_ALLOW_LOCAL_AUTH === "true";
+      setSession(allowLocal ? localSession : null);
       setMode("local");
       setReady(localReady);
       return;
