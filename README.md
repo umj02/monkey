@@ -54,3 +54,13 @@ Recomendado porque ya existen duplicados en la base actual.
 - Agrega flujo simplista de alertas desde el formulario de actividad.
 - Las alertas se guardan como recordatorios independientes y aparecen en `/reminders` sin requerir migración nueva.
 - Mantiene compatibilidad con la estructura Supabase actual de `calendar_events` y `reminders`.
+
+## v2.9 — Calendar Timeline Empty State Fix
+
+Esta versión toma como base v2.8 y ajusta la experiencia del calendario:
+
+- Corrige la línea de tiempo para que las actividades aparezcan aunque no estén exactamente en horas pares.
+- Agrupa actividades dentro del rango horario correcto, por ejemplo 09:00 dentro de 08:00 - 10:00.
+- Muestra la hora exacta dentro de cada bloque de actividad.
+- Cuando un día no tiene actividades, se oculta la línea de horas y aparece únicamente el estado “Día libre”.
+- Mantiene el diseño visual de v2.8 y el flujo de alertas conectado a recordatorios.

@@ -188,6 +188,24 @@ function createReminderTime(dateKey: string, time: string, alertOption: AlertOpt
   return date.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
+function eventsForTimelineSlot(events: CalendarEvent[], hour: string, index: number) {
+  const start = timeToMinutes(hour);
+  const nextHour = timelineHours[index + 1];
+  const end = nextHour ? timeToMinutes(nextHour) : 24 * 60;
+
+  return events.filter((event) => {
+    const eventMinutes = timeToMinutes(event.time);
+    if (index === 0 && eventMinutes < start) return true;
+    return eventMinutes >= start && eventMinutes < end;
+  });
+}
+
+function formatTimelineRange(hour: string, index: number) {
+  const nextHour = timelineHours[index + 1];
+  if (!nextHour) return `${hour}+`;
+  return `${hour} - ${nextHour}`;
+}
+
 export default function CalendarPage() {
   const { events, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { createReminder } = useReminders();
@@ -393,58 +411,73 @@ export default function CalendarPage() {
               </span>
             </div>
 
-            <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
-              <div className="grid grid-cols-[52px_1fr] gap-3">
-                <div className="space-y-6 pt-1">
-                  {timelineHours.map((hour) => (
-                    <p key={hour} className="h-[52px] text-[11px] font-bold text-monkey-muted">{hour}</p>
-                  ))}
-                </div>
-
-                <div className="space-y-3">
-                  {timelineHours.map((hour) => {
-                    const hourEvents = eventsForSelectedDate.filter((event) => event.time.slice(0, 2) === hour.slice(0, 2));
-                    return (
-                      <div key={hour} className="min-h-[52px] border-b border-gray-100 last:border-b-0">
-                        {hourEvents.length ? (
-                          <div className="space-y-2">
-                            {hourEvents.map((event) => {
-                              const meta = categoryFromEvent(event);
-                              return (
-                                <div key={event.id} className="grid grid-cols-[1fr_34px] items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => openEdit(event)}
-                                    className={cn("flex min-h-[52px] min-w-0 items-center gap-3 rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]", meta.pillClass)}
-                                  >
-                                    <span className="text-lg leading-none">{meta.icon}</span>
-                                    <span className="min-w-0 truncate">{stripEmoji(event.title)}</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDeleteId(event.id)}
-                                    className="grid h-9 w-9 place-items-center rounded-full bg-pink-50 text-monkey-pink"
-                                    aria-label="Eliminar actividad"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {eventsForSelectedDate.length === 0 ? (
-                <div className="mt-4">
+            {eventsForSelectedDate.length === 0 ? (
+              <div className="mt-5">
+                <div className="rounded-[26px] bg-white p-6 shadow-card">
                   <EmptyState title="Día libre" body="Agregá una actividad con el botón verde o elegí otro día." />
                 </div>
-              ) : null}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
+                <div className="grid grid-cols-[56px_1fr] gap-3">
+                  <div className="space-y-4 pt-1">
+                    {timelineHours.map((hour, index) => {
+                      const slotEvents = eventsForTimelineSlot(eventsForSelectedDate, hour, index);
+                      const slotHeight = slotEvents.length ? Math.max(64, slotEvents.length * 64) : 56;
+                      return (
+                        <div key={hour} className="flex items-start" style={{ minHeight: slotHeight }}>
+                          <p className="text-[12px] font-black text-monkey-muted">{hour}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-4">
+                    {timelineHours.map((hour, index) => {
+                      const slotEvents = eventsForTimelineSlot(eventsForSelectedDate, hour, index);
+                      const slotHeight = slotEvents.length ? Math.max(64, slotEvents.length * 64) : 56;
+                      return (
+                        <div key={hour} className="relative border-b border-gray-100 last:border-b-0" style={{ minHeight: slotHeight }}>
+                          <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
+                          {slotEvents.length ? (
+                            <div className="space-y-2 pb-2 pt-1">
+                              {slotEvents.map((event) => {
+                                const meta = categoryFromEvent(event);
+                                return (
+                                  <div key={event.id} className="grid grid-cols-[1fr_34px] items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => openEdit(event)}
+                                      className={cn("flex min-h-[52px] min-w-0 items-center gap-3 rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]", meta.pillClass)}
+                                    >
+                                      <span className="text-lg leading-none">{meta.icon}</span>
+                                      <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
+                                      <span className="shrink-0 text-[11px] font-black opacity-70">{event.time}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeleteId(event.id)}
+                                      className="grid h-9 w-9 place-items-center rounded-full bg-pink-50 text-monkey-pink"
+                                      aria-label="Eliminar actividad"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="pt-1 text-[10px] font-bold text-transparent" aria-hidden="true">
+                              {formatTimelineRange(hour, index)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="mt-5 rounded-[26px] bg-white p-4 shadow-card">
