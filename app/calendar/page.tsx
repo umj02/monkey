@@ -251,6 +251,44 @@ function eventRangeLabel(event: CalendarEvent) {
   return `${event.time}–${event.endTime} · ${minutesToHoursLabel(duration)}`;
 }
 
+function hourLabelFromMinutes(minutes: number) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:00`;
+}
+
+function eventInterval(event: CalendarEvent) {
+  const start = timeToMinutes(event.time);
+  const end = eventEndMinutes(event);
+  return { start, end, startHour: Math.floor(start / 60) * 60 };
+}
+
+function proposedInterval(startTime: string, endTimeValue?: string | null) {
+  const start = timeToMinutes(startTime);
+  const end = endTimeValue && isValidTime(endTimeValue) ? timeToMinutes(endTimeValue) : start + DEFAULT_DURATION_MINUTES;
+  return { start, end, startHour: Math.floor(start / 60) * 60 };
+}
+
+function findScheduleConflict(events: CalendarEvent[], proposedStart: string, proposedEnd: string | null, editingId?: string) {
+  const next = proposedInterval(proposedStart, proposedEnd);
+  const isLong = next.end - next.start > DEFAULT_DURATION_MINUTES;
+
+  return events.find((event) => {
+    if (event.id === editingId) return false;
+    const current = eventInterval(event);
+    const currentIsLong = current.end - current.start > DEFAULT_DURATION_MINUTES;
+
+    // Permitimos variaciones dentro de la misma hora: 09:00 y 09:15 viven en la fila 09:00.
+    if (current.startHour === next.startHour) return false;
+
+    // Una actividad larga existente bloquea horas posteriores cubiertas para que no queden ocultas.
+    if (currentIsLong && current.start < next.start && current.end > next.start) return true;
+
+    // Una nueva actividad larga no debe tapar eventos existentes en horas intermedias.
+    if (isLong && next.start < current.start && next.end > current.start) return true;
+
+    return false;
+  });
+}
+
 function getVisibleTimelineHours(events: CalendarEvent[]) {
   const minimumEndHour = 12;
   const maxEventHour = events.reduce((maxHour, event) => {
@@ -347,7 +385,7 @@ function ActivityTypeSelect({
 }
 
 export default function CalendarPage() {
-  const { events, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
+  const { events, syncing, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { createReminder } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -393,9 +431,9 @@ export default function CalendarPage() {
     return events.filter((event) => normalizeEventDate(event, selectedDateKey) >= selectedDateKey).length;
   }, [events, selectedDateKey]);
 
-  function notify(message: string) {
-    setToast({ message, type: "success" });
-    window.setTimeout(() => setToast(null), 2200);
+  function notify(message: string, type: "success" | "error" = "success") {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), 2400);
   }
 
   function selectDay(date: Date) {
@@ -452,8 +490,22 @@ export default function CalendarPage() {
     if (cleanEndTime && isValidTime(time) && isValidTime(cleanEndTime) && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) {
       nextErrors.endTime = "La hora final debe ser posterior a la hora de inicio.";
     }
+
+    const conflict = Object.keys(nextErrors).length
+      ? null
+      : findScheduleConflict(eventsForSelectedDate, time, cleanEndTime || null, editing?.id);
+
+    if (conflict) {
+      const conflictRange = eventRangeLabel(conflict);
+      const conflictHour = hourLabelFromMinutes(eventInterval(conflict).startHour);
+      nextErrors.time = `Este horario ya está ocupado por “${stripEmoji(conflict.title)}” (${conflictRange}). Elegí la fila ${conflictHour} u otra hora.`;
+    }
+
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length) {
+      if (nextErrors.time || nextErrors.endTime) notify(nextErrors.time || nextErrors.endTime || "Revisá el horario.", "error");
+      return;
+    }
 
     const meta = categories.find((item) => item.id === category) || categories[6];
     const payload = {
@@ -564,9 +616,12 @@ export default function CalendarPage() {
                 <p className="text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">Día seleccionado</p>
                 <p className="mt-1 truncate text-sm font-black capitalize text-monkey-ink">{formatLongDate(selectedDate)}</p>
               </div>
-              <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-xs font-black text-monkey-greenDark">
-                {eventsForSelectedDate.length} act.
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-monkey-greenDark">
+                  {eventsForSelectedDate.length} act.
+                </span>
+                {syncing ? <span className="rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-black text-monkey-muted">Sync</span> : null}
+              </div>
             </div>
 
             {eventsForSelectedDate.length === 0 ? (
@@ -627,6 +682,9 @@ export default function CalendarPage() {
                                 >
                                   +{extraCount} más en esta hora
                                 </button>
+                              ) : null}
+                              {isExpanded && slotEvents.length > MAX_VISIBLE_EVENTS_PER_HOUR ? (
+                                <p className="px-1 text-[10px] font-bold text-monkey-muted">Mostrando todas. Se contrae automáticamente si no editás nada.</p>
                               ) : null}
                             </div>
                           ) : null}
@@ -762,7 +820,7 @@ export default function CalendarPage() {
         <button type="button" onClick={goToday} className="h-12 w-full rounded-pill bg-green-50 text-sm font-black text-monkey-greenDark">Volver a hoy</button>
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas.</p>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {syncing ? "Sincronizando con Supabase..." : "Calendario listo."}</p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">
           <p className="text-sm font-black text-monkey-greenDark">Tip de alertas</p>

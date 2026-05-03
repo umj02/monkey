@@ -24,6 +24,14 @@ export const faceAssets: AppAsset[] = [
   { key: "face-alt", label: "Carita guiño", src: "/assets/monkey/faces/face-alt.png", category: "face" }
 ];
 
+export const todayQuickAssets: AppAsset[] = [
+  { key: "activity-meditate", label: "Meditar", src: "/assets/activities/icons/meditar.png", category: "activity" },
+  { key: "activity-shower", label: "Bañarse", src: "/assets/activities/icons/banarse.png", category: "activity" },
+  { key: "activity-brush", label: "Cepillarse", src: "/assets/activities/icons/cepillarse.png", category: "activity" },
+  { key: "activity-breakfast", label: "Desayuno", src: "/assets/activities/icons/desayuno.png", category: "activity" },
+  { key: "activity-wakeup", label: "Despertar", src: "/assets/activities/icons/despertar.png", category: "activity" }
+];
+
 export const activityAssets: AppAsset[] = [
   { key: "activity-water", label: "Agua", src: "/assets/activities/icons/beberagua.png", category: "activity" },
   { key: "activity-care", label: "Cuidado personal", src: "/assets/activities/icons/cuidado-personal.png", category: "activity" },
@@ -31,19 +39,12 @@ export const activityAssets: AppAsset[] = [
   { key: "activity-fruit", label: "Frutas", src: "/assets/activities/icons/fruit.png", category: "activity" },
   { key: "activity-gym", label: "Gimnasio", src: "/assets/activities/icons/gimnacio.png", category: "activity" },
   { key: "activity-instrument", label: "Instrumento", src: "/assets/activities/icons/instrumento.png", category: "activity" },
+  { key: "activity-read", label: "Leer", src: "/assets/activities/icons/leer.png", category: "activity" },
   { key: "activity-music", label: "Música", src: "/assets/activities/icons/musica.png", category: "activity" },
   { key: "activity-out", label: "Salida", src: "/assets/activities/icons/salida.png", category: "activity" },
   { key: "activity-sleep", label: "Dormir", src: "/assets/activities/icons/sleep.png", category: "activity" },
   { key: "activity-soccer", label: "Fútbol", src: "/assets/activities/icons/soccer.png", category: "activity" },
   { key: "activity-study", label: "Estudiar", src: "/assets/activities/icons/study.png", category: "activity" }
-];
-
-export const todayQuickAssets: AppAsset[] = [
-  { key: "activity-meditate", label: "Meditar", src: "/assets/activities/today/meditar.png", category: "activity" },
-  { key: "activity-shower", label: "Bañarse", src: "/assets/activities/today/banarse.png", category: "activity" },
-  { key: "activity-brush", label: "Cepillarse", src: "/assets/activities/today/cepillarse.png", category: "activity" },
-  { key: "activity-breakfast", label: "Desayuno", src: "/assets/activities/today/desayuno.png", category: "activity" },
-  { key: "activity-wakeup", label: "Despertar", src: "/assets/activities/today/despertar.png", category: "activity" }
 ];
 
 export const calendarActivityAssets: AppAsset[] = [

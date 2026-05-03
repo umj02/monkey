@@ -83,7 +83,7 @@ Cambios incluidos:
 - Migración opcional `0003_v210_calendar_end_time.sql` para persistir `end_time` en Supabase.
 
 
-## v2.11 — Calendar Smart Range + Icon Gallery Fix
+## v2.12 — Production Readiness + Calendar Stability Fix
 
 - Calendario semanal ahora muestra horas solo hasta mediodía por defecto y se expande automáticamente si hay actividades después.
 - El indicador `+X más en esta hora` ahora es interactivo: muestra las actividades ocultas y se contrae automáticamente después de 5 segundos si no hay acción.
@@ -91,3 +91,19 @@ Cambios incluidos:
 - Se agregó biblioteca de íconos para calendario en `public/assets/activities/calendar`.
 - El selector de tipo de actividad del calendario ahora usa tarjetas con imagen, en lugar del select nativo con emojis.
 - Se mantiene la lógica v2.10: horas reales, fin opcional, flag de duración y máximo 2 actividades visibles por hora.
+
+
+## v2.12 — Production Readiness + Calendar Stability
+
+Base: v2.11 — Calendar Smart Range + Icon Gallery.
+
+Incluye:
+- Sustitución de placeholders de `public/assets/activities` por los PNG reales entregados por el usuario.
+- Normalización de nombres de íconos (`banarse.png`, `meditacion.png`, `ejercicio.png`).
+- Selector de actividad de calendario con imágenes reales de `assets/activities/calendar`.
+- Galería de íconos de Hoy con imágenes reales para meditar, bañarse, cepillarse, desayuno y despertar.
+- Validación de conflictos para actividades largas: evita crear actividades ocultas dentro de horas ocupadas por una actividad de varias horas.
+- Se mantiene la regla UX: variaciones dentro de la misma hora se agrupan en esa fila; máximo 2 visibles y `+X más` expandible.
+- Feedback de sincronización en calendario cuando Supabase está cargando datos.
+- Bottom sheets con botón principal sticky para mejorar uso en móvil.
+- Preparado para correr `npm run typecheck` y `npm run build` antes del despliegue final.
