@@ -3,7 +3,7 @@
 v2.4.6 keeps the app working with localStorage, but the data contract is now ready for Supabase.
 
 Wallet DB contract:
-- `wallet_transactions`: income, expense and saving movements.
+- `wallet_transactions`: income, extra, expense and saving movements.
 - `wallet_budgets`: one budget per user + period + currency.
 - `wallet_goals`: saving goals.
 - `wallet_categories`: default and user-owned categories.

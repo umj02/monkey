@@ -1,3 +1,35 @@
+# Final QA Checklist — v2.13
+
+## Build
+- [ ] `npm install`
+- [ ] `npm run validate:assets`
+- [ ] `npm run typecheck`
+- [ ] `npm run build`
+
+## Supabase migrations
+- [ ] 0001 schema
+- [ ] 0002 data stability
+- [ ] 0003 calendar end time
+- [ ] 0004 calendar event reminders
+- [ ] 0005 wallet extra + period filters
+
+## Wallet
+- [ ] Wallet abre en Mes por defecto.
+- [ ] Semana filtra últimos 7 días por fecha.
+- [ ] Quincena filtra 01–14 o 15–fin de mes.
+- [ ] Mes filtra primer a último día del mes.
+- [ ] Ingreso, Extra, Gasto y Ahorro recalculan correctamente.
+- [ ] Historial muestra 5 movimientos por página.
+- [ ] Flechas de historial avanzan y retroceden.
+- [ ] Botón refresh actualiza sin crear movimiento.
+- [ ] Eliminar movimiento actualiza totales inmediatamente.
+
+## Alerts
+- [ ] En /reminders aparece CTA para activar notificaciones si permiso está pendiente.
+- [ ] Al llegar un recordatorio con la app abierta aparece modal.
+- [ ] El modal muestra animación Lottie.
+- [ ] Si el permiso está concedido aparece notificación del navegador.
+- [ ] No se repite la misma alerta múltiples veces en el mismo minuto.
 # Monkey Checks v2.12.2 — Final QA Hardening
 
 ## Estado de esta versión

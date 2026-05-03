@@ -41,12 +41,13 @@ export const calendarSeed: CalendarEvent[] = [
 
 
 export const walletSeed = {
-  period: "weekly" as const,
+  period: "monthly" as const,
   currency: "CRC" as const,
   balance: 22000,
   income: 60000,
   expenses: 23000,
   savings: 15000,
+  extras: 0,
   budgetLimit: 45000,
   tip: "Has gastado un 20% más en entretenimiento esta semana. ¿Qué tal si intentás reducirlo un poco para ahorrar más?",
   categories: [
@@ -59,10 +60,10 @@ export const walletSeed = {
     { id: "iphone", title: "iPhone 15", target: 250000, current: 15000, currency: "CRC" as const, icon: "wallet-phone" }
   ],
   transactions: [
-    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "weekly" as const, color: "green" as const, icon: "wallet-income" },
-    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "weekly" as const, color: "orange" as const, icon: "wallet-food" },
-    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 4500, currency: "CRC" as const, category: "Transporte", date: "2026-05-14", period: "weekly" as const, color: "yellow" as const, icon: "wallet-transport" },
-    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 15000, currency: "CRC" as const, category: "iPhone 15", date: "2026-05-14", period: "weekly" as const, color: "purple" as const, icon: "wallet-phone" }
+    { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "monthly" as const, color: "green" as const, icon: "wallet-income" },
+    { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "monthly" as const, color: "orange" as const, icon: "wallet-food" },
+    { id: "tx-3", type: "expense" as const, title: "Transporte", amount: 4500, currency: "CRC" as const, category: "Transporte", date: "2026-05-14", period: "monthly" as const, color: "yellow" as const, icon: "wallet-transport" },
+    { id: "tx-4", type: "saving" as const, title: "Ahorro meta", amount: 15000, currency: "CRC" as const, category: "iPhone 15", date: "2026-05-14", period: "monthly" as const, color: "purple" as const, icon: "wallet-phone" }
   ],
   badges: [
     { id: "badge-saving", label: "Buen ahorro", tone: "success" as const, icon: "🌱" },

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomNav } from "./bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
+import { BrowserAlertEngine } from "@/components/browser-alert-engine";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="app-screen pb-[calc(96px+var(--safe-bottom))]">
       {children}
+      <BrowserAlertEngine />
       <BottomNav />
     </main>
   );

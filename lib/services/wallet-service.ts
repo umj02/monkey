@@ -22,6 +22,12 @@ export const walletCurrencyLabels: Record<WalletCurrency, string> = {
   USD: "Dólares"
 };
 
+export const walletPeriodLabels: Record<WalletPeriod, string> = {
+  weekly: "Semana",
+  biweekly: "Quincena",
+  monthly: "Mes"
+};
+
 const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
   Comida: { color: "orange", icon: "wallet-food" },
   Transporte: { color: "yellow", icon: "wallet-transport" },
@@ -32,6 +38,8 @@ const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
   Trabajo: { color: "green", icon: "wallet-income" },
   Regalo: { color: "green", icon: "wallet-gift" },
   Venta: { color: "green", icon: "wallet-extras" },
+  Extra: { color: "blue", icon: "wallet-extras" },
+  Bono: { color: "blue", icon: "wallet-extras" },
   Ahorro: { color: "purple", icon: "wallet-savings" },
   Otro: { color: "blue", icon: "wallet-extras" }
 };
@@ -39,16 +47,53 @@ const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
 function getCategoryMeta(category: string, type: WalletTransactionType) {
   if (categoryMeta[category]) return categoryMeta[category];
   if (type === "income") return categoryMeta.Mesada;
+  if (type === "extra") return categoryMeta.Extra;
   if (type === "saving") return categoryMeta.Ahorro;
   return categoryMeta.Otro;
 }
 
-function samePeriod(transaction: WalletTransaction, period: WalletPeriod) {
-  return transaction.period === period;
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function parseDateKey(dateKey?: string | null) {
+  if (!dateKey) return new Date();
+  const [year, month, day] = dateKey.split("-").map(Number);
+  if (!year || !month || !day) return new Date();
+  return new Date(year, month - 1, day);
+}
+
+function endOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+export function getWalletPeriodRange(period: WalletPeriod, referenceDate = new Date()): { start: string; end: string; label: string } {
+  const ref = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  if (period === "weekly") {
+    const start = new Date(ref);
+    start.setDate(ref.getDate() - 6);
+    return { start: toDateKey(start), end: toDateKey(ref), label: "Últimos 7 días" };
+  }
+  if (period === "biweekly") {
+    const firstDay = ref.getDate() <= 14 ? 1 : 15;
+    const lastDay = ref.getDate() <= 14 ? 14 : endOfMonth(ref).getDate();
+    const start = new Date(ref.getFullYear(), ref.getMonth(), firstDay);
+    const end = new Date(ref.getFullYear(), ref.getMonth(), lastDay);
+    return { start: toDateKey(start), end: toDateKey(end), label: firstDay === 1 ? "1 al 14" : `15 al ${lastDay}` };
+  }
+  const start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const end = endOfMonth(ref);
+  return { start: toDateKey(start), end: toDateKey(end), label: new Intl.DateTimeFormat("es-CR", { month: "long", year: "numeric" }).format(ref) };
+}
+
+export function isTransactionInPeriod(transaction: WalletTransaction, period: WalletPeriod, referenceDate = new Date()) {
+  const range = getWalletPeriodRange(period, referenceDate);
+  const date = transaction.date;
+  return date >= range.start && date <= range.end;
 }
 
 function buildCategories(transactions: WalletTransaction[], period: WalletPeriod): WalletCategory[] {
-  const expenses = transactions.filter((tx) => tx.type === "expense" && samePeriod(tx, period));
+  const expenses = transactions.filter((tx) => tx.type === "expense" && isTransactionInPeriod(tx, period));
   const total = expenses.reduce((sum, tx) => sum + tx.amount, 0);
   const grouped = expenses.reduce<Record<string, WalletCategory>>((acc, tx) => {
     const key = tx.category || "Otro";
@@ -70,7 +115,7 @@ function buildBadges(income: number, expenses: number, savings: number, budgetLi
   const budgetRate = budgetLimit > 0 ? (expenses / budgetLimit) * 100 : 0;
 
   if (savingRate >= 20) badges.push({ id: "good-saving", label: "Buen ahorro", tone: "success", icon: "🌱" });
-  if (budgetRate <= 65) badges.push({ id: "stable-week", label: "Semana estable", tone: "success", icon: "🛡️" });
+  if (budgetRate <= 65) badges.push({ id: "stable-week", label: "Periodo estable", tone: "success", icon: "🛡️" });
   if (budgetRate > 80) badges.push({ id: "high-expense", label: "Cuidado con gastos", tone: "warning", icon: "⚠️" });
   if (transactions.some((tx) => tx.type === "saving")) badges.push({ id: "goal-active", label: "Meta activa", tone: "info", icon: "🎯" });
   if (badges.length === 0) badges.push({ id: "start", label: "Empezá hoy", tone: "info", icon: "✨" });
@@ -89,23 +134,41 @@ function buildTip(income: number, expenses: number, savings: number, budgetLimit
   return "Agregá tus ingresos y gastos para recibir consejos inteligentes según tus hábitos.";
 }
 
+function normalizeTransaction(tx: WalletTransaction, currency: WalletCurrency): WalletTransaction {
+  const meta = getCategoryMeta(tx.category, tx.type);
+  return {
+    ...tx,
+    amount: Math.max(0, Number(tx.amount) || 0),
+    currency: tx.currency || currency,
+    date: tx.date || toDateKey(new Date()),
+    period: tx.period || "monthly",
+    color: tx.color || meta.color,
+    icon: tx.icon || meta.icon,
+  };
+}
+
 export function normalizeWallet(data: WalletData): WalletData {
   const currency: WalletCurrency = data.currency || WALLET_DEFAULT_CURRENCY;
-  const transactions = Array.isArray(data.transactions) ? data.transactions.map((tx) => ({ ...tx, currency: tx.currency || currency })) : [];
-  const income = transactions.filter((tx) => tx.type === "income" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.income) ? data.income : 0);
-  const expenses = transactions.filter((tx) => tx.type === "expense" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.expenses) ? data.expenses : 0);
-  const savings = transactions.filter((tx) => tx.type === "saving" && samePeriod(tx, data.period)).reduce((sum, tx) => sum + tx.amount, 0) || (Number.isFinite(data.savings) ? data.savings : Math.max(income - expenses, 0));
-  const balance = Math.max(0, income - expenses - savings);
+  const period: WalletPeriod = data.period || "monthly";
+  const transactions = Array.isArray(data.transactions) ? data.transactions.map((tx) => normalizeTransaction(tx, currency)) : [];
+  const periodTransactions = transactions.filter((tx) => isTransactionInPeriod(tx, period));
+  const income = periodTransactions.filter((tx) => tx.type === "income").reduce((sum, tx) => sum + tx.amount, 0);
+  const extras = periodTransactions.filter((tx) => tx.type === "extra").reduce((sum, tx) => sum + tx.amount, 0);
+  const expenses = periodTransactions.filter((tx) => tx.type === "expense").reduce((sum, tx) => sum + tx.amount, 0);
+  const savings = periodTransactions.filter((tx) => tx.type === "saving").reduce((sum, tx) => sum + tx.amount, 0);
+  const balance = Math.max(0, income + extras - expenses - savings);
   const budgetLimit = Number.isFinite(data.budgetLimit) && data.budgetLimit > 0 ? data.budgetLimit : 1;
-  const categories = buildCategories(transactions, data.period);
+  const categories = buildCategories(transactions, period);
   const safeCategories = categories.length > 0 ? categories : data.categories.map((category) => ({ ...category, amount: Number.isFinite(category.amount) ? category.amount : 0, percent: Math.max(0, Math.min(100, Number.isFinite(category.percent) ? category.percent : 0)) }));
   const goals = data.goals.map((goal) => ({ ...goal, currency: goal.currency || currency, current: Math.max(0, Number.isFinite(goal.current) ? goal.current : 0), target: Math.max(1, Number.isFinite(goal.target) ? goal.target : 1), targetDate: goal.targetDate || null }));
-  const badges = buildBadges(income, expenses, savings, budgetLimit, transactions);
+  const badges = buildBadges(income + extras, expenses, savings, budgetLimit, periodTransactions);
 
   return {
     ...data,
+    period,
     currency,
     income,
+    extras,
     expenses,
     savings,
     balance,
@@ -114,7 +177,7 @@ export function normalizeWallet(data: WalletData): WalletData {
     goals,
     transactions,
     badges,
-    tip: buildTip(income, expenses, savings, budgetLimit, safeCategories)
+    tip: buildTip(income + extras, expenses, savings, budgetLimit, safeCategories)
   };
 }
 

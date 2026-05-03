@@ -200,3 +200,40 @@ npm install
 npm run typecheck
 npm run build
 ```
+
+## v2.13 — Wallet Period Filters + Browser Alerts
+
+Base: v2.12.2 Final QA Hardening.
+
+### Wallet
+- La vista base de Wallet ahora es mensual.
+- Semana se calcula por los últimos 7 días.
+- Quincena se calcula como 01–14 o 15–fin de mes según la fecha actual.
+- Los totales se calculan por fecha real del movimiento, no por el periodo seleccionado al crearlo.
+- Se agrega el tipo de movimiento `extra` para ingresos ocasionales.
+- Historial reciente con filtros por tipo: Todos, Ingreso, Extra, Gasto y Ahorro.
+- Historial paginado de 5 movimientos por página.
+- Botón de refrescar historial en vez de `+ movimiento`.
+- Se elimina el botón `+ gasto` de categorías para reducir duplicidad.
+
+### Alertas
+- Se agrega motor global de alertas mientras la app está abierta.
+- Se incluye modal de recordatorio con animación Lottie.
+- Se agrega solicitud opcional de permiso para notificaciones del navegador.
+- Si el navegador permite notificaciones, la app dispara notificación local además del modal.
+- Se evita repetir la misma alerta muchas veces dentro del mismo minuto.
+
+### Migración nueva
+Ejecutar después de las migraciones previas:
+
+```sql
+supabase/migrations/0005_v213_wallet_extra_period_filters.sql
+```
+
+### QA recomendado
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```

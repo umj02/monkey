@@ -87,7 +87,7 @@ export type AuthSession = {
 
 export type WalletPeriod = "weekly" | "biweekly" | "monthly";
 export type WalletCurrency = "CRC" | "USD";
-export type WalletTransactionType = "income" | "expense" | "saving";
+export type WalletTransactionType = "income" | "expense" | "saving" | "extra";
 export type WalletColor = "green" | "orange" | "purple" | "pink" | "blue" | "yellow";
 
 export type WalletCategory = {
@@ -143,6 +143,7 @@ export type WalletData = {
   income: number;
   expenses: number;
   savings: number;
+  extras?: number;
   budgetLimit: number;
   categories: WalletCategory[];
   goals: WalletGoal[];

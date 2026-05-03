@@ -112,8 +112,9 @@ export function getAssetSrc(keyOrSrc?: string | null) {
   return getAssetByKey(keyOrSrc)?.src ?? null;
 }
 
-export function getWalletAssetsByType(type: "income" | "expense" | "saving") {
-  if (type === "income") return walletAssets.filter((asset) => asset.group === "income");
-  if (type === "saving") return walletAssets.filter((asset) => asset.group === "income" || asset.key === "wallet-savings");
+export function getWalletAssetsByType(type: "income" | "expense" | "saving" | "extra") {
+  if (type === "income") return walletAssets.filter((asset) => asset.key === "wallet-income" || asset.key === "wallet-gift");
+  if (type === "extra") return walletAssets.filter((asset) => asset.key === "wallet-extras" || asset.key === "wallet-gift" || asset.key === "wallet-income");
+  if (type === "saving") return walletAssets.filter((asset) => asset.key === "wallet-savings" || asset.key === "wallet-phone");
   return walletAssets.filter((asset) => asset.group === "expense");
 }

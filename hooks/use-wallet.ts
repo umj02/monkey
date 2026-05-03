@@ -25,13 +25,21 @@ export function useWallet() {
   const [syncing, setSyncing] = useState(false);
   const normalized = normalizeWallet(wallet);
 
-  useEffect(() => {
-    if (!session || mode !== "supabase") return;
+  function refreshWallet() {
+    if (!session || mode !== "supabase") {
+      setWallet((current) => normalizeWallet({ ...current }));
+      return;
+    }
     setSyncing(true);
-    fetchWallet().then((remote) => {
-      if (remote) setWallet(remote);
-      setSyncing(false);
-    });
+    void fetchWallet()
+      .then((remote) => {
+        if (remote) setWallet(remote);
+      })
+      .finally(() => setSyncing(false));
+  }
+
+  useEffect(() => {
+    refreshWallet();
   }, [session?.userId, mode]);
 
   function updateWallet(input: WalletUpdateInput) {
@@ -69,5 +77,5 @@ export function useWallet() {
     });
   }
 
-  return { wallet: normalized, setWallet, ready, syncing, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal };
+  return { wallet: normalized, setWallet, ready, syncing, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal };
 }
