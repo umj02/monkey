@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
@@ -19,8 +20,17 @@ import type { Task, TaskColor, TimeBlock } from "@/types";
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
 const colorLabels: Record<TaskColor, string> = { green: "Verde", blue: "Azul", orange: "Naranja", purple: "Morado", pink: "Rosa", yellow: "Amarillo" };
 
+function formatTodayDate() {
+  const value = new Intl.DateTimeFormat("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  }).format(new Date());
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export default function TodayPage() {
-  const { blocks, percent, toggleTask, createTask, editTask, deleteTask } = useTasks();
+  const { blocks, percent, toggleTask, createTask, editTask, updateTaskReminder, deleteTask } = useTasks();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -31,9 +41,10 @@ export default function TodayPage() {
   const [icon, setIcon] = useState("activity-study");
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const todayLabel = useMemo(() => formatTodayDate(), []);
 
-  function showToast(message: string) {
-    setToast({ message, type: "success" });
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToast({ message, type });
     window.setTimeout(() => setToast(null), 2200);
   }
 
@@ -65,6 +76,11 @@ export default function TodayPage() {
     showToast("Tarea actualizada");
   }
 
+  function handleReminderChange(blockId: string, taskId: string, reminderAt: string | null) {
+    updateTaskReminder(blockId, taskId, reminderAt);
+    showToast(reminderAt ? "Recordatorio activado" : "Recordatorio apagado");
+  }
+
   function handleDeleteTask(blockId: string, taskId: string) {
     deleteTask(blockId, taskId);
     setSelectedBlock(null);
@@ -85,8 +101,8 @@ export default function TodayPage() {
         </header>
         <div className="mt-5"><ProgressCard percent={percent} /></div>
         <div className="mt-5 flex h-11 items-center justify-between">
-          <button className="text-left text-lg font-black tracking-tight">Martes, 14 de Mayo</button>
-          <button className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><CalendarDays className="h-5 w-5 text-monkey-muted" /></button>
+          <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
+          <Link href="/calendar" className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-card transition active:scale-95" aria-label="Ir al calendario"><CalendarDays className="h-5 w-5 text-monkey-muted" /></Link>
         </div>
         <div className="mt-3 space-y-3">
           {blocks.length === 0 ? <EmptyState title="Tu día está limpio" body="Agregá tu primera tarea para empezar con buen ritmo." /> : null}
@@ -101,7 +117,7 @@ export default function TodayPage() {
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 min-w-0 rounded-pill px-2 text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}><span className="block truncate">{colorLabels[item]}</span></button>)}</div></div>
         <AssetPicker label="Ícono de actividad" assets={activityAssets} value={icon} onChange={setIcon} />
       </FormSheet>
-      <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onDelete={handleDeleteTask} />
+      <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onReminderChange={handleReminderChange} onDelete={handleDeleteTask} />
     </AppShell>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Bell, BellOff, Check } from "lucide-react";
 import { AssetThumb } from "@/components/asset-thumb";
 import type { Task, TimeBlock } from "@/types";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,13 @@ const styleMap = {
   pink: "bg-pink-50 border-pink-100 text-monkey-pink",
   yellow: "bg-yellow-50 border-yellow-100 text-orange-600"
 };
+
+function reminderTime(reminderAt?: string | null) {
+  if (!reminderAt) return "Sin recordatorio";
+  const date = new Date(reminderAt);
+  if (Number.isNaN(date.getTime())) return "Recordatorio activo";
+  return date.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit" });
+}
 
 export function TimeBlockCard({
   block,
@@ -39,12 +46,22 @@ export function TimeBlockCard({
                 key={task.id}
                 type="button"
                 onClick={() => onTaskOpen ? onTaskOpen(block, task) : onToggle(block.id, task.id)}
-                className="flex min-h-9 w-full items-center justify-between rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
+                className="flex min-h-10 w-full items-center gap-2 rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
               >
-                <span className={cn(task.done && "text-gray-400 line-through")}>{task.title}</span>
+                <span className={cn("min-w-0 flex-1 truncate", task.done && "text-gray-400 line-through")}>{task.title}</span>
                 <span
                   className={cn(
-                    "grid h-5 w-5 place-items-center rounded-md border transition",
+                    "grid h-7 w-7 shrink-0 place-items-center rounded-full transition",
+                    task.reminderAt ? "bg-green-100 text-monkey-green" : "bg-gray-100 text-gray-400"
+                  )}
+                  title={reminderTime(task.reminderAt)}
+                  aria-label={reminderTime(task.reminderAt)}
+                >
+                  {task.reminderAt ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                </span>
+                <span
+                  className={cn(
+                    "grid h-6 w-6 shrink-0 place-items-center rounded-md border transition",
                     task.done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white"
                   )}
                   onClick={(event) => { event.stopPropagation(); onToggle(block.id, task.id); }}

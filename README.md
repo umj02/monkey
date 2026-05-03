@@ -25,3 +25,12 @@ supabase/migrations/0002_v259_data_stability.sql
 ```
 
 Recomendado porque ya existen duplicados en la base actual.
+
+
+## v2.6 — Today UX Improvements
+- Fecha real en vista Hoy.
+- Botón de calendario navega a /calendar.
+- Campanita de recordatorio en modal de tarea y tarjetas de Hoy.
+- Monito de progress card más grande.
+- Mensaje de felicitación al llegar a 100%.
+- Base v2.5.9 conservando fixes de estabilidad Supabase.
