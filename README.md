@@ -1,58 +1,27 @@
-# Monkey Checks v2.5.2 — Full Supabase Stable
+# Monkey Checks v2.5.9 — Supabase Data Stability Fix
 
-Base limpia tomada de v2.5.
+Base: v2.5.8.
 
-## Incluye
-- Auth real con Supabase.
-- Login/Register sin redirección mock.
-- Google/Apple no entran directo hasta configurar providers reales.
-- Protección de rutas internas con sesión obligatoria.
-- `supabase-data-service.ts` tipado para evitar `implicit any` en Vercel.
-- `initialSettings` corregido.
-- Migración full para base vacía en `supabase/migrations/0001_v25_full_schema.sql`.
+## Cambios principales
 
-## Variables requeridas en Vercel
-```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+- Corrige el patrón que duplicaba tareas, notas y eventos en Supabase.
+- Evita guardar en Supabase dentro de callbacks de `setState` para tareas.
+- Al crear tareas/notas/eventos, la app reemplaza el ID temporal por el UUID real devuelto por Supabase.
+- Tareas usan operaciones puntuales: crear, actualizar, eliminar.
+- Notas y calendario hacen create/update controlado y no vuelven a insertar registros existentes.
+- Agrega scripts de validación:
+  - `npm run typecheck`
+  - `npm run build:preflight`
+- Agrega migración opcional `0002_v259_data_stability.sql` para limpiar duplicados existentes y blindar la BD con índices únicos.
+
+## Después de desplegar
+
+1. Subir esta versión a GitHub/Vercel.
+2. Validar `npm run build`.
+3. Correr en Supabase SQL Editor la migración opcional:
+
+```txt
+supabase/migrations/0002_v259_data_stability.sql
 ```
 
-## Importante
-Si tenés confirmación de email activada en Supabase, el registro muestra mensaje para confirmar correo y no entra a `/today` hasta que exista sesión real.
-
-
-## v2.5.3 — Confirm Flow
-
-Nueva ruta de confirmación de cuenta:
-
-- `/auth/confirm`
-
-El registro envía `emailRedirectTo` a `/auth/confirm`. En Supabase debe configurarse:
-
-- Site URL: URL real de Vercel
-- Redirect URL permitida: `https://tu-app.vercel.app/auth/confirm`
-
-Después de confirmar, la pantalla muestra contador y redirige a `/login`.
-
-## v2.5.6 — Register Confirmation UX
-- Después de crear cuenta, el formulario queda bloqueado y la contraseña se limpia.
-- Se agrega panel de “Correo enviado”.
-- Se agrega botón “Reenviar correo” con contador de 60 segundos.
-- El reenvío usa Supabase Auth `resend` con redirect a `/auth/confirm`.
-
-
-## v2.5.8 — Smart Email Control
-
-- Cooldown de reenvío ampliado a 120 segundos.
-- Detección de rate limit de Supabase Auth.
-- Bloqueo dinámico de 180 segundos cuando Supabase limita correos.
-- Mensajes UX más claros para registro y reenvío.
-- Mantiene confirm flow y Supabase Auth estable.
-
-
-## v2.5.8 — Auth UX Polish
-
-- Elimina contador duplicado en registro.
-- Distingue correo enviado real vs rate limit.
-- Mensajes UX sin mencionar proveedores internos.
-- Reintento con cooldown dinámico desde el botón.
+Recomendado porque ya existen duplicados en la base actual.

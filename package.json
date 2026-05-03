@@ -1,11 +1,13 @@
 {
   "name": "monkey-checks",
-  "version": "2.5.8",
+  "version": "2.5.9",
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "build:preflight": "npm run typecheck && npm run build",
     "lint": "next lint"
   },
   "dependencies": {
