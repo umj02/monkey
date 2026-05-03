@@ -81,3 +81,13 @@ Cambios incluidos:
 - Eliminación movida al editor de actividad para limpiar el timeline.
 - Corrección de overflow en cards de Hoy para textos largos y badges de hora.
 - Migración opcional `0003_v210_calendar_end_time.sql` para persistir `end_time` en Supabase.
+
+
+## v2.11 — Calendar Smart Range + Icon Gallery Fix
+
+- Calendario semanal ahora muestra horas solo hasta mediodía por defecto y se expande automáticamente si hay actividades después.
+- El indicador `+X más en esta hora` ahora es interactivo: muestra las actividades ocultas y se contrae automáticamente después de 5 segundos si no hay acción.
+- Se agregaron nuevos íconos rápidos para la vista Hoy: meditar, bañarse, cepillarse, desayuno y despertar.
+- Se agregó biblioteca de íconos para calendario en `public/assets/activities/calendar`.
+- El selector de tipo de actividad del calendario ahora usa tarjetas con imagen, en lugar del select nativo con emojis.
+- Se mantiene la lógica v2.10: horas reales, fin opcional, flag de duración y máximo 2 actividades visibles por hora.

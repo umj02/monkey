@@ -13,7 +13,7 @@ import { Field } from "@/components/field";
 import { Toast, ToastState } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { AssetPicker } from "@/components/asset-picker";
-import { activityAssets } from "@/lib/asset-library";
+import { activityAssetGallery } from "@/lib/asset-library";
 import { useTasks } from "@/hooks/use-tasks";
 import type { Task, TaskColor, TimeBlock } from "@/types";
 
@@ -115,7 +115,7 @@ export default function TodayPage() {
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
         <Field label="Nombre del bloque" value={blockTitle} onChange={(e) => setBlockTitle(e.target.value)} placeholder="Estudiar" />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 min-w-0 rounded-pill px-2 text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}><span className="block truncate">{colorLabels[item]}</span></button>)}</div></div>
-        <AssetPicker label="Ícono de actividad" assets={activityAssets} value={icon} onChange={setIcon} />
+        <AssetPicker label="Ícono de actividad" assets={activityAssetGallery} value={icon} onChange={setIcon} />
       </FormSheet>
       <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onReminderChange={handleReminderChange} onDelete={handleDeleteTask} />
     </AppShell>

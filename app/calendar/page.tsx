@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { Toast, ToastState } from "@/components/toast";
+import { AssetThumb } from "@/components/asset-thumb";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useReminders } from "@/hooks/use-reminders";
 import type { CalendarEvent, Reminder } from "@/types";
@@ -81,18 +82,19 @@ type CategoryMeta = {
   id: CalendarCategory;
   label: string;
   icon: string;
+  iconKey: string;
   color: CalendarEvent["color"];
   pillClass: string;
 };
 
 const categories: CategoryMeta[] = [
-  { id: "exercise", label: "Ejercicio", icon: "😊", color: "yellow", pillClass: "bg-[#FDF6BA] text-[#A66A00]" },
-  { id: "study", label: "Estudiar", icon: "📝", color: "blue", pillClass: "bg-[#DDF7F7] text-[#187187]" },
-  { id: "class", label: "Clases", icon: "📚", color: "green", pillClass: "bg-[#DDF7D8] text-[#2E7D32]" },
-  { id: "food", label: "Comida", icon: "🍴", color: "pink", pillClass: "bg-[#FFE1E7] text-[#D9415F]" },
-  { id: "project", label: "Proyecto", icon: "💼", color: "purple", pillClass: "bg-[#E8DEFF] text-[#6242B5]" },
-  { id: "rest", label: "Descanso", icon: "🧘", color: "purple", pillClass: "bg-[#EEE7FF] text-[#7252C7]" },
-  { id: "other", label: "Otro", icon: "✨", color: "orange", pillClass: "bg-[#FFE9D7] text-[#B76119]" },
+  { id: "exercise", label: "Ejercicio", icon: "😊", iconKey: "calendar-exercise", color: "yellow", pillClass: "bg-[#FDF6BA] text-[#A66A00]" },
+  { id: "study", label: "Estudiar", icon: "📝", iconKey: "calendar-study", color: "blue", pillClass: "bg-[#DDF7F7] text-[#187187]" },
+  { id: "class", label: "Clases", icon: "📚", iconKey: "calendar-class", color: "green", pillClass: "bg-[#DDF7D8] text-[#2E7D32]" },
+  { id: "food", label: "Comida", icon: "🍴", iconKey: "calendar-food", color: "pink", pillClass: "bg-[#FFE1E7] text-[#D9415F]" },
+  { id: "project", label: "Proyecto", icon: "💼", iconKey: "calendar-project", color: "purple", pillClass: "bg-[#E8DEFF] text-[#6242B5]" },
+  { id: "rest", label: "Descanso", icon: "🧘", iconKey: "calendar-rest", color: "purple", pillClass: "bg-[#EEE7FF] text-[#7252C7]" },
+  { id: "other", label: "Otro", icon: "✨", iconKey: "calendar-task", color: "orange", pillClass: "bg-[#FFE9D7] text-[#B76119]" },
 ];
 
 const alertOptions: { id: AlertOption; label: string; offset: number | null }[] = [
@@ -249,6 +251,20 @@ function eventRangeLabel(event: CalendarEvent) {
   return `${event.time}–${event.endTime} · ${minutesToHoursLabel(duration)}`;
 }
 
+function getVisibleTimelineHours(events: CalendarEvent[]) {
+  const minimumEndHour = 12;
+  const maxEventHour = events.reduce((maxHour, event) => {
+    const startHour = Math.floor(timeToMinutes(event.time) / 60);
+    const endHour = event.endTime && isValidTime(event.endTime) ? Math.ceil(timeToMinutes(event.endTime) / 60) : startHour;
+    return Math.max(maxHour, startHour, endHour);
+  }, minimumEndHour);
+  const finalHour = Math.min(20, Math.max(minimumEndHour, maxEventHour));
+  return timelineHours.filter((hour) => {
+    const value = Number(hour.slice(0, 2));
+    return value <= finalHour;
+  });
+}
+
 function CompactSelect<T extends string>({
   label,
   value,
@@ -281,6 +297,55 @@ function CompactSelect<T extends string>({
   );
 }
 
+
+function ActivityTypeSelect({
+  value,
+  onChange,
+}: {
+  value: CalendarCategory;
+  onChange: (value: CalendarCategory) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = categories.find((item) => item.id === value) ?? categories[0];
+
+  return (
+    <div className="min-w-0">
+      <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Tipo de actividad</span>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-14 w-full min-w-0 items-center gap-3 rounded-[18px] border border-gray-100 bg-gray-50 px-4 text-left font-black text-monkey-ink transition active:scale-[.99]"
+        aria-expanded={open}
+      >
+        <AssetThumb icon={selected.iconKey} size={34} className="rounded-[10px]" />
+        <span className="min-w-0 flex-1 truncate">{selected.label}</span>
+        <ChevronDown className={cn("h-4 w-4 text-monkey-muted transition", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[20px] bg-gray-50 p-2">
+          {categories.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onChange(item.id);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex min-w-0 items-center gap-2 rounded-[16px] px-3 py-2 text-left text-xs font-black transition active:scale-[.98]",
+                value === item.id ? "bg-monkey-green text-white shadow-sm" : "bg-white text-monkey-muted",
+              )}
+            >
+              <AssetThumb icon={item.iconKey} size={30} className="rounded-[9px] bg-white/40" />
+              <span className="min-w-0 truncate">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function CalendarPage() {
   const { events, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { createReminder } = useReminders();
@@ -296,6 +361,7 @@ export default function CalendarPage() {
   const [alertOption, setAlertOption] = useState<AlertOption>("none");
   const [errors, setErrors] = useState<CalendarFormErrors>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const [expandedHourKey, setExpandedHourKey] = useState<string | null>(null);
 
   const selectedDateKey = toDateKey(selectedDate);
   const visibleMonth = monthNames[selectedDate.getMonth()];
@@ -308,6 +374,14 @@ export default function CalendarPage() {
       .filter((event) => normalizeEventDate(event, selectedDateKey) === selectedDateKey)
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [events, selectedDateKey]);
+
+  const visibleTimelineHours = useMemo(() => getVisibleTimelineHours(eventsForSelectedDate), [eventsForSelectedDate]);
+
+  useEffect(() => {
+    if (!expandedHourKey) return;
+    const timeout = window.setTimeout(() => setExpandedHourKey(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [expandedHourKey]);
 
   const eventDays = useMemo(() => {
     const days = new Set<string>();
@@ -504,14 +578,16 @@ export default function CalendarPage() {
             ) : (
               <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
                 <div className="grid grid-cols-[56px_1fr] gap-3">
-                  {timelineHours.map((hour) => {
+                  {visibleTimelineHours.map((hour) => {
                     const hiddenByLongEvent = isCoveredByPreviousLongEvent(eventsForSelectedDate, hour);
                     if (hiddenByLongEvent) return null;
 
+                    const slotKey = `${selectedDateKey}-${hour}`;
                     const slotEvents = eventsForHour(eventsForSelectedDate, hour);
-                    const visibleEvents = slotEvents.slice(0, MAX_VISIBLE_EVENTS_PER_HOUR);
-                    const extraCount = Math.max(0, slotEvents.length - MAX_VISIBLE_EVENTS_PER_HOUR);
-                    const rowHeight = visibleEvents.length > 1 ? 128 : visibleEvents.length === 1 ? 76 : 58;
+                    const isExpanded = expandedHourKey === slotKey;
+                    const visibleEvents = isExpanded ? slotEvents : slotEvents.slice(0, MAX_VISIBLE_EVENTS_PER_HOUR);
+                    const extraCount = !isExpanded ? Math.max(0, slotEvents.length - MAX_VISIBLE_EVENTS_PER_HOUR) : 0;
+                    const rowHeight = visibleEvents.length > 1 ? Math.max(128, visibleEvents.length * 62 + 18) : visibleEvents.length === 1 ? 76 : 58;
 
                     return (
                       <div key={hour} className="contents">
@@ -535,7 +611,7 @@ export default function CalendarPage() {
                                       meta.pillClass,
                                     )}
                                   >
-                                    <span className="shrink-0 text-lg leading-none">{meta.icon}</span>
+                                    <AssetThumb icon={meta.iconKey} size={30} className="rounded-[10px] bg-white/40" />
                                     <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
                                     <span className="shrink-0 rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80">
                                       {long ? eventRangeLabel(event) : event.time}
@@ -546,8 +622,8 @@ export default function CalendarPage() {
                               {extraCount ? (
                                 <button
                                   type="button"
-                                  onClick={() => setSheetMode("settings")}
-                                  className="h-8 rounded-full bg-gray-100 px-3 text-[11px] font-black text-monkey-muted"
+                                  onClick={() => setExpandedHourKey(slotKey)}
+                                  className="h-8 rounded-full bg-gray-100 px-3 text-[11px] font-black text-monkey-muted transition active:scale-95"
                                 >
                                   +{extraCount} más en esta hora
                                 </button>
@@ -645,12 +721,7 @@ export default function CalendarPage() {
           <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, la actividad ocupa solo su hora. Si agregás fin, se muestra como una actividad larga con flag de duración.</p>
         </div>
 
-        <CompactSelect
-          label="Tipo de actividad"
-          value={category}
-          options={categories.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
-          onChange={setCategory}
-        />
+        <ActivityTypeSelect value={category} onChange={setCategory} />
 
         <CompactSelect
           label="Alerta"

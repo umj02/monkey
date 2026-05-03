@@ -1,4 +1,4 @@
-export type AssetCategory = "intro" | "hero" | "face" | "wallet" | "activity";
+export type AssetCategory = "intro" | "hero" | "face" | "wallet" | "activity" | "calendar";
 
 export type AppAsset = {
   key: string;
@@ -38,6 +38,33 @@ export const activityAssets: AppAsset[] = [
   { key: "activity-study", label: "Estudiar", src: "/assets/activities/icons/study.png", category: "activity" }
 ];
 
+export const todayQuickAssets: AppAsset[] = [
+  { key: "activity-meditate", label: "Meditar", src: "/assets/activities/today/meditar.png", category: "activity" },
+  { key: "activity-shower", label: "Bañarse", src: "/assets/activities/today/banarse.png", category: "activity" },
+  { key: "activity-brush", label: "Cepillarse", src: "/assets/activities/today/cepillarse.png", category: "activity" },
+  { key: "activity-breakfast", label: "Desayuno", src: "/assets/activities/today/desayuno.png", category: "activity" },
+  { key: "activity-wakeup", label: "Despertar", src: "/assets/activities/today/despertar.png", category: "activity" }
+];
+
+export const calendarActivityAssets: AppAsset[] = [
+  { key: "calendar-exercise", label: "Ejercicio", src: "/assets/activities/calendar/ejercicio.png", category: "calendar" },
+  { key: "calendar-cleaning", label: "Limpieza", src: "/assets/activities/calendar/limpieza.png", category: "calendar" },
+  { key: "calendar-task", label: "Tarea", src: "/assets/activities/calendar/tarea.png", category: "calendar" },
+  { key: "calendar-health", label: "Salud", src: "/assets/activities/calendar/salud.png", category: "calendar" },
+  { key: "calendar-reading", label: "Lectura", src: "/assets/activities/calendar/lectura.png", category: "calendar" },
+  { key: "calendar-study", label: "Estudio", src: "/assets/activities/calendar/estudio.png", category: "calendar" },
+  { key: "calendar-class", label: "Clases", src: "/assets/activities/calendar/clases.png", category: "calendar" },
+  { key: "calendar-food", label: "Comida", src: "/assets/activities/calendar/comida.png", category: "calendar" },
+  { key: "calendar-project", label: "Proyecto", src: "/assets/activities/calendar/proyecto.png", category: "calendar" },
+  { key: "calendar-vacation", label: "Vacaciones", src: "/assets/activities/calendar/vacaciones.png", category: "calendar" },
+  { key: "calendar-rest", label: "Descanso", src: "/assets/activities/calendar/descanso.png", category: "calendar" },
+  { key: "calendar-meeting", label: "Reunión", src: "/assets/activities/calendar/reunion.png", category: "calendar" },
+  { key: "calendar-out", label: "Salida", src: "/assets/activities/calendar/salida.png", category: "calendar" },
+  { key: "calendar-cinema", label: "Cine", src: "/assets/activities/calendar/cine.png", category: "calendar" },
+  { key: "calendar-fastfood", label: "Comida rápida", src: "/assets/activities/calendar/fastfood.png", category: "calendar" },
+  { key: "calendar-meditation", label: "Meditación", src: "/assets/activities/calendar/meditacion.png", category: "calendar" }
+];
+
 export const walletAssets: AppAsset[] = [
   { key: "wallet-income", label: "Ingresos", src: "/assets/wallet/icons/income/ingresos.png", category: "wallet", group: "income" },
   { key: "wallet-savings", label: "Ahorros", src: "/assets/wallet/icons/income/ahorros.png", category: "wallet", group: "income" },
@@ -69,7 +96,9 @@ export const walletAssets: AppAsset[] = [
   { key: "wallet-healthy", label: "Saludable", src: "/assets/wallet/icons/expense/saludable.png", category: "wallet", group: "expense" }
 ];
 
-export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...activityAssets, ...walletAssets];
+export const activityAssetGallery = [...todayQuickAssets, ...activityAssets];
+
+export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...todayQuickAssets, ...activityAssets, ...calendarActivityAssets, ...walletAssets];
 
 export function getAssetByKey(key?: string | null) {
   if (!key) return null;
