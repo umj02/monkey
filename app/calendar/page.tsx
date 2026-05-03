@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   ListFilter,
   Plus,
   Trash2,
@@ -38,7 +39,26 @@ const monthNames = [
   "Noviembre",
   "Diciembre",
 ];
-const timelineHours = ["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+const timelineHours = [
+  "06:00",
+  "07:00",
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+];
+
+const DEFAULT_DURATION_MINUTES = 60;
+const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
 
 type CalendarViewMode = "week" | "month";
 type CalendarSheetMode = "closed" | "event" | "settings" | "month";
@@ -54,6 +74,7 @@ type MonthCell = {
 type CalendarFormErrors = {
   title?: string;
   time?: string;
+  endTime?: string;
 };
 
 type CategoryMeta = {
@@ -143,6 +164,12 @@ function timeToMinutes(value: string) {
   return Number(hour) * 60 + Number(minute);
 }
 
+function minutesToHoursLabel(minutes: number) {
+  const hours = minutes / 60;
+  if (Number.isInteger(hours)) return `${hours} h`;
+  return `${hours.toFixed(1).replace(".0", "")} h`;
+}
+
 function formatLongDate(date: Date) {
   return new Intl.DateTimeFormat("es-CR", { weekday: "long", day: "numeric", month: "long" }).format(date);
 }
@@ -188,22 +215,70 @@ function createReminderTime(dateKey: string, time: string, alertOption: AlertOpt
   return date.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function eventsForTimelineSlot(events: CalendarEvent[], hour: string, index: number) {
-  const start = timeToMinutes(hour);
-  const nextHour = timelineHours[index + 1];
-  const end = nextHour ? timeToMinutes(nextHour) : 24 * 60;
+function eventStartHour(event: CalendarEvent) {
+  return Math.floor(timeToMinutes(event.time) / 60) * 60;
+}
 
-  return events.filter((event) => {
-    const eventMinutes = timeToMinutes(event.time);
-    if (index === 0 && eventMinutes < start) return true;
-    return eventMinutes >= start && eventMinutes < end;
+function eventEndMinutes(event: CalendarEvent) {
+  if (event.endTime && isValidTime(event.endTime)) return timeToMinutes(event.endTime);
+  return timeToMinutes(event.time) + DEFAULT_DURATION_MINUTES;
+}
+
+function isLongEvent(event: CalendarEvent) {
+  return Boolean(event.endTime && isValidTime(event.endTime) && eventEndMinutes(event) > timeToMinutes(event.time) + DEFAULT_DURATION_MINUTES);
+}
+
+function eventsForHour(events: CalendarEvent[], hour: string) {
+  const hourStart = timeToMinutes(hour);
+  return events.filter((event) => eventStartHour(event) === hourStart);
+}
+
+function isCoveredByPreviousLongEvent(events: CalendarEvent[], hour: string) {
+  const hourStart = timeToMinutes(hour);
+  return events.some((event) => {
+    const start = timeToMinutes(event.time);
+    const end = eventEndMinutes(event);
+    return end - start > DEFAULT_DURATION_MINUTES && start < hourStart && end > hourStart;
   });
 }
 
-function formatTimelineRange(hour: string, index: number) {
-  const nextHour = timelineHours[index + 1];
-  if (!nextHour) return `${hour}+`;
-  return `${hour} - ${nextHour}`;
+function eventRangeLabel(event: CalendarEvent) {
+  if (!event.endTime || !isValidTime(event.endTime)) return event.time;
+  const duration = eventEndMinutes(event) - timeToMinutes(event.time);
+  if (duration <= 0) return event.time;
+  return `${event.time}–${event.endTime} · ${minutesToHoursLabel(duration)}`;
+}
+
+function CompactSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { id: T; label: string; icon?: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">{label}</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value as T)}
+          className="h-12 w-full appearance-none rounded-[18px] border border-gray-100 bg-gray-50 px-4 pr-10 text-sm font-black text-monkey-ink outline-none transition focus:border-green-200 focus:bg-white"
+        >
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.icon ? `${option.icon} ` : ""}{option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-monkey-muted" />
+      </div>
+    </label>
+  );
 }
 
 export default function CalendarPage() {
@@ -216,6 +291,7 @@ export default function CalendarPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("");
   const [category, setCategory] = useState<CalendarCategory>("study");
   const [alertOption, setAlertOption] = useState<AlertOption>("none");
   const [errors, setErrors] = useState<CalendarFormErrors>({});
@@ -273,6 +349,7 @@ export default function CalendarPage() {
     setEditing(null);
     setTitle("");
     setTime("09:00");
+    setEndTime("");
     setCategory("study");
     setAlertOption("none");
     setErrors({});
@@ -284,6 +361,7 @@ export default function CalendarPage() {
     setEditing(event);
     setTitle(stripEmoji(event.title));
     setTime(event.time);
+    setEndTime(event.endTime ?? "");
     setCategory(meta.id);
     setAlertOption("none");
     setErrors({});
@@ -293,8 +371,13 @@ export default function CalendarPage() {
   function submitEvent() {
     const nextErrors: CalendarFormErrors = {};
     const cleanTitle = title.trim();
+    const cleanEndTime = endTime.trim();
     if (cleanTitle.length < 3) nextErrors.title = "El título debe tener al menos 3 caracteres.";
     if (!isValidTime(time)) nextErrors.time = "Usá formato HH:MM entre 00:00 y 23:59.";
+    if (cleanEndTime && !isValidTime(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el campo vacío.";
+    if (cleanEndTime && isValidTime(time) && isValidTime(cleanEndTime) && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) {
+      nextErrors.endTime = "La hora final debe ser posterior a la hora de inicio.";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -302,6 +385,7 @@ export default function CalendarPage() {
     const payload = {
       title: `${meta.icon} ${cleanTitle}`,
       time,
+      endTime: cleanEndTime || null,
       color: meta.color,
       date: selectedDateKey,
     } satisfies Omit<CalendarEvent, "id">;
@@ -402,11 +486,11 @@ export default function CalendarPage() {
             </div>
 
             <div className="mt-5 flex items-center justify-between rounded-[20px] bg-white px-4 py-3 shadow-sm">
-              <div>
+              <div className="min-w-0 flex-1 pr-3">
                 <p className="text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">Día seleccionado</p>
-                <p className="mt-1 text-sm font-black capitalize text-monkey-ink">{formatLongDate(selectedDate)}</p>
+                <p className="mt-1 truncate text-sm font-black capitalize text-monkey-ink">{formatLongDate(selectedDate)}</p>
               </div>
-              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-monkey-greenDark">
+              <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-xs font-black text-monkey-greenDark">
                 {eventsForSelectedDate.length} act.
               </span>
             </div>
@@ -420,61 +504,60 @@ export default function CalendarPage() {
             ) : (
               <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
                 <div className="grid grid-cols-[56px_1fr] gap-3">
-                  <div className="space-y-4 pt-1">
-                    {timelineHours.map((hour, index) => {
-                      const slotEvents = eventsForTimelineSlot(eventsForSelectedDate, hour, index);
-                      const slotHeight = slotEvents.length ? Math.max(64, slotEvents.length * 64) : 56;
-                      return (
-                        <div key={hour} className="flex items-start" style={{ minHeight: slotHeight }}>
+                  {timelineHours.map((hour) => {
+                    const hiddenByLongEvent = isCoveredByPreviousLongEvent(eventsForSelectedDate, hour);
+                    if (hiddenByLongEvent) return null;
+
+                    const slotEvents = eventsForHour(eventsForSelectedDate, hour);
+                    const visibleEvents = slotEvents.slice(0, MAX_VISIBLE_EVENTS_PER_HOUR);
+                    const extraCount = Math.max(0, slotEvents.length - MAX_VISIBLE_EVENTS_PER_HOUR);
+                    const rowHeight = visibleEvents.length > 1 ? 128 : visibleEvents.length === 1 ? 76 : 58;
+
+                    return (
+                      <div key={hour} className="contents">
+                        <div className="flex items-start pt-2" style={{ minHeight: rowHeight }}>
                           <p className="text-[12px] font-black text-monkey-muted">{hour}</p>
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="space-y-4">
-                    {timelineHours.map((hour, index) => {
-                      const slotEvents = eventsForTimelineSlot(eventsForSelectedDate, hour, index);
-                      const slotHeight = slotEvents.length ? Math.max(64, slotEvents.length * 64) : 56;
-                      return (
-                        <div key={hour} className="relative border-b border-gray-100 last:border-b-0" style={{ minHeight: slotHeight }}>
+                        <div className="relative border-b border-gray-100 pb-2 pt-1 last:border-b-0" style={{ minHeight: rowHeight }}>
                           <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
-                          {slotEvents.length ? (
-                            <div className="space-y-2 pb-2 pt-1">
-                              {slotEvents.map((event) => {
+                          {visibleEvents.length ? (
+                            <div className="space-y-2">
+                              {visibleEvents.map((event) => {
                                 const meta = categoryFromEvent(event);
+                                const long = isLongEvent(event);
                                 return (
-                                  <div key={event.id} className="grid grid-cols-[1fr_34px] items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => openEdit(event)}
-                                      className={cn("flex min-h-[52px] min-w-0 items-center gap-3 rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]", meta.pillClass)}
-                                    >
-                                      <span className="text-lg leading-none">{meta.icon}</span>
-                                      <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
-                                      <span className="shrink-0 text-[11px] font-black opacity-70">{event.time}</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setDeleteId(event.id)}
-                                      className="grid h-9 w-9 place-items-center rounded-full bg-pink-50 text-monkey-pink"
-                                      aria-label="Eliminar actividad"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
+                                  <button
+                                    key={event.id}
+                                    type="button"
+                                    onClick={() => openEdit(event)}
+                                    className={cn(
+                                      "flex min-h-[52px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]",
+                                      meta.pillClass,
+                                    )}
+                                  >
+                                    <span className="shrink-0 text-lg leading-none">{meta.icon}</span>
+                                    <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
+                                    <span className="shrink-0 rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80">
+                                      {long ? eventRangeLabel(event) : event.time}
+                                    </span>
+                                  </button>
                                 );
                               })}
+                              {extraCount ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSheetMode("settings")}
+                                  className="h-8 rounded-full bg-gray-100 px-3 text-[11px] font-black text-monkey-muted"
+                                >
+                                  +{extraCount} más en esta hora
+                                </button>
+                              ) : null}
                             </div>
-                          ) : (
-                            <p className="pt-1 text-[10px] font-bold text-transparent" aria-hidden="true">
-                              {formatTimelineRange(hour, index)}
-                            </p>
-                          )}
+                          ) : null}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -546,53 +629,51 @@ export default function CalendarPage() {
       <FormSheet
         open={sheetMode === "event"}
         title={editing ? "Editar actividad" : "Nueva actividad"}
-        subtitle={`Se guardará para ${formatShortDate(selectedDate)}. Podés agregar una alerta simple.`}
+        subtitle={`Se guardará para ${formatShortDate(selectedDate)}. Definí horario, tipo y alerta.`}
         onClose={() => setSheetMode("closed")}
         onSubmit={submitEvent}
         submitLabel={editing ? "Guardar cambios" : "Crear actividad"}
       >
-        <Field label="Nombre" value={title} onChange={(event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value)} placeholder="Ej: estudiar matemática" error={errors.title} />
-        <Field label="Hora" value={time} onChange={(event: ChangeEvent<HTMLInputElement>) => setTime(event.target.value)} placeholder="09:00" error={errors.time} />
+        <Field label="Nombre" value={title} onChange={(event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value)} placeholder="Ej: ir al gym" error={errors.title} />
 
         <div>
-          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Tipo de actividad</span>
+          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Clock3 className="h-4 w-4" /> Horario</span>
           <div className="grid grid-cols-2 gap-2">
-            {categories.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setCategory(item.id)}
-                className={cn(
-                  "flex h-12 min-w-0 items-center gap-2 rounded-[16px] px-3 text-left text-xs font-black transition active:scale-95",
-                  category === item.id ? "bg-monkey-green text-white shadow-sm" : item.pillClass,
-                )}
-              >
-                <span className="text-base">{item.icon}</span>
-                <span className="truncate">{item.label}</span>
-              </button>
-            ))}
+            <Field label="Inicio" value={time} onChange={(event: ChangeEvent<HTMLInputElement>) => setTime(event.target.value)} placeholder="09:00" error={errors.time} />
+            <Field label="Fin opcional" value={endTime} onChange={(event: ChangeEvent<HTMLInputElement>) => setEndTime(event.target.value)} placeholder="12:00" error={errors.endTime} />
           </div>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, la actividad ocupa solo su hora. Si agregás fin, se muestra como una actividad larga con flag de duración.</p>
         </div>
 
-        <div>
-          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Bell className="h-4 w-4" /> Alerta</span>
-          <div className="grid grid-cols-2 gap-2">
-            {alertOptions.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setAlertOption(item.id)}
-                className={cn(
-                  "min-h-11 rounded-[16px] px-3 text-xs font-black transition active:scale-95",
-                  alertOption === item.id ? "bg-monkey-green text-white shadow-sm" : "bg-gray-100 text-monkey-muted",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">La alerta se guarda como recordatorio y aparecerá en la sección Recordatorios.</p>
+        <CompactSelect
+          label="Tipo de actividad"
+          value={category}
+          options={categories.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
+          onChange={setCategory}
+        />
+
+        <CompactSelect
+          label="Alerta"
+          value={alertOption}
+          options={alertOptions.map((item) => ({ id: item.id, label: item.label }))}
+          onChange={setAlertOption}
+        />
+
+        <div className="rounded-[18px] bg-green-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Cómo se verá</p>
+          <p className="mt-1 text-xs leading-5 text-monkey-muted">Las actividades de 09:15 aparecen dentro de la fila 09:00. Máximo se muestran 2 por hora para mantener el calendario limpio.</p>
         </div>
+
+        {editing ? (
+          <button
+            type="button"
+            onClick={() => setDeleteId(editing.id)}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-pink-50 text-sm font-black text-monkey-pink"
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar actividad
+          </button>
+        ) : null}
       </FormSheet>
 
       <FormSheet
@@ -645,6 +726,7 @@ export default function CalendarPage() {
         onConfirm={() => {
           if (deleteId) deleteEvent(deleteId);
           setDeleteId(null);
+          setSheetMode("closed");
           notify("Actividad eliminada");
         }}
       />

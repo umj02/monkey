@@ -64,3 +64,20 @@ Esta versión toma como base v2.8 y ajusta la experiencia del calendario:
 - Muestra la hora exacta dentro de cada bloque de actividad.
 - Cuando un día no tiene actividades, se oculta la línea de horas y aparece únicamente el estado “Día libre”.
 - Mantiene el diseño visual de v2.8 y el flujo de alertas conectado a recordatorios.
+
+
+## v2.10 — Calendar Hour Rows + Compact Activity Editor
+
+Base: v2.9 Calendar Timeline Fix.
+
+Cambios incluidos:
+- Timeline del calendario vuelve a horas reales de 06:00 a 20:00, hora por hora.
+- Actividades creadas a 09:15 se muestran dentro de la fila 09:00 con su hora exacta.
+- Nueva hora final opcional para actividades largas.
+- Las actividades largas no agrandan filas; se muestran con flag de duración, por ejemplo `09:00–12:00 · 3 h`.
+- Las filas intermedias ocupadas por una actividad larga se ocultan para mantener una lectura limpia en móvil.
+- Máximo 2 actividades visibles por hora; si hay más, se muestra un indicador compacto.
+- Editor de actividad más compacto con selector desplegable de tipo y alerta.
+- Eliminación movida al editor de actividad para limpiar el timeline.
+- Corrección de overflow en cards de Hoy para textos largos y badges de hora.
+- Migración opcional `0003_v210_calendar_end_time.sql` para persistir `end_time` en Supabase.

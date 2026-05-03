@@ -58,6 +58,7 @@ export type CalendarEvent = {
   id: string;
   date: string;
   time: string;
+  endTime?: string | null;
   title: string;
   color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
 };

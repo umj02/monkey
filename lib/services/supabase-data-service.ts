@@ -41,7 +41,7 @@ type NoteRow = Pick<
 >;
 type CalendarEventRow = Pick<
   TableRow<"calendar_events">,
-  "id" | "event_date" | "start_time" | "title" | "color"
+  "id" | "event_date" | "start_time" | "end_time" | "title" | "color"
 >;
 type ReminderRow = Pick<
   TableRow<"reminders">,
@@ -461,7 +461,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
 
   const { data, error } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color")
     .eq("user_id", userId)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -474,6 +474,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
       id: event.id,
       date: event.event_date,
       time: (event.start_time || "09:00").slice(0, 5),
+      endTime: event.end_time ? event.end_time.slice(0, 5) : null,
       title: event.title,
       color: (event.color || "green") as CalendarEvent["color"],
     }),
@@ -491,6 +492,7 @@ export async function upsertCalendarEvent(
     user_id: userId,
     event_date: event.date,
     start_time: normalizeTime(event.time),
+    end_time: event.endTime ? normalizeTime(event.endTime) : null,
     title: normalizeTitle(event.title),
     color: event.color,
   };
@@ -500,13 +502,14 @@ export async function upsertCalendarEvent(
     const { data, error } = await supabase
       .from("calendar_events")
       .upsert(payload, { onConflict: "id" })
-      .select("id,event_date,start_time,title,color")
+      .select("id,event_date,start_time,end_time,title,color")
       .single();
     if (error) return null;
     return {
       id: data.id,
       date: data.event_date,
       time: normalizeTime(data.start_time),
+      endTime: data.end_time ? normalizeTime(data.end_time) : null,
       title: data.title,
       color: data.color as CalendarEvent["color"],
     };
@@ -514,7 +517,7 @@ export async function upsertCalendarEvent(
 
   const { data: existing } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color")
     .eq("user_id", userId)
     .eq("event_date", event.date)
     .eq("start_time", normalizeTime(event.time))
@@ -527,6 +530,7 @@ export async function upsertCalendarEvent(
       id: existing.id,
       date: existing.event_date,
       time: normalizeTime(existing.start_time),
+      endTime: existing.end_time ? normalizeTime(existing.end_time) : null,
       title: existing.title,
       color: existing.color as CalendarEvent["color"],
     };
@@ -534,7 +538,7 @@ export async function upsertCalendarEvent(
   const { data, error } = await supabase
     .from("calendar_events")
     .insert(payload)
-    .select("id,event_date,start_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color")
     .single();
 
   if (error) return null;
@@ -542,6 +546,7 @@ export async function upsertCalendarEvent(
     id: data.id,
     date: data.event_date,
     time: normalizeTime(data.start_time),
+    endTime: data.end_time ? normalizeTime(data.end_time) : null,
     title: data.title,
     color: data.color as CalendarEvent["color"],
   };

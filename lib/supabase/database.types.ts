@@ -29,9 +29,9 @@ export type Database = {
         Update: { id?: string; user_id?: string; task_id?: string | null; title?: string; remind_time?: string; repeat_rule?: string | null; enabled?: boolean | null; created_at?: string | null; updated_at?: string | null };
       };
       calendar_events: {
-        Row: { id: string; user_id: string; event_date: string; start_time: string | null; title: string; color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at: string | null; updated_at: string | null };
-        Insert: { id?: string; user_id: string; event_date: string; start_time?: string | null; title: string; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at?: string | null; updated_at?: string | null };
-        Update: { id?: string; user_id?: string; event_date?: string; start_time?: string | null; title?: string; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at?: string | null; updated_at?: string | null };
+        Row: { id: string; user_id: string; event_date: string; start_time: string | null; end_time: string | null; title: string; color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at: string | null; updated_at: string | null };
+        Insert: { id?: string; user_id: string; event_date: string; start_time?: string | null; end_time?: string | null; title: string; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at?: string | null; updated_at?: string | null };
+        Update: { id?: string; user_id?: string; event_date?: string; start_time?: string | null; end_time?: string | null; title?: string; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange"; created_at?: string | null; updated_at?: string | null };
       };
       wallet_transactions: {
         Row: { id: string; user_id: string; type: "income" | "expense" | "saving"; title: string; amount: number; currency: "CRC" | "USD"; category: string; icon: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; created_at: string | null; updated_at: string | null };

@@ -34,11 +34,11 @@ export function TimeBlockCard({
 }) {
   return (
     <article className={cn("animate-slideUp rounded-card border p-4 shadow-sm", styleMap[block.color])}>
-      <div className="grid grid-cols-[54px_1fr] gap-1">
+      <div className="grid min-w-0 grid-cols-[54px_minmax(0,1fr)] gap-1">
         <div className="pt-1 text-[13px] font-black">{block.time}</div>
-        <div>
-          <button type="button" onClick={() => onOpen?.(block)} className="text-left text-[15px] font-black text-monkey-ink">
-            <AssetThumb icon={block.icon} size={28} className="mr-2 inline-flex align-middle rounded-[10px] bg-white/60 p-1" />{block.title}
+        <div className="min-w-0">
+          <button type="button" onClick={() => onOpen?.(block)} className="flex max-w-full min-w-0 items-center text-left text-[15px] font-black text-monkey-ink">
+            <AssetThumb icon={block.icon} size={28} className="mr-2 shrink-0 rounded-[10px] bg-white/60 p-1" /><span className="min-w-0 truncate">{block.title}</span>
           </button>
           <div className="mt-2 space-y-2">
             {block.tasks.map((task) => (
@@ -46,12 +46,12 @@ export function TimeBlockCard({
                 key={task.id}
                 type="button"
                 onClick={() => onTaskOpen ? onTaskOpen(block, task) : onToggle(block.id, task.id)}
-                className="flex min-h-10 w-full items-center gap-2 rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
+                className="flex min-h-10 w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
               >
                 <span className={cn("min-w-0 flex-1 truncate", task.done && "text-gray-400 line-through")}>{task.title}</span>
                 {task.reminderAt ? (
                   <span className="shrink-0 rounded-pill bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-green">
-                    {reminderTime(task.reminderAt)}
+{reminderTime(task.reminderAt).replace(" a. m.", "").replace(" p. m.", "")}
                   </span>
                 ) : null}
                 <span
