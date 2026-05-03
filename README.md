@@ -45,3 +45,12 @@ Recomendado porque ya existen duplicados en la base actual.
 - Usa `tasks.reminder_at` como fuente principal para recordatorios de tareas y evita duplicar datos.
 - En la vista Hoy se muestra la hora del recordatorio junto a la campanita.
 - No requiere migración nueva: funciona sobre el esquema v2.5 + estabilidad v2.5.9.
+
+## v2.8 — Calendar UX Redesign + Alerts Flow
+- Rediseña `/calendar` con estilo visual tipo referencia: encabezado simple, selector Semana/Mes, días seleccionables y línea de tiempo vertical.
+- La vista semanal muestra actividades por horario con tarjetas pastel, ícono y color según tipo/hora.
+- La vista mensual permite tocar un día y regresar automáticamente a la agenda semanal de ese día.
+- Agrega botón flotante y botón superior `+` para crear actividades.
+- Agrega flujo simplista de alertas desde el formulario de actividad.
+- Las alertas se guardan como recordatorios independientes y aparecen en `/reminders` sin requerir migración nueva.
+- Mantiene compatibilidad con la estructura Supabase actual de `calendar_events` y `reminders`.
