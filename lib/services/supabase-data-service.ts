@@ -4,6 +4,8 @@ import type {
   CalendarEvent,
   Note,
   Reminder,
+  ReminderPanelItem,
+  ReminderStatus,
   TaskColor,
   TimeBlock,
   WalletData,
@@ -24,6 +26,14 @@ type TimeBlockRow = Pick<
 type TaskRow = Pick<
   TableRow<"tasks">,
   "id" | "block_id" | "title" | "done" | "reminder_at" | "sort_order"
+>;
+type TaskReminderRow = Pick<
+  TableRow<"tasks">,
+  "id" | "block_id" | "title" | "done" | "reminder_at"
+>;
+type TimeBlockLookupRow = Pick<
+  TableRow<"time_blocks">,
+  "id" | "block_date" | "start_time" | "title" | "icon"
 >;
 type NoteRow = Pick<
   TableRow<"notes">,
@@ -541,6 +551,89 @@ export async function deleteCalendarEventRemote(id: string): Promise<void> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return;
   await supabase.from("calendar_events").delete().eq("id", id);
+}
+
+export async function fetchTaskReminderItems(): Promise<ReminderPanelItem[] | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const { data: taskData, error } = await supabase
+    .from("tasks")
+    .select("id,block_id,title,done,reminder_at")
+    .eq("user_id", userId)
+    .not("reminder_at", "is", null)
+    .order("reminder_at", { ascending: true });
+
+  if (error) return null;
+
+  const tasks: TaskReminderRow[] = taskData ?? [];
+  const blockIds = Array.from(
+    new Set(
+      tasks
+        .map((task: TaskReminderRow) => task.block_id)
+        .filter((id: string | null): id is string => Boolean(id)),
+    ),
+  );
+
+  let blocks: TimeBlockLookupRow[] = [];
+  if (blockIds.length > 0) {
+    const { data: blockData } = await supabase
+      .from("time_blocks")
+      .select("id,block_date,start_time,title,icon")
+      .in("id", blockIds);
+    blocks = blockData ?? [];
+  }
+
+  const blockById = new Map<string, TimeBlockLookupRow>(
+    blocks.map((block: TimeBlockLookupRow) => [block.id, block]),
+  );
+
+  return tasks.map((task: TaskReminderRow): ReminderPanelItem => {
+    const block = task.block_id ? blockById.get(task.block_id) : null;
+    const reminderAt = task.reminder_at;
+    const date = reminderAt ? new Date(reminderAt) : null;
+    const isInvalidDate = !date || Number.isNaN(date.getTime());
+    const now = new Date();
+    const dateKey = isInvalidDate ? "" : date.toISOString().slice(0, 10);
+    const today = now.toISOString().slice(0, 10);
+    const status: ReminderStatus = isInvalidDate
+      ? "upcoming"
+      : date.getTime() < now.getTime()
+        ? "overdue"
+        : dateKey === today
+          ? "today"
+          : "upcoming";
+    const time = isInvalidDate
+      ? "09:00"
+      : date.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowKey = tomorrow.toISOString().slice(0, 10);
+    const dateLabel = isInvalidDate
+      ? "Fecha pendiente"
+      : dateKey === today
+        ? "Hoy"
+        : dateKey === tomorrowKey
+          ? "Mañana"
+          : new Intl.DateTimeFormat("es-CR", { weekday: "short", day: "numeric", month: "short" }).format(date);
+
+    return {
+      id: `task-${task.id}`,
+      source: "task",
+      taskId: task.id,
+      title: task.title,
+      time,
+      reminderAt,
+      enabled: true,
+      status,
+      dateLabel,
+      blockId: task.block_id,
+      blockTitle: block?.title ?? "Tarea",
+      blockTime: block?.start_time?.slice(0, 5) ?? null,
+      icon: block?.icon ?? "activity-study",
+    };
+  });
 }
 
 export async function fetchReminders(): Promise<Reminder[] | null> {

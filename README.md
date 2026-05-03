@@ -1,4 +1,4 @@
-# Monkey Checks v2.5.9 — Supabase Data Stability Fix
+# Monkey Checks v2.7 — Reminder System Real
 
 Base: v2.5.8.
 
@@ -34,3 +34,14 @@ Recomendado porque ya existen duplicados en la base actual.
 - Monito de progress card más grande.
 - Mensaje de felicitación al llegar a 100%.
 - Base v2.5.9 conservando fixes de estabilidad Supabase.
+
+
+## v2.7 — Reminder System Real
+- La vista `/reminders` ahora combina recordatorios independientes y tareas con `reminderAt`.
+- Agrupa recordatorios por estado: Hoy, Próximos, Ya pasaron e Inactivos.
+- Muestra resumen superior con conteos reales.
+- Permite apagar recordatorios de tareas sin eliminar la tarea.
+- Mantiene edición, activación y eliminación de recordatorios independientes.
+- Usa `tasks.reminder_at` como fuente principal para recordatorios de tareas y evita duplicar datos.
+- En la vista Hoy se muestra la hora del recordatorio junto a la campanita.
+- No requiere migración nueva: funciona sobre el esquema v2.5 + estabilidad v2.5.9.

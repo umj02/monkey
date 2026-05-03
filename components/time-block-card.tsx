@@ -49,6 +49,11 @@ export function TimeBlockCard({
                 className="flex min-h-10 w-full items-center gap-2 rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
               >
                 <span className={cn("min-w-0 flex-1 truncate", task.done && "text-gray-400 line-through")}>{task.title}</span>
+                {task.reminderAt ? (
+                  <span className="shrink-0 rounded-pill bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-green">
+                    {reminderTime(task.reminderAt)}
+                  </span>
+                ) : null}
                 <span
                   className={cn(
                     "grid h-7 w-7 shrink-0 place-items-center rounded-full transition",

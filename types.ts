@@ -34,6 +34,26 @@ export type Reminder = {
   taskId?: string | null;
 };
 
+export type ReminderStatus = "today" | "upcoming" | "overdue" | "inactive";
+
+export type ReminderPanelItem = {
+  id: string;
+  source: "task" | "standalone";
+  title: string;
+  time: string;
+  reminderAt?: string | null;
+  enabled: boolean;
+  status: ReminderStatus;
+  dateLabel: string;
+  repeat?: Reminder["repeat"];
+  reminderId?: string | null;
+  taskId?: string | null;
+  blockId?: string | null;
+  blockTitle?: string | null;
+  blockTime?: string | null;
+  icon?: string | null;
+};
+
 export type CalendarEvent = {
   id: string;
   date: string;
