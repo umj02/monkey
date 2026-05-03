@@ -10,3 +10,4 @@ build
 .vercel
 *.zip
 *.tar
+tsconfig.tsbuildinfo
