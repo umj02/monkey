@@ -389,7 +389,7 @@ function ActivityTypeSelect({
 
 export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
-  const { upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
+  const { upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [sheetMode, setSheetMode] = useState<CalendarSheetMode>("closed");
@@ -501,7 +501,7 @@ export default function CalendarPage() {
     if (conflict) {
       const conflictRange = eventRangeLabel(conflict);
       const conflictHour = hourLabelFromMinutes(eventInterval(conflict).startHour);
-      nextErrors.time = `Este horario ya está ocupado por “${stripEmoji(conflict.title)}” (${conflictRange}). Elegí la fila ${conflictHour} u otra hora.`;
+      nextErrors.time = `Este horario está ocupado por “${stripEmoji(conflict.title)}” (${conflictRange}). Elegí otra hora o editá esa actividad.`;
     }
 
     setErrors(nextErrors);
@@ -522,19 +522,25 @@ export default function CalendarPage() {
     const savedEvent = editing ? await updateEvent(editing.id, payload) : await createEvent(payload);
 
     const alertTime = createReminderTime(selectedDateKey, time, alertOption);
+    let alertSynced = true;
     if (alertTime) {
-      upsertCalendarReminder(savedEvent.id, {
+      const result = await upsertCalendarReminder(savedEvent.id, {
         title: `Alerta: ${cleanTitle}`,
         time: alertTime,
         repeat: "custom" as Reminder["repeat"],
         calendarEventId: savedEvent.id,
       });
+      alertSynced = result.ok;
     } else if (editing) {
-      deleteCalendarEventReminders(editing.id);
+      alertSynced = await deleteCalendarEventReminders(editing.id);
     }
 
     setSheetMode("closed");
-    notify(editing ? "Actividad actualizada" : alertTime ? "Actividad y alerta creadas" : "Actividad creada");
+    if (!alertSynced) {
+      notify("Actividad guardada, pero la alerta no se pudo sincronizar. Revisá Recordatorios.", "error");
+      return;
+    }
+    notify(editing ? "Actividad actualizada y sincronizada" : alertTime ? "Actividad y alerta creadas" : "Actividad creada");
   }
 
   return (
@@ -664,7 +670,9 @@ export default function CalendarPage() {
         <button type="button" onClick={goToday} className="h-12 w-full rounded-pill bg-green-50 text-sm font-black text-monkey-greenDark">Volver a hoy</button>
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError ? lastError : syncing ? "Sincronizando con Supabase..." : syncStatus === "saving" ? "Guardando cambios..." : syncStatus === "synced" ? "Sincronizado." : "Calendario listo."}</p>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">
+            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Sincronizando con Supabase..." : syncStatus === "saving" ? "Guardando cambios..." : syncStatus === "synced" ? "Sincronizado." : "Calendario listo."}
+          </p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">
           <p className="text-sm font-black text-monkey-greenDark">Tip de alertas</p>
@@ -694,12 +702,12 @@ export default function CalendarPage() {
       <ConfirmSheet
         open={!!deleteId}
         title="¿Eliminar actividad?"
-        body="La actividad se quitará del calendario."
+        body="La actividad se quitará del calendario y también se eliminará su alerta relacionada."
         onCancel={() => setDeleteId(null)}
         onConfirm={() => {
           if (deleteId) {
             void deleteEvent(deleteId);
-            deleteCalendarEventReminders(deleteId);
+            void deleteCalendarEventReminders(deleteId);
           }
           setDeleteId(null);
           setSheetMode("closed");

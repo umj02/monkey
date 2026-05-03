@@ -1,3 +1,60 @@
+# Monkey Checks v2.12.2 — Final QA Hardening
+
+Monkey Checks es una app mobile-first para organizar tareas, calendario, recordatorios, notas, wallet y perfil con Supabase.
+
+## Qué trae v2.12.2
+
+- Hardening final sobre `v2.12.1`.
+- Calendario con recordatorios ligados a eventos.
+- Mejor manejo de sincronización y errores de alertas.
+- Form sheets más seguros para móvil y doble submit.
+- Validación de assets por script.
+- Scripts de QA final.
+- Dependencias fijadas, sin `latest`.
+
+## Scripts
+
+```bash
+npm run dev
+npm run validate:assets
+npm run typecheck
+npm run build
+npm run qa:final
+```
+
+## Supabase
+
+Antes de usar calendario con hora final y alertas ligadas a eventos, correr las migraciones:
+
+```txt
+supabase/migrations/0001_v25_full_schema.sql
+supabase/migrations/0002_v259_data_stability.sql
+supabase/migrations/0003_v210_calendar_end_time.sql
+supabase/migrations/0004_v2121_calendar_event_reminders.sql
+```
+
+## Variables de entorno
+
+```txt
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Solo para desarrollo local:
+
+```txt
+NEXT_PUBLIC_ALLOW_LOCAL_AUTH=true
+```
+
+## Preflight recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run qa:final
+```
+
+Ver también `FINAL_QA_CHECKLIST.md`.
 # Monkey Checks v2.7 — Reminder System Real
 
 Base: v2.5.8.

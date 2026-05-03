@@ -14,32 +14,69 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import type { Reminder } from "@/types";
 
+export type ReminderSyncStatus = "idle" | "loading" | "saving" | "synced" | "error";
+
 export function useReminders() {
   const { session, mode } = useAuth();
   const [items, setItems, ready] = useLocalStorageState<Reminder[]>(STORAGE_KEYS.reminders, remindersSeed, [...LEGACY_STORAGE_KEYS.reminders]);
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<ReminderSyncStatus>("idle");
+  const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session || mode !== "supabase") return;
     let cancelled = false;
     setSyncing(true);
-    fetchReminders().then((remote) => {
-      if (!cancelled && remote) setItems(remote);
-      if (!cancelled) setSyncing(false);
-    });
+    setSyncStatus("loading");
+    setLastError(null);
+    fetchReminders()
+      .then((remote) => {
+        if (cancelled) return;
+        if (remote) {
+          setItems(remote);
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("error");
+          setLastError("No se pudieron cargar los recordatorios.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSyncStatus("error");
+          setLastError("No se pudieron cargar los recordatorios.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSyncing(false);
+      });
     return () => {
       cancelled = true;
     };
   }, [session?.userId, mode, setItems]);
 
-  function create(input: ReminderInput) {
+  async function persist(item: Reminder) {
+    if (!session || mode !== "supabase") return { ok: true, reminder: item, localOnly: true };
+    setSyncStatus("saving");
+    setLastError(null);
+    const remote = await upsertReminder(item);
+    if (!remote) {
+      setSyncStatus("error");
+      setLastError("No se pudo sincronizar el recordatorio.");
+      return { ok: false, reminder: item, localOnly: false };
+    }
+    setItems((list) => list.map((current) => (current.id === item.id || current.calendarEventId === remote.calendarEventId ? remote : current)));
+    setSyncStatus("synced");
+    return { ok: true, reminder: remote, localOnly: false };
+  }
+
+  async function create(input: ReminderInput) {
     const item = createReminder(input);
     setItems((list) => [item, ...list]);
-    if (session && mode === "supabase") void upsertReminder(item);
+    await persist(item);
     return item;
   }
 
-  function update(id: string, input: ReminderInput) {
+  async function update(id: string, input: ReminderInput) {
     const nextItem = items.find((item) => item.id === id);
     const merged = nextItem
       ? {
@@ -51,11 +88,13 @@ export function useReminders() {
           calendarEventId: input.calendarEventId ?? nextItem.calendarEventId ?? null,
         }
       : null;
-    setItems((list) => list.map((item) => (item.id === id ? merged ?? item : item)));
-    if (merged && session && mode === "supabase") void upsertReminder(merged);
+    if (!merged) return null;
+    setItems((list) => list.map((item) => (item.id === id ? merged : item)));
+    await persist(merged);
+    return merged;
   }
 
-  function upsertCalendarReminder(calendarEventId: string, input: ReminderInput) {
+  async function upsertCalendarReminder(calendarEventId: string, input: ReminderInput): Promise<{ ok: boolean; reminder: Reminder | null }> {
     const existing = items.find((item) => item.calendarEventId === calendarEventId);
     const merged: Reminder = existing
       ? {
@@ -63,6 +102,7 @@ export function useReminders() {
           title: input.title.trim(),
           time: input.time,
           repeat: input.repeat,
+          enabled: true,
           calendarEventId,
         }
       : createReminder({ ...input, calendarEventId });
@@ -71,25 +111,50 @@ export function useReminders() {
       if (existing) return list.map((item) => (item.id === existing.id ? merged : item));
       return [merged, ...list];
     });
-    if (session && mode === "supabase") void upsertReminder(merged);
-    return merged;
+
+    const result = await persist(merged);
+    return { ok: result.ok, reminder: result.reminder };
   }
 
-  function deleteCalendarEventReminders(calendarEventId: string) {
+  async function deleteCalendarEventReminders(calendarEventId: string): Promise<boolean> {
+    const previous = items;
     setItems((list) => list.filter((item) => item.calendarEventId !== calendarEventId));
-    if (session && mode === "supabase") void deleteRemindersByCalendarEventRemote(calendarEventId);
+    if (!session || mode !== "supabase") return true;
+    setSyncStatus("saving");
+    setLastError(null);
+    const ok = await deleteRemindersByCalendarEventRemote(calendarEventId);
+    if (!ok) {
+      setItems(previous);
+      setSyncStatus("error");
+      setLastError("No se pudo eliminar la alerta relacionada.");
+      return false;
+    }
+    setSyncStatus("synced");
+    return true;
   }
 
-  function toggle(id: string) {
+  async function toggle(id: string) {
     const nextItem = items.find((item) => item.id === id);
     const merged = nextItem ? { ...nextItem, enabled: !nextItem.enabled } : null;
-    setItems((list) => list.map((item) => item.id === id ? { ...item, enabled: !item.enabled } : item));
-    if (merged && session && mode === "supabase") void upsertReminder(merged);
+    if (!merged) return;
+    setItems((list) => list.map((item) => (item.id === id ? merged : item)));
+    await persist(merged);
   }
 
-  function remove(id: string) {
+  async function remove(id: string) {
+    const previous = items;
     setItems((list) => list.filter((item) => item.id !== id));
-    if (session && mode === "supabase") void deleteReminderRemote(id);
+    if (!session || mode !== "supabase") return;
+    setSyncStatus("saving");
+    setLastError(null);
+    const ok = await deleteReminderRemote(id);
+    if (!ok) {
+      setItems(previous);
+      setSyncStatus("error");
+      setLastError("No se pudo eliminar el recordatorio.");
+      return;
+    }
+    setSyncStatus("synced");
   }
 
   return {
@@ -97,6 +162,8 @@ export function useReminders() {
     setItems,
     ready,
     syncing,
+    syncStatus,
+    lastError,
     createReminder: create,
     updateReminder: update,
     upsertCalendarReminder,
