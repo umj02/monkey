@@ -121,3 +121,24 @@ No se incluye `package-lock.json` porque el entorno de generación no logró com
 - Calendario: crear actividad con alerta, editar solo texto/hora, guardar y confirmar que la alerta sigue en Recordatorios.
 - Login: entrar a `/calendar` sin sesión, iniciar sesión y confirmar que vuelve a `/calendar`.
 - Copys: confirmar que ya no aparecen mensajes de "almacenamiento local" en acciones de usuario final.
+
+## v2.16 — Background Push Notifications QA
+
+Antes de marcar push como producción:
+
+1. Ejecutar migración `0011_v216_background_push_notifications.sql`.
+2. Configurar en Vercel:
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+   - `VAPID_PUBLIC_KEY`
+   - `VAPID_PRIVATE_KEY`
+   - `VAPID_SUBJECT`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `CRON_SECRET`
+3. Confirmar que Vercel Cron llame `/api/cron/reminders`.
+4. Iniciar sesión con usuario real.
+5. Ir a Recordatorios y activar alertas.
+6. Crear recordatorio a 1-2 minutos.
+7. Ejecutar cron manualmente o esperar el cron.
+8. Confirmar notificación push.
+9. Confirmar que no se duplica dentro del mismo minuto.
+10. En iPhone, instalar como PWA antes de probar push.

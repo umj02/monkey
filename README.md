@@ -504,3 +504,62 @@ QA recomendado:
 6. Eliminar solo una fecha y confirmar que la serie sigue viva.
 7. Crear tarea desde Hoy con tipo de actividad visual.
 8. Confirmar que aparece en Calendario con el mismo icono/tipo.
+
+## v2.16 — Background Push Notifications
+
+Esta versión agrega notificaciones push reales en segundo plano usando PWA + Service Worker + Vercel Cron/API Route + Supabase.
+
+### Migración nueva
+
+Ejecutar después de las migraciones previas:
+
+```txt
+supabase/migrations/0011_v216_background_push_notifications.sql
+```
+
+### Variables de entorno requeridas en Vercel
+
+```env
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:tu-correo@dominio.com
+SUPABASE_SERVICE_ROLE_KEY=
+CRON_SECRET=
+```
+
+Generar VAPID keys:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` y `VAPID_PRIVATE_KEY` son privadas y nunca deben usarse en frontend.
+
+### Vercel Cron recomendado
+
+Crear un cron que llame cada minuto o cada 5 minutos a:
+
+```txt
+/api/cron/reminders
+```
+
+Enviar header:
+
+```txt
+Authorization: Bearer <CRON_SECRET>
+```
+
+### QA push
+
+1. Login con usuario real.
+2. Ir a Recordatorios.
+3. Tocar Activar alertas.
+4. Aceptar permisos del navegador.
+5. Crear un recordatorio para 1-2 minutos después.
+6. Cerrar la pestaña o dejar la app en segundo plano.
+7. Ejecutar cron o esperar Vercel Cron.
+8. Confirmar que llega la notificación.
+
+Notas: iOS puede requerir instalar la app como PWA para permitir push web. El modal in-app sigue funcionando cuando la app está abierta.
+

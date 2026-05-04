@@ -6,6 +6,7 @@ import { Bell, BellRing, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchCalendarEvents, fetchReminders, fetchTaskReminderItems } from "@/lib/services/supabase-data-service";
 import { LottieAlertIcon } from "@/components/lottie-alert-icon";
+import { subscribeToBackgroundPush, getPushAvailability, type PushSubscriptionState } from "@/lib/push/client";
 import type { CalendarEvent, Reminder, ReminderPanelItem } from "@/types";
 
 type AlertItem = {
@@ -81,22 +82,45 @@ export function BrowserAlertEngine() {
   const { session, mode } = useAuth();
   const [activeAlert, setActiveAlert] = useState<AlertItem | null>(null);
   const [permissionState, setPermissionState] = useState<NotificationPermission | "unsupported">("unsupported");
+  const [pushState, setPushState] = useState<PushSubscriptionState>("unsupported");
+  const [pushMessage, setPushMessage] = useState<string>("");
+  const [subscribing, setSubscribing] = useState(false);
   const checkingRef = useRef(false);
 
   const canUseNotifications = useMemo(() => typeof window !== "undefined" && "Notification" in window, []);
 
   useEffect(() => {
+    setPushState(getPushAvailability());
     if (!canUseNotifications) {
       setPermissionState("unsupported");
       return;
     }
     setPermissionState(Notification.permission);
+    if (Notification.permission === "granted" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration("/sw.js")
+        .then((registration) => registration?.pushManager.getSubscription())
+        .then((subscription) => {
+          if (subscription) setPushState("subscribed");
+        })
+        .catch(() => null);
+    }
   }, [canUseNotifications]);
 
   const requestPermission = useCallback(async () => {
     if (!canUseNotifications) return;
-    const next = await Notification.requestPermission();
-    setPermissionState(next);
+    setSubscribing(true);
+    setPushMessage("");
+    try {
+      const result = await subscribeToBackgroundPush();
+      setPushState(result.state);
+      setPushMessage(result.message);
+      if ("Notification" in window) setPermissionState(Notification.permission);
+    } catch {
+      setPushState("error");
+      setPushMessage("No se pudieron activar las alertas en segundo plano.");
+    } finally {
+      setSubscribing(false);
+    }
   }, [canUseNotifications]);
 
   const notify = useCallback((item: AlertItem) => {
@@ -149,7 +173,7 @@ export function BrowserAlertEngine() {
     return () => window.clearInterval(timer);
   }, [checkAlerts, mode, session]);
 
-  const showPermissionCta = pathname === "/reminders" && permissionState === "default";
+  const showPermissionCta = pathname === "/reminders" && (permissionState === "default" || pushState === "missing-key" || pushState === "error");
 
   return (
     <>
@@ -157,10 +181,14 @@ export function BrowserAlertEngine() {
         <button
           type="button"
           onClick={requestPermission}
-          className="fixed left-1/2 top-[calc(16px+var(--safe-top))] z-[60] flex w-[calc(100%-40px)] max-w-[390px] -translate-x-1/2 items-center gap-3 rounded-[20px] border border-green-100 bg-white/95 p-3 text-left shadow-soft backdrop-blur-xl"
+          disabled={subscribing || pushState === "missing-key"}
+          className="fixed left-1/2 top-[calc(16px+var(--safe-top))] z-[60] flex w-[calc(100%-40px)] max-w-[390px] -translate-x-1/2 items-center gap-3 rounded-[20px] border border-green-100 bg-white/95 p-3 text-left shadow-soft backdrop-blur-xl disabled:opacity-80"
         >
           <span className="grid h-10 w-10 place-items-center rounded-full bg-green-100 text-monkey-green"><Bell className="h-5 w-5" /></span>
-          <span className="min-w-0 flex-1"><strong className="block text-sm font-black">Activar alertas</strong><span className="block text-xs font-bold text-monkey-muted">Permite notificaciones para tus recordatorios.</span></span>
+          <span className="min-w-0 flex-1">
+            <strong className="block text-sm font-black">{subscribing ? "Activando alertas…" : "Activar alertas"}</strong>
+            <span className="block text-xs font-bold text-monkey-muted">{pushMessage || (pushState === "missing-key" ? "Falta configurar VAPID en Vercel." : "Permite notificaciones incluso cuando la app está cerrada.")}</span>
+          </span>
         </button>
       ) : null}
 

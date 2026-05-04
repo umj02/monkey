@@ -45,6 +45,17 @@ export type Database = {
         Insert: { id?: string; user_id: string; calendar_event_id: string; occurrence_date: string; title?: string | null; start_time?: string | null; end_time?: string | null; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange" | null; icon_key?: string | null; activity_type_key?: string | null; reminder_at?: string | null; is_cancelled?: boolean | null; created_at?: string | null; updated_at?: string | null };
         Update: { id?: string; user_id?: string; calendar_event_id?: string; occurrence_date?: string; title?: string | null; start_time?: string | null; end_time?: string | null; color?: "yellow" | "blue" | "green" | "pink" | "purple" | "orange" | null; icon_key?: string | null; activity_type_key?: string | null; reminder_at?: string | null; is_cancelled?: boolean | null; created_at?: string | null; updated_at?: string | null };
       };
+
+      push_subscriptions: {
+        Row: { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; timezone: string | null; user_agent: string | null; enabled: boolean | null; created_at: string | null; updated_at: string | null };
+        Insert: { id?: string; user_id: string; endpoint: string; p256dh: string; auth: string; timezone?: string | null; user_agent?: string | null; enabled?: boolean | null; created_at?: string | null; updated_at?: string | null };
+        Update: { id?: string; user_id?: string; endpoint?: string; p256dh?: string; auth?: string; timezone?: string | null; user_agent?: string | null; enabled?: boolean | null; created_at?: string | null; updated_at?: string | null };
+      };
+      push_notification_deliveries: {
+        Row: { id: string; user_id: string; reminder_id: string; scheduled_for: string; sent_at: string | null; status: string | null; error_message: string | null; created_at: string | null };
+        Insert: { id?: string; user_id: string; reminder_id: string; scheduled_for: string; sent_at?: string | null; status?: string | null; error_message?: string | null; created_at?: string | null };
+        Update: { id?: string; user_id?: string; reminder_id?: string; scheduled_for?: string; sent_at?: string | null; status?: string | null; error_message?: string | null; created_at?: string | null };
+      };
       wallet_transactions: {
         Row: { id: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency: "CRC" | "USD"; category: string; icon: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; created_at: string | null; updated_at: string | null };
         Insert: { id?: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency?: "CRC" | "USD"; category: string; icon?: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; created_at?: string | null; updated_at?: string | null };

@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Push real se configura en v2.16; este registro prepara PWA/notificaciones.
+      // Service worker requerido para PWA y push en segundo plano.
     });
   }, []);
 
