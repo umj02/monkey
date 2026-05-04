@@ -1,3 +1,50 @@
+# Monkey Checks v2.13.5 — Calendar Recurring Activities UX
+
+Base: v2.13.4.
+
+## Cambios principales
+
+- Agrega configuración de repetición en el modal de calendario sin sobrecargar el formulario principal.
+- Nuevo sheet secundario **Repetición** con opciones:
+  - No se repite
+  - Todos los días
+  - Días específicos
+- Selector de días L, M, X, J, V, S, D.
+- Campo opcional `Hasta cuándo` para terminar la repetición.
+- Render de ocurrencias recurrentes en vista Semana y Mes.
+- Las alertas ligadas a actividades recurrentes se evalúan solo cuando la ocurrencia corresponde al día actual.
+- Migración nueva: `0006_v2135_calendar_recurrence.sql`.
+
+## Migraciones requeridas
+
+```txt
+supabase/migrations/0001_v25_full_schema.sql
+supabase/migrations/0002_v259_data_stability.sql
+supabase/migrations/0003_v210_calendar_end_time.sql
+supabase/migrations/0004_v2121_calendar_event_reminders.sql
+supabase/migrations/0005_v213_wallet_extra_period_filters.sql
+supabase/migrations/0006_v2135_calendar_recurrence.sql
+```
+
+## QA recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Probar en calendario:
+
+- Crear actividad única.
+- Crear actividad diaria.
+- Crear actividad en días específicos.
+- Verificar que aparece en Semana y Mes.
+- Verificar que una alerta recurrente solo se muestra en los días configurados.
+
+---
+
 # Monkey Checks v2.12.2 — Final QA Hardening
 
 Monkey Checks es una app mobile-first para organizar tareas, calendario, recordatorios, notas, wallet y perfil con Supabase.

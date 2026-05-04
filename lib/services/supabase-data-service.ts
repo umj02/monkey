@@ -41,7 +41,7 @@ type NoteRow = Pick<
 >;
 type CalendarEventRow = Pick<
   TableRow<"calendar_events">,
-  "id" | "event_date" | "start_time" | "end_time" | "title" | "color"
+  "id" | "event_date" | "start_time" | "end_time" | "title" | "color" | "recurrence_type" | "recurrence_days" | "recurrence_until" | "recurrence_group_id"
 >;
 type ReminderRow = Pick<
   TableRow<"reminders">,
@@ -479,7 +479,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
 
   const { data, error } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
     .eq("user_id", userId)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -495,6 +495,10 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
       endTime: event.end_time ? event.end_time.slice(0, 5) : null,
       title: event.title,
       color: (event.color || "green") as CalendarEvent["color"],
+      recurrenceType: (event.recurrence_type || "none") as CalendarEvent["recurrenceType"],
+      recurrenceDays: event.recurrence_days ?? null,
+      recurrenceUntil: event.recurrence_until ?? null,
+      recurrenceGroupId: event.recurrence_group_id ?? null,
     }),
   );
 }
@@ -513,6 +517,10 @@ export async function upsertCalendarEvent(
     end_time: event.endTime ? normalizeTime(event.endTime) : null,
     title: normalizeTitle(event.title),
     color: event.color,
+    recurrence_type: event.recurrenceType ?? "none",
+    recurrence_days: event.recurrenceType === "custom_days" ? event.recurrenceDays ?? [] : null,
+    recurrence_until: event.recurrenceUntil ?? null,
+    recurrence_group_id: event.recurrenceGroupId ?? null,
   };
 
   if (isUuid(event.id)) {
@@ -520,7 +528,7 @@ export async function upsertCalendarEvent(
     const { data, error } = await supabase
       .from("calendar_events")
       .upsert(payload, { onConflict: "id" })
-      .select("id,event_date,start_time,end_time,title,color")
+      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
       .single();
     if (error) return null;
     return {
@@ -530,12 +538,16 @@ export async function upsertCalendarEvent(
       endTime: data.end_time ? normalizeTime(data.end_time) : null,
       title: data.title,
       color: data.color as CalendarEvent["color"],
+      recurrenceType: (data.recurrence_type || "none") as CalendarEvent["recurrenceType"],
+      recurrenceDays: data.recurrence_days ?? null,
+      recurrenceUntil: data.recurrence_until ?? null,
+      recurrenceGroupId: data.recurrence_group_id ?? null,
     };
   }
 
   const { data: existing } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
     .eq("user_id", userId)
     .eq("event_date", event.date)
     .eq("start_time", normalizeTime(event.time))
@@ -543,20 +555,32 @@ export async function upsertCalendarEvent(
     .limit(1)
     .maybeSingle();
 
-  if (existing?.id)
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+      .single();
+    if (error) return null;
     return {
-      id: existing.id,
-      date: existing.event_date,
-      time: normalizeTime(existing.start_time),
-      endTime: existing.end_time ? normalizeTime(existing.end_time) : null,
-      title: existing.title,
-      color: existing.color as CalendarEvent["color"],
+      id: data.id,
+      date: data.event_date,
+      time: normalizeTime(data.start_time),
+      endTime: data.end_time ? normalizeTime(data.end_time) : null,
+      title: data.title,
+      color: data.color as CalendarEvent["color"],
+      recurrenceType: (data.recurrence_type || "none") as CalendarEvent["recurrenceType"],
+      recurrenceDays: data.recurrence_days ?? null,
+      recurrenceUntil: data.recurrence_until ?? null,
+      recurrenceGroupId: data.recurrence_group_id ?? null,
     };
+  }
 
   const { data, error } = await supabase
     .from("calendar_events")
     .insert(payload)
-    .select("id,event_date,start_time,end_time,title,color")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
     .single();
 
   if (error) return null;
@@ -567,6 +591,10 @@ export async function upsertCalendarEvent(
     endTime: data.end_time ? normalizeTime(data.end_time) : null,
     title: data.title,
     color: data.color as CalendarEvent["color"],
+    recurrenceType: (data.recurrence_type || "none") as CalendarEvent["recurrenceType"],
+    recurrenceDays: data.recurrence_days ?? null,
+    recurrenceUntil: data.recurrence_until ?? null,
+    recurrenceGroupId: data.recurrence_group_id ?? null,
   };
 }
 

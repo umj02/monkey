@@ -56,6 +56,8 @@ export type ReminderPanelItem = {
   icon?: string | null;
 };
 
+export type CalendarRecurrenceType = "none" | "daily" | "custom_days";
+
 export type CalendarEvent = {
   id: string;
   date: string;
@@ -63,6 +65,10 @@ export type CalendarEvent = {
   endTime?: string | null;
   title: string;
   color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
+  recurrenceType?: CalendarRecurrenceType;
+  recurrenceDays?: number[] | null;
+  recurrenceUntil?: string | null;
+  recurrenceGroupId?: string | null;
 };
 
 export type Profile = {

@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, BellRing, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { fetchReminders, fetchTaskReminderItems } from "@/lib/services/supabase-data-service";
+import { fetchCalendarEvents, fetchReminders, fetchTaskReminderItems } from "@/lib/services/supabase-data-service";
 import { LottieAlertIcon } from "@/components/lottie-alert-icon";
-import type { Reminder, ReminderPanelItem } from "@/types";
+import type { CalendarEvent, Reminder, ReminderPanelItem } from "@/types";
 
 type AlertItem = {
   id: string;
@@ -39,6 +39,28 @@ function currentHHMM() {
 function minuteKey() {
   const now = new Date();
   return `${now.toISOString().slice(0, 10)}T${now.toTimeString().slice(0, 5)}`;
+}
+
+
+function todayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function fromDateKey(dateKey: string) {
+  const [year = "2026", month = "01", day = "01"] = dateKey.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+function calendarEventOccursToday(event: CalendarEvent) {
+  const dateKey = todayKey();
+  const recurrenceType = event.recurrenceType ?? "none";
+  if (recurrenceType === "none") return event.date === dateKey;
+  if (dateKey.localeCompare(event.date) < 0) return false;
+  if (event.recurrenceUntil && dateKey.localeCompare(event.recurrenceUntil) > 0) return false;
+  if (recurrenceType === "daily") return true;
+  if (recurrenceType === "custom_days") return (event.recurrenceDays ?? []).includes(fromDateKey(dateKey).getDay());
+  return false;
 }
 
 function standaloneDue(reminder: Reminder) {
@@ -96,9 +118,14 @@ export function BrowserAlertEngine() {
     if (!session || mode !== "supabase" || checkingRef.current) return;
     checkingRef.current = true;
     try {
-      const [standalone, taskItems] = await Promise.all([fetchReminders(), fetchTaskReminderItems()]);
+      const [standalone, taskItems, calendarEvents] = await Promise.all([fetchReminders(), fetchTaskReminderItems(), fetchCalendarEvents()]);
+      const calendarById = new Map((calendarEvents || []).map((event) => [event.id, event]));
       const candidates: AlertItem[] = [];
       for (const reminder of standalone || []) {
+        if (reminder.calendarEventId) {
+          const event = calendarById.get(reminder.calendarEventId);
+          if (!event || !calendarEventOccursToday(event)) continue;
+        }
         if (standaloneDue(reminder)) candidates.push({ id: `reminder-${reminder.id}-${minuteKey()}`, title: reminder.title, time: reminder.time, source: "reminder" });
       }
       for (const task of taskItems || []) {

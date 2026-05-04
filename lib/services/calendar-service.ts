@@ -11,11 +11,15 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     time: input.time,
     endTime: input.endTime ?? null,
     color: input.color,
+    recurrenceType: input.recurrenceType ?? "none",
+    recurrenceDays: input.recurrenceDays ?? null,
+    recurrenceUntil: input.recurrenceUntil ?? null,
+    recurrenceGroupId: input.recurrenceGroupId ?? null,
   };
 }
 
 export function sortCalendarEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) =>
-    `${a.date} ${a.time} ${a.endTime ?? ""}`.localeCompare(`${b.date} ${b.time} ${b.endTime ?? ""}`),
+    `${a.date} ${a.time} ${a.endTime ?? ""} ${a.recurrenceType ?? "none"}`.localeCompare(`${b.date} ${b.time} ${b.endTime ?? ""} ${b.recurrenceType ?? "none"}`),
   );
 }

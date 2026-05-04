@@ -19,7 +19,7 @@ import { Toast, ToastState } from "@/components/toast";
 import { AssetThumb } from "@/components/asset-thumb";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useReminders } from "@/hooks/use-reminders";
-import type { CalendarEvent, Reminder } from "@/types";
+import type { CalendarEvent, CalendarRecurrenceType, Reminder } from "@/types";
 import { cn } from "@/lib/utils";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarViewToggle, type CalendarViewMode } from "@/components/calendar/calendar-view-toggle";
@@ -29,7 +29,7 @@ import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarTimeline } from "@/components/calendar/calendar-timeline";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
-const dayLetters = ["L", "M", "M", "J", "V", "S", "D"];
+const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
 const monthNames = [
   "Enero",
   "Febrero",
@@ -49,9 +49,10 @@ const timelineHours = Array.from({ length: 24 }, (_, hour) => `${String(hour).pa
 const DEFAULT_DURATION_MINUTES = 60;
 const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
 
-type CalendarSheetMode = "closed" | "event" | "settings" | "month";
+type CalendarSheetMode = "closed" | "event" | "settings" | "month" | "recurrence";
 type CalendarCategory = "exercise" | "study" | "class" | "food" | "project" | "rest" | "other";
 type AlertOption = "none" | "exact" | "5" | "15" | "30";
+type RecurrenceType = CalendarRecurrenceType;
 
 type MonthCell = {
   key: string;
@@ -92,6 +93,22 @@ const alertOptions: { id: AlertOption; label: string; offset: number | null }[] 
   { id: "30", label: "30 min antes", offset: 30 },
 ];
 
+const recurrenceOptions: { id: RecurrenceType; label: string; helper: string }[] = [
+  { id: "none", label: "No se repite", helper: "Solo este día" },
+  { id: "daily", label: "Todos los días", helper: "A la misma hora" },
+  { id: "custom_days", label: "Días específicos", helper: "Elegí los días" },
+];
+
+const recurrenceWeekdays = [
+  { jsDay: 1, short: "L", label: "Lunes" },
+  { jsDay: 2, short: "M", label: "Martes" },
+  { jsDay: 3, short: "X", label: "Miércoles" },
+  { jsDay: 4, short: "J", label: "Jueves" },
+  { jsDay: 5, short: "V", label: "Viernes" },
+  { jsDay: 6, short: "S", label: "Sábado" },
+  { jsDay: 0, short: "D", label: "Domingo" },
+];
+
 function toDateKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -102,6 +119,12 @@ function toDateKey(date: Date) {
 function fromDateKey(dateKey: string) {
   const [year = "2026", month = "05", day = "14"] = dateKey.split("-");
   return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+function isValidDateKey(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = fromDateKey(value);
+  return !Number.isNaN(date.getTime()) && toDateKey(date) === value;
 }
 
 function getMonday(date: Date) {
@@ -165,6 +188,36 @@ function formatLongDate(date: Date) {
 
 function formatShortDate(date: Date) {
   return new Intl.DateTimeFormat("es-CR", { day: "numeric", month: "short" }).format(date);
+}
+
+function dateKeyToJsDay(dateKey: string) {
+  return fromDateKey(dateKey).getDay();
+}
+
+function compareDateKeys(a: string, b: string) {
+  return a.localeCompare(b);
+}
+
+function eventOccursOnDate(event: CalendarEvent, dateKey: string) {
+  const recurrenceType = event.recurrenceType ?? "none";
+  const startDate = event.date;
+  if (recurrenceType === "none") return startDate === dateKey;
+  if (compareDateKeys(dateKey, startDate) < 0) return false;
+  if (event.recurrenceUntil && compareDateKeys(dateKey, event.recurrenceUntil) > 0) return false;
+  if (recurrenceType === "daily") return true;
+  if (recurrenceType === "custom_days") return (event.recurrenceDays ?? []).includes(dateKeyToJsDay(dateKey));
+  return false;
+}
+
+function recurrenceSummary(type: RecurrenceType, days: number[], until?: string | null) {
+  if (type === "none") return "No se repite";
+  const untilLabel = until && isValidDateKey(until) ? ` · hasta ${formatShortDate(fromDateKey(until))}` : "";
+  if (type === "daily") return `Todos los días${untilLabel}`;
+  const selected = recurrenceWeekdays
+    .filter((day) => days.includes(day.jsDay))
+    .map((day) => day.short)
+    .join(", ");
+  return `${selected || "Elegí días"}${untilLabel}`;
 }
 
 function stripEmoji(title: string) {
@@ -301,6 +354,29 @@ function getVisibleTimelineHours(events: CalendarEvent[]) {
   });
 }
 
+
+function RecurrenceControl({
+  summary,
+  onOpen,
+}: {
+  summary: string;
+  onOpen: () => void;
+}) {
+  return (
+    <div>
+      <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Repetir</span>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex h-12 w-full min-w-0 items-center justify-between gap-3 rounded-[18px] border border-gray-100 bg-gray-50 px-4 text-left text-sm font-black text-monkey-ink transition active:scale-[.99]"
+      >
+        <span className="min-w-0 truncate">{summary}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-monkey-muted" />
+      </button>
+    </div>
+  );
+}
+
 function CompactSelect<T extends string>({
   label,
   value,
@@ -395,6 +471,9 @@ export default function CalendarPage() {
   const [endTime, setEndTime] = useState("");
   const [category, setCategory] = useState<CalendarCategory>("study");
   const [alertOption, setAlertOption] = useState<AlertOption>("none");
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>("none");
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
+  const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [errors, setErrors] = useState<CalendarFormErrors>({});
   const [toast, setToast] = useState<ToastState>(null);
   const [expandedHourKey, setExpandedHourKey] = useState<string | null>(null);
@@ -407,7 +486,7 @@ export default function CalendarPage() {
 
   const eventsForSelectedDate = useMemo(() => {
     return events
-      .filter((event) => normalizeEventDate(event, selectedDateKey) === selectedDateKey)
+      .filter((event) => eventOccursOnDate(event, selectedDateKey))
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [events, selectedDateKey]);
 
@@ -421,12 +500,17 @@ export default function CalendarPage() {
 
   const eventDays = useMemo(() => {
     const days = new Set<string>();
-    events.forEach((event) => days.add(normalizeEventDate(event, selectedDateKey)));
+    const candidateKeys = new Set<string>();
+    monthCells.forEach((cell) => { if (cell.dateKey) candidateKeys.add(cell.dateKey); });
+    weekDates.forEach((date) => candidateKeys.add(toDateKey(date)));
+    candidateKeys.forEach((dateKey) => {
+      if (events.some((event) => eventOccursOnDate(event, dateKey))) days.add(dateKey);
+    });
     return days;
-  }, [events, selectedDateKey]);
+  }, [events, monthCells, weekDates]);
 
   const upcomingCount = useMemo(() => {
-    return events.filter((event) => normalizeEventDate(event, selectedDateKey) >= selectedDateKey).length;
+    return events.filter((event) => eventOccursOnDate(event, selectedDateKey) || normalizeEventDate(event, selectedDateKey) >= selectedDateKey).length;
   }, [events, selectedDateKey]);
 
   function notify(message: string, type: "success" | "error" = "success") {
@@ -464,6 +548,9 @@ export default function CalendarPage() {
     setEndTime("");
     setCategory("study");
     setAlertOption("none");
+    setRecurrenceType("none");
+    setRecurrenceDays([selectedDate.getDay()]);
+    setRecurrenceUntil("");
     setErrors({});
     setSheetMode("event");
   }
@@ -477,6 +564,9 @@ export default function CalendarPage() {
     setCategory(meta.id);
     const existingReminder = reminders.find((item) => item.calendarEventId === event.id);
     setAlertOption(inferAlertOption(event.time, existingReminder?.time));
+    setRecurrenceType(event.recurrenceType ?? "none");
+    setRecurrenceDays(event.recurrenceDays?.length ? event.recurrenceDays : [fromDateKey(event.date).getDay()]);
+    setRecurrenceUntil(event.recurrenceUntil ?? "");
     setErrors({});
     setSheetMode("event");
   }
@@ -490,6 +580,18 @@ export default function CalendarPage() {
     if (cleanEndTime && !isValidTime(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el campo vacío.";
     if (cleanEndTime && isValidTime(time) && isValidTime(cleanEndTime) && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) {
       nextErrors.endTime = "La hora final debe ser posterior a la hora de inicio.";
+    }
+    if (recurrenceType === "custom_days" && recurrenceDays.length === 0) {
+      notify("Elegí al menos un día para repetir.", "error");
+      return;
+    }
+    if (recurrenceUntil && !isValidDateKey(recurrenceUntil)) {
+      notify("Usá la fecha final con formato YYYY-MM-DD.", "error");
+      return;
+    }
+    if (recurrenceUntil && compareDateKeys(recurrenceUntil, editing ? editing.date : selectedDateKey) < 0) {
+      notify("La fecha final debe ser posterior a la fecha inicial.", "error");
+      return;
     }
 
     const conflict = Object.keys(nextErrors).length
@@ -514,7 +616,11 @@ export default function CalendarPage() {
       time,
       endTime: cleanEndTime || null,
       color: meta.color,
-      date: selectedDateKey,
+      date: editing ? editing.date : selectedDateKey,
+      recurrenceType,
+      recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,
+      recurrenceUntil: recurrenceUntil || null,
+      recurrenceGroupId: editing?.recurrenceGroupId ?? null,
     } satisfies Omit<CalendarEvent, "id">;
 
     const savedEvent = editing ? await updateEvent(editing.id, payload) : await createEvent(payload);
@@ -525,7 +631,7 @@ export default function CalendarPage() {
       const result = await upsertCalendarReminder(savedEvent.id, {
         title: `Alerta: ${cleanTitle}`,
         time: alertTime,
-        repeat: "custom" as Reminder["repeat"],
+        repeat: (recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
         calendarEventId: savedEvent.id,
       });
       alertSynced = result.ok;
@@ -636,9 +742,14 @@ export default function CalendarPage() {
           onChange={setAlertOption}
         />
 
+        <RecurrenceControl
+          summary={recurrenceSummary(recurrenceType, recurrenceDays, recurrenceUntil || null)}
+          onOpen={() => setSheetMode("recurrence")}
+        />
+
         <div className="rounded-[18px] bg-green-50 p-4">
           <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Cómo se verá</p>
-          <p className="mt-1 text-xs leading-5 text-monkey-muted">Las actividades de 09:15 aparecen dentro de la fila 09:00. Máximo se muestran 2 por hora para mantener el calendario limpio.</p>
+          <p className="mt-1 text-xs leading-5 text-monkey-muted">Las actividades de 09:15 aparecen dentro de la fila 09:00. Si activás repetición, aparecerán automáticamente en los días configurados.</p>
         </div>
 
         {editing ? (
@@ -651,6 +762,93 @@ export default function CalendarPage() {
             Eliminar actividad
           </button>
         ) : null}
+      </FormSheet>
+
+      <FormSheet
+        open={sheetMode === "recurrence"}
+        title="Repetición"
+        subtitle="Definí si esta actividad aparece todos los días o solo en días específicos."
+        onClose={() => setSheetMode("event")}
+        onSubmit={() => {
+          if (recurrenceType === "custom_days" && recurrenceDays.length === 0) {
+            notify("Elegí al menos un día para repetir.", "error");
+            return;
+          }
+          if (recurrenceUntil && !isValidDateKey(recurrenceUntil)) {
+            notify("Usá la fecha final con formato YYYY-MM-DD.", "error");
+            return;
+          }
+          if (recurrenceUntil && compareDateKeys(recurrenceUntil, editing ? editing.date : selectedDateKey) < 0) {
+            notify("La fecha final debe ser posterior a la fecha inicial.", "error");
+            return;
+          }
+          setSheetMode("event");
+        }}
+        submitLabel="Guardar repetición"
+      >
+        <div className="grid gap-2">
+          {recurrenceOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => {
+                setRecurrenceType(option.id);
+                if (option.id === "custom_days" && recurrenceDays.length === 0) setRecurrenceDays([selectedDate.getDay()]);
+              }}
+              className={cn(
+                "flex min-h-14 items-center justify-between rounded-[18px] px-4 text-left transition active:scale-[.99]",
+                recurrenceType === option.id ? "bg-monkey-green text-white shadow-sm" : "bg-gray-50 text-monkey-ink",
+              )}
+            >
+              <span>
+                <strong className="block text-sm font-black">{option.label}</strong>
+                <span className={cn("block text-xs font-bold", recurrenceType === option.id ? "text-white/80" : "text-monkey-muted")}>{option.helper}</span>
+              </span>
+              <span className={cn("grid h-5 w-5 place-items-center rounded-full border-2", recurrenceType === option.id ? "border-white bg-white text-monkey-green" : "border-gray-200")}>
+                {recurrenceType === option.id ? "✓" : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {recurrenceType === "custom_days" ? (
+          <div>
+            <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Días específicos</span>
+            <div className="grid grid-cols-7 gap-2">
+              {recurrenceWeekdays.map((day) => {
+                const active = recurrenceDays.includes(day.jsDay);
+                return (
+                  <button
+                    key={day.jsDay}
+                    type="button"
+                    title={day.label}
+                    onClick={() => setRecurrenceDays((current) => active ? current.filter((item) => item !== day.jsDay) : [...current, day.jsDay])}
+                    className={cn("h-11 rounded-[14px] text-xs font-black transition active:scale-95", active ? "bg-monkey-green text-white shadow-sm" : "bg-gray-100 text-monkey-muted")}
+                  >
+                    {day.short}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {recurrenceType !== "none" ? (
+          <div>
+            <Field
+              label="Hasta cuándo (opcional)"
+              value={recurrenceUntil}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setRecurrenceUntil(event.target.value)}
+              placeholder="2026-08-31"
+            />
+            <p className="mt-2 text-xs leading-5 text-monkey-muted">Si lo dejás vacío, la app mostrará la repetición de forma continua y calculará las ocurrencias al abrir el calendario.</p>
+          </div>
+        ) : null}
+
+        <div className="rounded-[18px] bg-green-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Resumen</p>
+          <p className="mt-1 text-sm font-bold text-monkey-muted">{recurrenceSummary(recurrenceType, recurrenceDays, recurrenceUntil || null)}</p>
+        </div>
       </FormSheet>
 
       <FormSheet
