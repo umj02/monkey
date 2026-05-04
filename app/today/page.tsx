@@ -180,8 +180,8 @@ function CalendarTodayCard({
 }
 
 export default function TodayPage() {
-  const { blocks, percent, syncing: tasksSyncing, toggleTask, createTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
-  const { events: calendarEvents, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
+  const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
+  const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -233,17 +233,29 @@ export default function TodayPage() {
     setErrors({});
   }
 
-  function submitTask() {
+  async function submitTask() {
     const nextErrors: { title?: string; time?: string } = {};
-    if (taskTitle.trim().length < 3) nextErrors.title = "Escribí al menos 3 caracteres.";
+    const cleanTitle = taskTitle.trim();
+    if (cleanTitle.length < 3) nextErrors.title = "Escribí al menos 3 caracteres.";
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) nextErrors.time = "Usá formato HH:MM, por ejemplo 09:00.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    createTask({ title: taskTitle, time, blockTitle, color, icon, date: todayDateKey });
+    await createEvent({
+      title: cleanTitle,
+      date: todayDateKey,
+      time,
+      endTime: null,
+      color,
+      recurrenceType: "none",
+      recurrenceDays: null,
+      recurrenceUntil: null,
+      recurrenceGroupId: null,
+      done: false,
+    });
     setFormOpen(false);
     resetForm();
-    showToast("Tarea creada con éxito");
+    showToast("Tarea creada y agregada al calendario de hoy");
   }
 
   function handleEditTask(blockId: string, taskId: string, title: string) {
@@ -322,10 +334,10 @@ export default function TodayPage() {
         </div>
       </section>
       <button onClick={() => setFormOpen(true)} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar tarea"><Plus className="h-8 w-8" /></button>
-      <FormSheet open={formOpen} title="Nueva tarea" subtitle="Creá una tarea rápida y asignala a un bloque de hora." onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel="Crear tarea">
+      <FormSheet open={formOpen} title="Nueva tarea" subtitle="Creá una tarea rápida para hoy. También aparecerá en Calendario." onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel="Crear tarea">
         <Field label="Tarea" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Ej: Repasar matemáticas" error={errors.title} />
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
-        <Field label="Nombre del bloque" value={blockTitle} onChange={(e) => setBlockTitle(e.target.value)} placeholder="Estudiar" />
+        
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 min-w-0 rounded-pill px-2 text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}><span className="block truncate">{colorLabels[item]}</span></button>)}</div></div>
         <AssetPicker label="Ícono de actividad" assets={activityAssetGallery} value={icon} onChange={setIcon} />
       </FormSheet>

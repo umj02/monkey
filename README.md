@@ -1,3 +1,63 @@
+# Monkey Checks v2.13.9 — Unified Today Calendar Flow + Nested Calendar Cards
+
+Base: v2.13.8 — Calendar Overflow + Mobile Sheet UX Fix.
+
+## Cambios principales
+
+- Regenerada desde base limpia v2.13.8.
+- Hoy y Calendario quedan unificados para nuevas tareas rápidas.
+- Una tarea creada desde **Hoy** ahora se guarda como `calendar_event` del día actual.
+- Esa tarea aparece en **Hoy**, en **Calendario** y persiste después de refrescar.
+- Calendario agrupa visualmente actividades internas dentro de actividades largas.
+- Una actividad larga con tareas dentro se muestra como card contenedora.
+- Las tareas internas no se duplican como cards separadas fuera del contenedor.
+- Botón de expansión:
+  - `Ver X tareas anidadas`
+  - `Ocultar tareas anidadas`
+- Las actividades individuales siguen apareciendo como cards separadas.
+- Se conserva el fix mobile de v2.13.8:
+  - sin desbordes horizontales,
+  - cards compactas,
+  - modal con scroll mejorado.
+- No requiere migración nueva.
+
+## Migraciones requeridas
+
+Asegurate de tener corridas las migraciones hasta v2.13.7:
+
+```txt
+supabase/migrations/0001_v25_full_schema.sql
+supabase/migrations/0002_v259_data_stability.sql
+supabase/migrations/0003_v210_calendar_end_time.sql
+supabase/migrations/0004_v2121_calendar_event_reminders.sql
+supabase/migrations/0005_v213_wallet_extra_period_filters.sql
+supabase/migrations/0006_v2135_calendar_recurrence.sql
+supabase/migrations/0007_v2136_calendar_done_today_sync.sql
+supabase/migrations/0008_v2137_calendar_event_completions.sql
+```
+
+## QA recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Probar:
+
+- Crear una tarea desde Hoy y verificar que aparece en Calendario.
+- Refrescar y confirmar que la tarea sigue en Hoy y Calendario.
+- Crear en Calendario una actividad larga, por ejemplo 07:30–12:00.
+- Crear actividades internas a las 08:00 y 10:00.
+- Confirmar que se agrupan dentro de la card principal.
+- Confirmar que las actividades internas no aparecen duplicadas fuera del contenedor.
+- Expandir/ocultar tareas anidadas.
+- Probar en iPhone/Safari el scroll del modal y la vista calendario.
+
+---
+
 # Monkey Checks v2.13.5 — Calendar Recurring Activities UX
 
 Base: v2.13.4.

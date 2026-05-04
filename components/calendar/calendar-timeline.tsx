@@ -8,6 +8,62 @@ type CategoryMeta = {
   pillClass: string;
 };
 
+function timeToMinutes(value: string) {
+  const [hour = "0", minute = "0"] = value.split(":");
+  return Number(hour) * 60 + Number(minute);
+}
+
+function eventEndMinutes(event: CalendarEvent) {
+  if (event.endTime && /^([01]\d|2[0-3]):[0-5]\d$/.test(event.endTime)) return timeToMinutes(event.endTime);
+  return timeToMinutes(event.time) + 60;
+}
+
+function findContainingLongEvent(events: CalendarEvent[], child: CalendarEvent, isLongEvent: (event: CalendarEvent) => boolean) {
+  const childStart = timeToMinutes(child.time);
+  return [...events]
+    .filter((candidate) => candidate.id !== child.id && isLongEvent(candidate))
+    .sort((a, b) => (eventEndMinutes(a) - timeToMinutes(a.time)) - (eventEndMinutes(b) - timeToMinutes(b.time)))
+    .find((candidate) => {
+      const start = timeToMinutes(candidate.time);
+      const end = eventEndMinutes(candidate);
+      return start <= childStart && end > childStart;
+    }) ?? null;
+}
+
+function EventPill({
+  event,
+  meta,
+  label,
+  title,
+  onEdit,
+  compact = false,
+}: {
+  event: CalendarEvent;
+  meta: CategoryMeta;
+  label: string;
+  title: string;
+  onEdit: (event: CalendarEvent) => void;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onEdit(event)}
+      className={cn(
+        "flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] text-left font-black transition active:scale-[.98]",
+        compact ? "min-h-[44px] px-3 py-2 text-xs" : "min-h-[52px] px-3 py-3 text-sm sm:gap-3 sm:px-4",
+        meta.pillClass,
+      )}
+    >
+      <AssetThumb icon={meta.iconKey} size={compact ? 26 : 30} className="shrink-0 rounded-[10px] bg-white/40" />
+      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className="max-w-[86px] shrink-0 truncate rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80 sm:max-w-[128px]">
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export function CalendarTimeline({
   events,
   hours,
@@ -20,7 +76,6 @@ export function CalendarTimeline({
   eventRangeLabel,
   eventsForHour,
   isCoveredByPreviousLongEvent,
-  containingLongEventLabel,
   onEdit,
   onExpandHour,
 }: {
@@ -39,6 +94,18 @@ export function CalendarTimeline({
   onEdit: (event: CalendarEvent) => void;
   onExpandHour: (slotKey: string | null) => void;
 }) {
+  const nestedByParent = new Map<string, CalendarEvent[]>();
+  const nestedChildIds = new Set<string>();
+
+  for (const event of events) {
+    const parent = findContainingLongEvent(events, event, isLongEvent);
+    if (!parent) continue;
+    nestedChildIds.add(event.id);
+    const list = nestedByParent.get(parent.id) ?? [];
+    list.push(event);
+    nestedByParent.set(parent.id, list.sort((a, b) => a.time.localeCompare(b.time)));
+  }
+
   if (events.length === 0) {
     return (
       <div className="mt-5">
@@ -54,16 +121,17 @@ export function CalendarTimeline({
       <div className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-2 sm:grid-cols-[56px_minmax(0,1fr)] sm:gap-3">
         {hours.map((hour) => {
           const slotKey = `${selectedDateKey}-${hour}`;
-          const slotEvents = eventsForHour(events, hour);
+          const rawSlotEvents = eventsForHour(events, hour);
+          const slotEvents = rawSlotEvents.filter((event) => !nestedChildIds.has(event.id));
           const hiddenByLongEvent = isCoveredByPreviousLongEvent(events, hour);
-          // Las horas cubiertas por una actividad larga solo se ocultan cuando no tienen
-          // actividades propias. Si el usuario agrega algo a las 09:00 dentro de 07:00–17:00,
-          // esa fila se muestra como actividad anidada.
           if (hiddenByLongEvent && slotEvents.length === 0) return null;
+
           const isExpanded = expandedHourKey === slotKey;
           const visibleEvents = isExpanded ? slotEvents : slotEvents.slice(0, maxVisibleEventsPerHour);
           const extraCount = !isExpanded ? Math.max(0, slotEvents.length - maxVisibleEventsPerHour) : 0;
-          const rowHeight = visibleEvents.length > 1 ? Math.max(128, visibleEvents.length * 62 + 18) : visibleEvents.length === 1 ? 76 : 58;
+          const nestedCount = visibleEvents.reduce((count, event) => count + (nestedByParent.get(event.id)?.length ?? 0), 0);
+          const baseRows = visibleEvents.length || 1;
+          const rowHeight = Math.max(72, baseRows * 66 + (nestedCount ? 20 : 0));
 
           return (
             <div key={hour} className="contents">
@@ -74,29 +142,50 @@ export function CalendarTimeline({
                 <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
                 {visibleEvents.length ? (
                   <div className="space-y-2">
-                    {hiddenByLongEvent ? (
-                      <span className="block h-1 w-10 rounded-full bg-monkey-green/25" aria-hidden="true" />
-                    ) : null}
                     {visibleEvents.map((event) => {
                       const meta = categoryFromEvent(event);
+                      const nested = nestedByParent.get(event.id) ?? [];
+                      const nestedKey = `nested-${event.id}`;
+                      const nestedOpen = expandedHourKey === nestedKey;
                       const long = isLongEvent(event);
+                      const title = stripEmoji(event.title);
+                      const label = long ? eventRangeLabel(event) : event.time;
+
                       return (
-                        <button
-                          key={event.id}
-                          type="button"
-                          onClick={() => onEdit(event)}
-                          className={cn(
-                            "flex min-h-[52px] w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] px-3 py-3 text-left text-sm font-black transition active:scale-[.98] sm:gap-3 sm:px-4",
-                            hiddenByLongEvent ? "ml-2 w-[calc(100%-8px)] border-l-4 border-white/70" : "",
-                            meta.pillClass,
-                          )}
-                        >
-                          <AssetThumb icon={meta.iconKey} size={30} className="rounded-[10px] bg-white/40" />
-                          <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
-                          <span className="max-w-[86px] shrink-0 truncate rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80 sm:max-w-[128px]">
-                            {long ? eventRangeLabel(event) : event.time}
-                          </span>
-                        </button>
+                        <div key={event.id} className={cn("min-w-0 overflow-hidden", nested.length ? "rounded-[18px] bg-gray-50/80 p-2" : "")}>
+                          <EventPill event={event} meta={meta} label={label} title={title} onEdit={onEdit} />
+
+                          {nested.length ? (
+                            <div className="mt-2 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => onExpandHour(nestedOpen ? null : nestedKey)}
+                                className="mb-2 h-8 rounded-full bg-white px-3 text-[11px] font-black text-monkey-muted shadow-sm transition active:scale-95"
+                              >
+                                {nestedOpen ? "Ocultar tareas anidadas" : `Ver ${nested.length} tareas anidadas`}
+                              </button>
+
+                              {nestedOpen ? (
+                                <div className="space-y-1.5 border-l-4 border-white/80 pl-2">
+                                  {nested.map((child) => {
+                                    const childMeta = categoryFromEvent(child);
+                                    return (
+                                      <EventPill
+                                        key={child.id}
+                                        event={child}
+                                        meta={childMeta}
+                                        label={child.endTime ? eventRangeLabel(child) : child.time}
+                                        title={stripEmoji(child.title)}
+                                        onEdit={onEdit}
+                                        compact
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
                       );
                     })}
                     {extraCount ? (
