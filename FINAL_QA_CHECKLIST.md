@@ -142,3 +142,13 @@ Antes de marcar push como producción:
 8. Confirmar notificación push.
 9. Confirmar que no se duplica dentro del mismo minuto.
 10. En iPhone, instalar como PWA antes de probar push.
+
+## v2.16.1 — Reminder Upsert Runtime Fix
+
+- [ ] Correr migración `0012_v2161_reminder_upsert_fix.sql`.
+- [ ] Activar campanita desde Hoy sin error 400.
+- [ ] Activar campanita desde Calendario sin error 400.
+- [ ] Ver recordatorio ligado en `/reminders`.
+- [ ] Apagar campanita y confirmar que el recordatorio se limpia.
+- [ ] Confirmar que manual reminders siguen funcionando.
+- [ ] Confirmar que `/api/cron/reminders` responde con `ok: true` usando `CRON_SECRET`.

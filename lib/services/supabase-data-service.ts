@@ -905,13 +905,37 @@ export async function upsertReminder(item: Reminder): Promise<Reminder | null> {
     calendar_event_id: calendarEventId,
   };
 
+  // Calendar alerts are keyed by calendar_event_id, but PostgREST cannot reliably
+  // use older partial indexes through `on_conflict=calendar_event_id`. To avoid the
+  // runtime 400 seen in production, we explicitly update the existing reminder first
+  // and insert only when there is no linked reminder yet.
+  if (calendarEventId) {
+    const { data: existing, error: existingError } = await supabase
+      .from("reminders")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("calendar_event_id", calendarEventId)
+      .maybeSingle();
+
+    if (existingError) return null;
+
+    const query = existing?.id
+      ? supabase.from("reminders").update(payload).eq("id", existing.id)
+      : supabase.from("reminders").insert(payload);
+
+    const { data, error } = await query
+      .select("id,title,remind_time,repeat_rule,enabled,task_id,calendar_event_id")
+      .single();
+
+    if (error || !data) return null;
+    return mapReminderRow(data as ReminderRow);
+  }
+
   if (!isTemporaryId(item.id, "reminder-") && isUuid(item.id)) payload.id = item.id;
 
-  const query = calendarEventId
-    ? supabase.from("reminders").upsert(payload, { onConflict: "calendar_event_id" })
-    : supabase.from("reminders").upsert(payload, { onConflict: "id" });
-
-  const { data, error } = await query
+  const { data, error } = await supabase
+    .from("reminders")
+    .upsert(payload, { onConflict: "id" })
     .select("id,title,remind_time,repeat_rule,enabled,task_id,calendar_event_id")
     .single();
 

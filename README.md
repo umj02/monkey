@@ -563,3 +563,43 @@ Authorization: Bearer <CRON_SECRET>
 
 Notas: iOS puede requerir instalar la app como PWA para permitir push web. El modal in-app sigue funcionando cuando la app está abierta.
 
+
+---
+
+## v2.16.1 — Reminder Upsert Fix + Push Runtime QA
+
+Esta versión corrige el error runtime detectado al activar una campanita/alarma desde Hoy o Calendario:
+
+```txt
+/rest/v1/reminders?on_conflict=calendar_event_id → 400
+```
+
+### Cambios técnicos
+
+- `upsertReminder` ya no depende de `onConflict: "calendar_event_id"` para recordatorios ligados a eventos.
+- Cuando el recordatorio pertenece a una actividad de calendario, primero busca si existe por `user_id + calendar_event_id`.
+- Si existe, actualiza el recordatorio.
+- Si no existe, crea uno nuevo.
+- Mantiene `upsert(..., onConflict: "id")` solo para recordatorios independientes.
+- Agrega migración `0012_v2161_reminder_upsert_fix.sql`.
+- La migración elimina duplicados antiguos por `calendar_event_id` y crea un índice único completo compatible con PostgREST.
+
+### Migración obligatoria
+
+Ejecutar después de `0011_v216_background_push_notifications.sql`:
+
+```txt
+supabase/migrations/0012_v2161_reminder_upsert_fix.sql
+```
+
+### QA recomendado
+
+1. Entrar a `/today`.
+2. Crear o usar una actividad de calendario.
+3. Activar campanita.
+4. Confirmar que ya no aparece “No se pudo activar la alarma”.
+5. Ir a `/reminders` y validar que el recordatorio aparece.
+6. Apagar campanita desde Hoy.
+7. Validar que el recordatorio se elimina o desactiva.
+8. Crear recordatorio con hora próxima y probar push/in-app alert.
+9. Revisar `/api/cron/reminders` después de configurar `CRON_SECRET` y VAPID.
