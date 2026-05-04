@@ -15,6 +15,7 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     recurrenceDays: input.recurrenceDays ?? null,
     recurrenceUntil: input.recurrenceUntil ?? null,
     recurrenceGroupId: input.recurrenceGroupId ?? null,
+    done: Boolean(input.done),
   };
 }
 

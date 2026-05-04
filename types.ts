@@ -69,6 +69,15 @@ export type CalendarEvent = {
   recurrenceDays?: number[] | null;
   recurrenceUntil?: string | null;
   recurrenceGroupId?: string | null;
+  done?: boolean;
+};
+
+
+export type CalendarEventCompletion = {
+  id: string;
+  calendarEventId: string;
+  occurrenceDate: string;
+  done: boolean;
 };
 
 export type Profile = {

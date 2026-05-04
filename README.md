@@ -349,3 +349,30 @@ Pruebas manuales clave:
 6. Crear actividad a `23:00` y confirmar que se visualiza correctamente.
 7. Crear actividad a `00:30` y confirmar que se agrupa en la fila `00:00`.
 8. Validar `npm run validate:assets`, `npm run typecheck` y `npm run build`.
+
+
+## v2.13.6 — Calendar Nested Activities + Today Sync + Mobile Sheet Fix
+
+- Las actividades largas del calendario ya no bloquean actividades internas.
+- Las horas cubiertas por una actividad larga se ocultan solo si no tienen actividades propias.
+- La vista Hoy ahora mezcla tareas del día y actividades del calendario que ocurren hoy, incluidas recurrencias.
+- Las actividades del calendario pueden marcarse como completadas desde Hoy.
+- Los checks visuales se cambiaron a bolitas para un look más suave.
+- El bottom sheet ahora tiene header fijo, contenido scrolleable y footer fijo para mejorar iPhone/Safari.
+- Nueva migración: `0007_v2136_calendar_done_today_sync.sql`.
+
+## v2.13.7 — Today Calendar Completion + Nested Context Polish
+
+- Hoy muestra una fuente clara para cada item: Tarea, Calendario o Recurrente.
+- Las actividades anidadas muestran contexto tipo “Dentro de Clases”.
+- Las tareas nuevas creadas desde Hoy guardan fecha real del día.
+- Las actividades recurrentes se marcan como completadas por fecha usando `calendar_event_completions`.
+- Hoy incluye estado de sincronización y botón manual de refresh.
+- Se corrigió el error TypeScript de `conflict.title` inferido como `never`.
+- Se agregaron utilidades en `lib/calendar/calendar-utils.ts` para fechas, recurrencias y completado por ocurrencia.
+
+Migración nueva requerida:
+
+```txt
+supabase/migrations/0008_v2137_calendar_event_completions.sql
+```

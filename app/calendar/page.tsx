@@ -319,26 +319,22 @@ function proposedInterval(startTime: string, endTimeValue?: string | null) {
   return { start, end, startHour: Math.floor(start / 60) * 60 };
 }
 
-function findScheduleConflict(events: CalendarEvent[], proposedStart: string, proposedEnd: string | null, editingId?: string) {
-  const next = proposedInterval(proposedStart, proposedEnd);
-  const isLong = next.end - next.start > DEFAULT_DURATION_MINUTES;
+function findScheduleConflict(events: CalendarEvent[], proposedStart: string, proposedEnd: string | null, editingId?: string): CalendarEvent | null {
+  // v2.13.6: una actividad larga funciona como bloque principal, no como bloqueo duro.
+  // Permitimos actividades internas (ej. 07:00–17:00 + una actividad a las 09:00)
+  // para que el calendario pueda mostrar tareas anidadas dentro del rango.
+  return null;
+}
 
-  return events.find((event) => {
-    if (event.id === editingId) return false;
-    const current = eventInterval(event);
-    const currentIsLong = current.end - current.start > DEFAULT_DURATION_MINUTES;
-
-    // Permitimos variaciones dentro de la misma hora: 09:00 y 09:15 viven en la fila 09:00.
-    if (current.startHour === next.startHour) return false;
-
-    // Una actividad larga existente bloquea horas posteriores cubiertas para que no queden ocultas.
-    if (currentIsLong && current.start < next.start && current.end > next.start) return true;
-
-    // Una nueva actividad larga no debe tapar eventos existentes en horas intermedias.
-    if (isLong && next.start < current.start && next.end > current.start) return true;
-
-    return false;
+function containingLongEventLabel(events: CalendarEvent[], child: CalendarEvent) {
+  const childStart = timeToMinutes(child.time);
+  const parent = events.find((candidate) => {
+    if (candidate.id === child.id) return false;
+    if (!isLongEvent(candidate)) return false;
+    const interval = eventInterval(candidate);
+    return interval.start <= childStart && interval.end > childStart;
   });
+  return parent ? `Dentro de ${stripEmoji(parent.title)}` : "Dentro de una actividad larga";
 }
 
 function getVisibleTimelineHours(events: CalendarEvent[]) {
@@ -621,6 +617,7 @@ export default function CalendarPage() {
       recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,
       recurrenceUntil: recurrenceUntil || null,
       recurrenceGroupId: editing?.recurrenceGroupId ?? null,
+      done: editing?.done ?? false,
     } satisfies Omit<CalendarEvent, "id">;
 
     const savedEvent = editing ? await updateEvent(editing.id, payload) : await createEvent(payload);
@@ -688,6 +685,7 @@ export default function CalendarPage() {
               eventRangeLabel={eventRangeLabel}
               eventsForHour={eventsForHour}
               isCoveredByPreviousLongEvent={isCoveredByPreviousLongEvent}
+              containingLongEventLabel={(event) => containingLongEventLabel(eventsForSelectedDate, event)}
               onEdit={openEdit}
               onExpandHour={setExpandedHourKey}
             />

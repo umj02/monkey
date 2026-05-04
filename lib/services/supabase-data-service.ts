@@ -2,6 +2,7 @@ import { createOptionalClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import type {
   CalendarEvent,
+  CalendarEventCompletion,
   Note,
   Reminder,
   ReminderPanelItem,
@@ -41,8 +42,13 @@ type NoteRow = Pick<
 >;
 type CalendarEventRow = Pick<
   TableRow<"calendar_events">,
-  "id" | "event_date" | "start_time" | "end_time" | "title" | "color" | "recurrence_type" | "recurrence_days" | "recurrence_until" | "recurrence_group_id"
+  "id" | "event_date" | "start_time" | "end_time" | "title" | "color" | "recurrence_type" | "recurrence_days" | "recurrence_until" | "recurrence_group_id" | "done"
 >;
+type CalendarEventCompletionRow = Pick<
+  TableRow<"calendar_event_completions">,
+  "id" | "calendar_event_id" | "occurrence_date" | "done"
+>;
+
 type ReminderRow = Pick<
   TableRow<"reminders">,
   "id" | "title" | "remind_time" | "repeat_rule" | "enabled" | "task_id" | "calendar_event_id"
@@ -479,7 +485,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
 
   const { data, error } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
     .eq("user_id", userId)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -499,6 +505,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
       recurrenceDays: event.recurrence_days ?? null,
       recurrenceUntil: event.recurrence_until ?? null,
       recurrenceGroupId: event.recurrence_group_id ?? null,
+      done: Boolean(event.done),
     }),
   );
 }
@@ -521,6 +528,7 @@ export async function upsertCalendarEvent(
     recurrence_days: event.recurrenceType === "custom_days" ? event.recurrenceDays ?? [] : null,
     recurrence_until: event.recurrenceUntil ?? null,
     recurrence_group_id: event.recurrenceGroupId ?? null,
+    done: Boolean(event.done),
   };
 
   if (isUuid(event.id)) {
@@ -528,7 +536,7 @@ export async function upsertCalendarEvent(
     const { data, error } = await supabase
       .from("calendar_events")
       .upsert(payload, { onConflict: "id" })
-      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
       .single();
     if (error) return null;
     return {
@@ -542,12 +550,13 @@ export async function upsertCalendarEvent(
       recurrenceDays: data.recurrence_days ?? null,
       recurrenceUntil: data.recurrence_until ?? null,
       recurrenceGroupId: data.recurrence_group_id ?? null,
+      done: Boolean(data.done),
     };
   }
 
   const { data: existing } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
     .eq("user_id", userId)
     .eq("event_date", event.date)
     .eq("start_time", normalizeTime(event.time))
@@ -560,7 +569,7 @@ export async function upsertCalendarEvent(
       .from("calendar_events")
       .update(payload)
       .eq("id", existing.id)
-      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+      .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
       .single();
     if (error) return null;
     return {
@@ -574,13 +583,14 @@ export async function upsertCalendarEvent(
       recurrenceDays: data.recurrence_days ?? null,
       recurrenceUntil: data.recurrence_until ?? null,
       recurrenceGroupId: data.recurrence_group_id ?? null,
+      done: Boolean(data.done),
     };
   }
 
   const { data, error } = await supabase
     .from("calendar_events")
     .insert(payload)
-    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id")
+    .select("id,event_date,start_time,end_time,title,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
     .single();
 
   if (error) return null;
@@ -595,7 +605,71 @@ export async function upsertCalendarEvent(
     recurrenceDays: data.recurrence_days ?? null,
     recurrenceUntil: data.recurrence_until ?? null,
     recurrenceGroupId: data.recurrence_group_id ?? null,
+    done: Boolean(data.done),
   };
+}
+
+export async function fetchCalendarEventCompletions(): Promise<CalendarEventCompletion[] | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const { data, error } = await supabase
+    .from("calendar_event_completions")
+    .select("id,calendar_event_id,occurrence_date,done")
+    .eq("user_id", userId);
+
+  if (error) return null;
+
+  const rows: CalendarEventCompletionRow[] = data ?? [];
+  return rows.map((row: CalendarEventCompletionRow): CalendarEventCompletion => ({
+    id: row.id,
+    calendarEventId: row.calendar_event_id,
+    occurrenceDate: row.occurrence_date,
+    done: Boolean(row.done),
+  }));
+}
+
+export async function upsertCalendarEventCompletion(
+  completion: Omit<CalendarEventCompletion, "id"> & { id?: string },
+): Promise<CalendarEventCompletion | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const payload: Database["public"]["Tables"]["calendar_event_completions"]["Insert"] = {
+    user_id: userId,
+    calendar_event_id: completion.calendarEventId,
+    occurrence_date: completion.occurrenceDate,
+    done: completion.done,
+  };
+
+  const { data, error } = await supabase
+    .from("calendar_event_completions")
+    .upsert(payload, { onConflict: "user_id,calendar_event_id,occurrence_date" })
+    .select("id,calendar_event_id,occurrence_date,done")
+    .single();
+
+  if (error) return null;
+  return {
+    id: data.id,
+    calendarEventId: data.calendar_event_id,
+    occurrenceDate: data.occurrence_date,
+    done: Boolean(data.done),
+  };
+}
+
+export async function deleteCalendarEventCompletionRemote(calendarEventId: string, occurrenceDate: string): Promise<boolean> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return false;
+  const { error } = await supabase
+    .from("calendar_event_completions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("calendar_event_id", calendarEventId)
+    .eq("occurrence_date", occurrenceDate);
+  return !error;
 }
 
 export async function deleteCalendarEventRemote(id: string): Promise<void> {

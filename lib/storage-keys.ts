@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   taskBlocks: "monkey.taskBlocks.v24",
   calendarEvents: "monkey.calendarEvents.v24",
+  calendarEventCompletions: "monkey.calendarEventCompletions.v2137",
   notes: "monkey.notes.v24",
   reminders: "monkey.reminders.v24",
   profile: "monkey.profile.v24",
@@ -12,6 +13,7 @@ export const STORAGE_KEYS = {
 export const LEGACY_STORAGE_KEYS = {
   taskBlocks: ["monkey.today.blocks.v23"],
   calendarEvents: ["monkey.calendar.v23"],
+  calendarEventCompletions: [],
   notes: ["monkey.notes.v23"],
   reminders: ["monkey.reminders.v23"],
   profile: ["monkey.profile.v23"],

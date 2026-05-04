@@ -30,36 +30,40 @@ export function useCalendarEvents() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!session || mode !== "supabase") return;
-    let cancelled = false;
+  async function refreshEvents() {
+    if (!session || mode !== "supabase") return false;
     setSyncing(true);
     setSyncStatus("loading");
     setLastError(null);
-    fetchCalendarEvents()
-      .then((remote) => {
-        if (cancelled) return;
-        if (remote) {
-          setEvents(remote);
-          setSyncStatus("synced");
-        } else {
-          setSyncStatus("error");
-          setLastError("No se pudo cargar el calendario.");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSyncStatus("error");
-          setLastError("No se pudo cargar el calendario.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setSyncing(false);
-      });
+    try {
+      const remote = await fetchCalendarEvents();
+      if (remote) {
+        setEvents(remote);
+        setSyncStatus("synced");
+        return true;
+      }
+      setSyncStatus("error");
+      setLastError("No se pudo cargar el calendario.");
+      return false;
+    } catch {
+      setSyncStatus("error");
+      setLastError("No se pudo cargar el calendario.");
+      return false;
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!session || mode !== "supabase") return;
+    void refreshEvents().then(() => {
+      if (cancelled) return;
+    });
     return () => {
       cancelled = true;
     };
-  }, [session?.userId, mode, setEvents]);
+  }, [session?.userId, mode]);
 
   async function createEvent(input: CalendarEventInput): Promise<CalendarEvent> {
     const event = createCalendarEvent(input);
@@ -135,5 +139,6 @@ export function useCalendarEvents() {
     createEvent,
     updateEvent,
     deleteEvent,
+    refreshEvents,
   };
 }

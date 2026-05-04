@@ -58,6 +58,7 @@ function findNewTask(
   const targetBlock = next.find(
     (block) =>
       block.time === input.time &&
+      (!input.date || !block.date || block.date === input.date) &&
       block.tasks.some((task) => !previousIds.has(task.id)),
   );
   const targetTask =
@@ -77,21 +78,25 @@ export function useTasks() {
   const [syncing, setSyncing] = useState(false);
   const percent = useMemo(() => calculateTaskProgress(blocks), [blocks]);
 
+  async function refreshTasks() {
+    if (!session || mode !== "supabase") return false;
+    setSyncing(true);
+    try {
+      const remote = await fetchTimeBlocks();
+      if (remote) {
+        setBlocks(remote);
+        return true;
+      }
+      return false;
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   useEffect(() => {
     if (!session || mode !== "supabase") return;
-    let cancelled = false;
-    setSyncing(true);
-    fetchTimeBlocks()
-      .then((remote) => {
-        if (!cancelled && remote) setBlocks(remote);
-      })
-      .finally(() => {
-        if (!cancelled) setSyncing(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.userId, mode, setBlocks]);
+    void refreshTasks();
+  }, [session?.userId, mode]);
 
   function toggleTask(blockId: string, taskId: string) {
     const currentBlock = blocks.find((block) => block.id === blockId);
@@ -184,5 +189,6 @@ export function useTasks() {
     editTask,
     updateTaskReminder,
     deleteTask,
+    refreshTasks,
   };
 }

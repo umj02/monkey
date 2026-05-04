@@ -66,7 +66,7 @@ export function TimeBlockCard({
                 </span>
                 <span
                   className={cn(
-                    "grid h-6 w-6 shrink-0 place-items-center rounded-md border transition",
+                    "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition",
                     task.done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white"
                   )}
                   onClick={(event) => { event.stopPropagation(); onToggle(block.id, task.id); }}

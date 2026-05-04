@@ -20,6 +20,7 @@ export function CalendarTimeline({
   eventRangeLabel,
   eventsForHour,
   isCoveredByPreviousLongEvent,
+  containingLongEventLabel,
   onEdit,
   onExpandHour,
 }: {
@@ -34,6 +35,7 @@ export function CalendarTimeline({
   eventRangeLabel: (event: CalendarEvent) => string;
   eventsForHour: (events: CalendarEvent[], hour: string) => CalendarEvent[];
   isCoveredByPreviousLongEvent: (events: CalendarEvent[], hour: string) => boolean;
+  containingLongEventLabel: (event: CalendarEvent) => string;
   onEdit: (event: CalendarEvent) => void;
   onExpandHour: (slotKey: string | null) => void;
 }) {
@@ -51,11 +53,13 @@ export function CalendarTimeline({
     <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
       <div className="grid grid-cols-[56px_1fr] gap-3">
         {hours.map((hour) => {
-          const hiddenByLongEvent = isCoveredByPreviousLongEvent(events, hour);
-          if (hiddenByLongEvent) return null;
-
           const slotKey = `${selectedDateKey}-${hour}`;
           const slotEvents = eventsForHour(events, hour);
+          const hiddenByLongEvent = isCoveredByPreviousLongEvent(events, hour);
+          // Las horas cubiertas por una actividad larga solo se ocultan cuando no tienen
+          // actividades propias. Si el usuario agrega algo a las 09:00 dentro de 07:00–17:00,
+          // esa fila se muestra como actividad anidada.
+          if (hiddenByLongEvent && slotEvents.length === 0) return null;
           const isExpanded = expandedHourKey === slotKey;
           const visibleEvents = isExpanded ? slotEvents : slotEvents.slice(0, maxVisibleEventsPerHour);
           const extraCount = !isExpanded ? Math.max(0, slotEvents.length - maxVisibleEventsPerHour) : 0;
@@ -70,6 +74,9 @@ export function CalendarTimeline({
                 <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
                 {visibleEvents.length ? (
                   <div className="space-y-2">
+                    {hiddenByLongEvent ? (
+                      <p className="px-1 text-[10px] font-black uppercase tracking-[.08em] text-monkey-muted">{containingLongEventLabel(visibleEvents[0])}</p>
+                    ) : null}
                     {visibleEvents.map((event) => {
                       const meta = categoryFromEvent(event);
                       const long = isLongEvent(event);

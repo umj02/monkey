@@ -1,7 +1,7 @@
 import { createId } from "@/lib/local-storage";
 import type { Task, TaskColor, TimeBlock } from "@/types";
 
-export type CreateTaskInput = { title: string; time: string; blockTitle: string; color: TaskColor; icon?: string };
+export type CreateTaskInput = { title: string; time: string; blockTitle: string; color: TaskColor; icon?: string; date?: string };
 
 export function calculateTaskProgress(blocks: TimeBlock[]) {
   const tasks = blocks.flatMap((block) => block.tasks);
@@ -19,12 +19,13 @@ export function toggleTaskInBlocks(blocks: TimeBlock[], blockId: string, taskId:
 
 export function addTaskToBlocks(blocks: TimeBlock[], input: CreateTaskInput) {
   const task: Task = { id: createId("task"), title: input.title.trim(), done: false };
-  const existing = blocks.find((block) => block.time === input.time);
+  const existing = blocks.find((block) => block.time === input.time && (!input.date || !block.date || block.date === input.date));
   if (existing) {
     return blocks.map((block) => (block.id === existing.id ? { ...block, tasks: [...block.tasks, task] } : block));
   }
   const block: TimeBlock = {
     id: createId("block"),
+    date: input.date,
     time: input.time,
     title: input.blockTitle.trim() || "Nuevo bloque",
     color: input.color,

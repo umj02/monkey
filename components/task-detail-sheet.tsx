@@ -128,7 +128,7 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
           <div className="mt-4 space-y-2">
             {activeBlock.tasks.map((item) => (
               <button key={item.id} onClick={() => onToggle?.(activeBlock.id, item.id)} className="flex h-10 w-full items-center gap-3 rounded-[14px] px-2 text-left text-sm transition active:scale-[.98]">
-                <span className={item.done ? "grid h-5 w-5 place-items-center rounded-md bg-monkey-green text-white" : "h-5 w-5 rounded-md border border-gray-300 bg-white"}>{item.done ? <Check className="h-3.5 w-3.5" /> : null}</span>
+                <span className={item.done ? "grid h-5 w-5 place-items-center rounded-full bg-monkey-green text-white" : "h-5 w-5 rounded-full border-2 border-gray-300 bg-white"}>{item.done ? <Check className="h-3.5 w-3.5" /> : null}</span>
                 <span className={item.done ? "flex-1 text-gray-400 line-through" : "flex-1"}>{item.title}</span>
                 <span className={item.reminderAt ? "grid h-7 w-7 place-items-center rounded-full bg-green-100 text-monkey-green" : "grid h-7 w-7 place-items-center rounded-full bg-gray-100 text-gray-400"}>
                   {item.reminderAt ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
