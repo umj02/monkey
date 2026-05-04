@@ -603,3 +603,27 @@ supabase/migrations/0012_v2161_reminder_upsert_fix.sql
 7. Validar que el recordatorio se elimina o desactiva.
 8. Crear recordatorio con hora próxima y probar push/in-app alert.
 9. Revisar `/api/cron/reminders` después de configurar `CRON_SECRET` y VAPID.
+
+## v2.16.2 — Today Completion Animation + Monkey Activity System
+
+Ajustes UX/UI sobre v2.16.1:
+
+- Hero de Hoy refinado: el mono queda mejor centrado verticalmente y el fondo tiene movimiento sutil con blobs/shine animado.
+- Al completar una actividad desde Hoy, la card hace una animación de brinquito + salida suave y se oculta únicamente de la vista Hoy.
+- La actividad completada permanece visible en Calendario con estilo tachado/suavizado.
+- Se agrega flag flotante `Completada · Deshacer` para recuperar una actividad marcada por error.
+- El selector `Tipo de actividad` ahora usa solo actividades con monitos como fuente principal.
+- Se agrega carpeta limpia `public/assets/activities/monkeys` usando los assets de `activities(1).zip`.
+- Los monitos transparentes reciben fondo pastel por CSS, sin modificar los PNG originales.
+- Hoy y Calendario usan el mismo catálogo visual de actividades, listo para métricas futuras por `activity_type_key`.
+- Se conserva compatibilidad con `icon_key`/tipos antiguos mediante alias internos.
+
+QA recomendado:
+
+1. Crear una actividad en Hoy con un tipo de monito.
+2. Confirmar que aparece en Calendario con el mismo tipo.
+3. Completar la actividad desde Hoy.
+4. Confirmar animación de salida + flag `Deshacer`.
+5. No tocar deshacer y confirmar que desaparece de Hoy.
+6. Revisar Calendario: debe permanecer visible como completada/tachada.
+7. Crear una actividad recurrente, completarla solo hoy y validar que mañana siga pendiente.

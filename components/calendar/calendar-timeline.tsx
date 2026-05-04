@@ -37,6 +37,7 @@ function EventPill({
   title,
   onEdit,
   compact = false,
+  done = false,
 }: {
   event: CalendarEvent;
   meta: CategoryMeta;
@@ -44,6 +45,7 @@ function EventPill({
   title: string;
   onEdit: (event: CalendarEvent) => void;
   compact?: boolean;
+  done?: boolean;
 }) {
   return (
     <button
@@ -53,12 +55,13 @@ function EventPill({
         "flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] text-left font-black transition active:scale-[.98]",
         compact ? "min-h-[44px] px-3 py-2 text-xs" : "min-h-[52px] px-3 py-3 text-sm sm:gap-3 sm:px-4",
         meta.pillClass,
+        done && "opacity-60 grayscale",
       )}
     >
       <AssetThumb icon={meta.iconKey} size={compact ? 26 : 30} className="shrink-0 rounded-[10px] bg-white/40" />
-      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className={cn("min-w-0 flex-1 truncate", done && "line-through")}>{title}</span>
       <span className="max-w-[86px] shrink-0 truncate rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80 sm:max-w-[128px]">
-        {label}
+        {done ? "Listo" : label}
       </span>
     </button>
   );
@@ -78,6 +81,7 @@ export function CalendarTimeline({
   isCoveredByPreviousLongEvent,
   onEdit,
   onExpandHour,
+  isEventDone,
 }: {
   events: CalendarEvent[];
   hours: string[];
@@ -91,6 +95,7 @@ export function CalendarTimeline({
   eventsForHour: (events: CalendarEvent[], hour: string) => CalendarEvent[];
   isCoveredByPreviousLongEvent: (events: CalendarEvent[], hour: string) => boolean;
   containingLongEventLabel: (event: CalendarEvent) => string;
+  isEventDone: (event: CalendarEvent) => boolean;
   onEdit: (event: CalendarEvent) => void;
   onExpandHour: (slotKey: string | null) => void;
 }) {
@@ -153,7 +158,7 @@ export function CalendarTimeline({
 
                       return (
                         <div key={event.id} className={cn("min-w-0 overflow-hidden", nested.length ? "rounded-[18px] bg-gray-50/80 p-2" : "")}>
-                          <EventPill event={event} meta={meta} label={label} title={title} onEdit={onEdit} />
+                          <EventPill event={event} meta={meta} label={label} title={title} onEdit={onEdit} done={isEventDone(event)} />
 
                           {nested.length ? (
                             <div className="mt-2 min-w-0">
@@ -177,6 +182,7 @@ export function CalendarTimeline({
                                         label={child.endTime ? eventRangeLabel(child) : child.time}
                                         title={stripEmoji(child.title)}
                                         onEdit={onEdit}
+                                        done={isEventDone(child)}
                                         compact
                                       />
                                     );

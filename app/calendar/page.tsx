@@ -29,8 +29,9 @@ import { CalendarDaySummary } from "@/components/calendar/calendar-day-summary";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarTimeline } from "@/components/calendar/calendar-timeline";
 import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
+import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
 import { ACTIVITY_TYPES, activityTypePillClass, getActivityTypeByKey, inferActivityTypeFromEvent } from "@/lib/activity-types";
-import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -400,6 +401,7 @@ function ActivityTypeSelect({
 export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { overrides, saveOverride } = useCalendarOverrides();
+  const { completionMap } = useCalendarCompletions();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -693,6 +695,7 @@ export default function CalendarPage() {
               eventsForHour={eventsForHour}
               isCoveredByPreviousLongEvent={isCoveredByPreviousLongEvent}
               containingLongEventLabel={(event) => containingLongEventLabel(eventsForSelectedDate, event)}
+              isEventDone={(event) => getCalendarEventDone(event, selectedDateKey, completionMap)}
               onEdit={requestEdit}
               onExpandHour={setExpandedHourKey}
             />

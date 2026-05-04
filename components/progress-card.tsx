@@ -5,13 +5,15 @@ export function ProgressCard({ percent }: { percent: number }) {
 
   return (
     <section className="relative h-[154px] overflow-hidden rounded-card bg-gradient-to-br from-monkey-purple via-[#7C6CF5] to-monkey-green p-5 text-white shadow-soft">
-      <div className="absolute -right-6 -top-8 h-36 w-36 rounded-full bg-white/10" />
-      <div className="absolute right-2 top-6 h-24 w-24 rounded-full bg-white/10" />
+      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,.08),transparent_38%,rgba(255,255,255,.12)_62%,transparent)] animate-heroShimmer" />
+      <div className="absolute -right-4 top-[-18px] h-36 w-36 rounded-full bg-white/10 animate-heroBlob" />
+      <div className="absolute right-10 top-10 h-24 w-24 rounded-full bg-white/10 animate-heroBlobSlow" />
+      <div className="absolute right-[38px] top-1/2 h-32 w-32 -translate-y-1/2 rounded-full bg-white/10 blur-[1px]" />
       <AssetThumb
         icon="hero-sentado"
         size={132}
-        className="absolute -bottom-4 right-0 animate-floaty"
-        imageClassName="object-bottom"
+        className="absolute bottom-3 right-4 animate-floaty"
+        imageClassName="object-contain object-center drop-shadow-[0_16px_20px_rgba(17,24,39,.16)]"
       />
       <div className="relative z-10 max-w-[240px]">
         <p className="text-sm font-bold opacity-95">

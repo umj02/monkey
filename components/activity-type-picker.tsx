@@ -41,20 +41,22 @@ export function ActivityTypePicker({ label = "Tipo de actividad", value, onChang
         </div>
         <div className="asset-picker-scroll no-scrollbar flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
           {filtered.map((type) => {
-            const active = value === type.key || value === type.iconKey;
+            const active = getActivityTypeByKey(value).key === type.key;
             return (
               <button
                 key={type.key}
                 type="button"
                 onClick={() => onChange(type.key)}
                 className={cn(
-                  "grid flex-none place-items-center gap-1 rounded-[16px] border px-2 py-2 text-[10px] font-black transition active:scale-95",
-                  compact ? "w-[72px]" : "w-[78px]",
+                  "grid flex-none place-items-center gap-1 rounded-[18px] border px-2 py-2 text-[10px] font-black transition active:scale-95",
+                  compact ? "w-[76px]" : "w-[84px]",
                   active ? "border-monkey-green bg-white text-monkey-greenDark shadow-sm" : "border-transparent bg-white/70 text-monkey-muted",
                 )}
                 aria-pressed={active}
               >
-                <AssetThumb icon={type.iconKey} size={compact ? 34 : 38} />
+                <span className={cn("grid place-items-center rounded-[14px] p-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,.65)]", type.toneClass)}>
+                  <AssetThumb icon={type.iconKey} size={compact ? 34 : 40} imageClassName="drop-shadow-sm" />
+                </span>
                 <span className="block w-full truncate text-center leading-tight">{type.label}</span>
               </button>
             );

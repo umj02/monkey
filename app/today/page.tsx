@@ -118,7 +118,11 @@ function containingLongEvent(events: CalendarEvent[], child: CalendarEvent) {
 }
 
 function calendarIcon(event: CalendarEvent) {
-  return event.iconKey ?? inferActivityTypeFromEvent(event).iconKey ?? calendarStyleMap[event.color]?.icon ?? "calendar-task";
+  return inferActivityTypeFromEvent(event).iconKey ?? event.iconKey ?? calendarStyleMap[event.color]?.icon ?? "monkey-estudiar";
+}
+
+function todayOccurrenceKey(event: CalendarEvent, dateKey: string) {
+  return `${calendarOccurrenceBaseId(event)}::${calendarOccurrenceDate(event, dateKey)}`;
 }
 
 function CalendarTodayCard({
@@ -127,6 +131,7 @@ function CalendarTodayCard({
   sourceLabel,
   contextLabel,
   hasReminder,
+  isCompleting,
   onToggle,
   onEdit,
   onToggleReminder,
@@ -136,6 +141,7 @@ function CalendarTodayCard({
   sourceLabel: string;
   contextLabel?: string | null;
   hasReminder: boolean;
+  isCompleting?: boolean;
   onToggle: (event: CalendarEvent) => void;
   onEdit: (event: CalendarEvent) => void;
   onToggleReminder: (event: CalendarEvent) => void;
@@ -143,7 +149,7 @@ function CalendarTodayCard({
   const style = calendarStyleMap[event.color] ?? calendarStyleMap.blue;
   return (
     <article
-      className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", style.card)}
+      className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", style.card, isCompleting && "pointer-events-none animate-completeOut")}
       onClick={() => onEdit(event)}
       role="button"
       tabIndex={0}
@@ -156,7 +162,7 @@ function CalendarTodayCard({
         <div className="min-w-0">
           <div className="flex max-w-full min-w-0 items-center text-left text-[15px] font-black text-monkey-ink">
             <AssetThumb icon={calendarIcon(event)} size={28} className="mr-2 shrink-0 rounded-[10px] bg-white/60 p-1" />
-            <span className="min-w-0 truncate">{stripEmoji(event.title)}</span>
+            <span className={cn("min-w-0 truncate", done && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
           </div>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
             <span className="rounded-full bg-white/70 px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-monkey-muted">{sourceLabel}</span>
@@ -220,6 +226,8 @@ export default function TodayPage() {
   const [pendingRecurringEvent, setPendingRecurringEvent] = useState<CalendarEvent | null>(null);
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const [completingCalendarKeys, setCompletingCalendarKeys] = useState<Set<string>>(() => new Set());
+  const [undoCompleted, setUndoCompleted] = useState<{ key: string; event: CalendarEvent } | null>(null);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
 
@@ -243,11 +251,19 @@ export default function TodayPage() {
   }, [visibleBlocks, calendarTodayEvents, completionMap, todayDateKey, percent]);
 
   const agendaItems = useMemo(() => {
+    const calendarItems = calendarTodayEvents
+      .filter((event) => {
+        const key = todayOccurrenceKey(event, todayDateKey);
+        const done = getCalendarEventDone(event, todayDateKey, completionMap);
+        return !done || completingCalendarKeys.has(key);
+      })
+      .map((event) => ({ id: `calendar-${todayOccurrenceKey(event, todayDateKey)}`, type: "calendar" as const, time: event.time, event }));
+
     return [
       ...visibleBlocks.map((block) => ({ id: `task-${block.id}`, type: "task" as const, time: block.time, block })),
-      ...calendarTodayEvents.map((event) => ({ id: `calendar-${event.id}`, type: "calendar" as const, time: event.time, event })),
+      ...calendarItems,
     ].sort((a, b) => a.time.localeCompare(b.time));
-  }, [visibleBlocks, calendarTodayEvents]);
+  }, [visibleBlocks, calendarTodayEvents, completionMap, completingCalendarKeys, todayDateKey]);
 
   function showToast(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
@@ -402,13 +418,55 @@ export default function TodayPage() {
   function toggleCalendarEvent(event: CalendarEvent) {
     const currentDone = getCalendarEventDone(event, todayDateKey, completionMap);
     const nextDone = !currentDone;
+    const occurrenceKey = todayOccurrenceKey(event, todayDateKey);
+
+    if (nextDone) {
+      setCompletingCalendarKeys((current) => new Set(current).add(occurrenceKey));
+      setUndoCompleted({ key: occurrenceKey, event });
+      window.setTimeout(() => {
+        setCompletingCalendarKeys((current) => {
+          const next = new Set(current);
+          next.delete(occurrenceKey);
+          return next;
+        });
+      }, 640);
+      window.setTimeout(() => {
+        setUndoCompleted((current) => (current?.key === occurrenceKey ? null : current));
+      }, 5200);
+    } else {
+      setUndoCompleted((current) => (current?.key === occurrenceKey ? null : current));
+      setCompletingCalendarKeys((current) => {
+        const next = new Set(current);
+        next.delete(occurrenceKey);
+        return next;
+      });
+    }
+
     if (isRecurringEvent(event)) {
-      void setCompletion(event.id, todayDateKey, nextDone);
+      void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), nextDone);
     } else {
       const { id: _id, ...input } = event;
       void updateEvent(event.id, { ...input, done: nextDone });
     }
     showToast(nextDone ? "Actividad completada" : "Actividad pendiente");
+  }
+
+  function undoLastCompletion() {
+    if (!undoCompleted) return;
+    const event = undoCompleted.event;
+    if (isRecurringEvent(event)) {
+      void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), false);
+    } else {
+      const { id: _id, ...input } = event;
+      void updateEvent(event.id, { ...input, done: false });
+    }
+    setCompletingCalendarKeys((current) => {
+      const next = new Set(current);
+      next.delete(undoCompleted.key);
+      return next;
+    });
+    setUndoCompleted(null);
+    showToast("Actividad recuperada");
   }
 
   async function refreshToday() {
@@ -452,6 +510,7 @@ export default function TodayPage() {
               sourceLabel={isRecurringEvent(item.event) ? "Recurrente" : "Calendario"}
               contextLabel={containingLongEvent(calendarTodayEvents, item.event) ? `Dentro de ${stripEmoji(containingLongEvent(calendarTodayEvents, item.event)!.title)}` : null}
               hasReminder={reminderEventIds.has(calendarOccurrenceBaseId(item.event))}
+              isCompleting={completingCalendarKeys.has(todayOccurrenceKey(item.event, todayDateKey))}
               onToggle={toggleCalendarEvent}
               onEdit={requestCalendarEventEditor}
               onToggleReminder={toggleCalendarReminder}
@@ -460,6 +519,13 @@ export default function TodayPage() {
         </div>
       </section>
       <button onClick={openNewTask} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar tarea"><Plus className="h-8 w-8" /></button>
+      {undoCompleted ? (
+        <div className="fixed bottom-[88px] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-black/5 bg-white/95 px-3 py-2 text-xs font-black text-monkey-ink shadow-soft backdrop-blur-xl animate-pop">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-green-50 text-monkey-green">✓</span>
+          <span>Completada</span>
+          <button type="button" onClick={undoLastCompletion} className="rounded-full bg-gray-100 px-3 py-1 text-monkey-greenDark transition active:scale-95">Deshacer</button>
+        </div>
+      ) : null}
       <FormSheet open={formOpen} title={editingCalendarEvent ? "Editar tarea" : "Nueva tarea"} subtitle={editingCalendarEvent ? "Los cambios se actualizan también en Calendario." : "Creá una tarea rápida para hoy. También aparecerá en Calendario."} onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel={editingCalendarEvent ? "Guardar cambios" : "Crear tarea"}>
         <Field label="Tarea" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Ej: Repasar matemáticas" error={errors.title} />
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />

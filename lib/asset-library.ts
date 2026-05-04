@@ -66,6 +66,27 @@ export const calendarActivityAssets: AppAsset[] = [
   { key: "calendar-meditation", label: "Meditación", src: "/assets/activities/calendar/meditacion.png", category: "calendar" }
 ];
 
+
+export const monkeyActivityAssets: AppAsset[] = [
+  { key: "monkey-banarse", label: "Bañarse", src: "/assets/activities/monkeys/banarse.png", category: "activity", group: "rutina" },
+  { key: "monkey-beberagua", label: "Beber agua", src: "/assets/activities/monkeys/beberagua.png", category: "activity", group: "salud" },
+  { key: "monkey-cepillarse", label: "Cepillarse", src: "/assets/activities/monkeys/cepillarse.png", category: "activity", group: "rutina" },
+  { key: "monkey-cuidado-personal", label: "Cuidado personal", src: "/assets/activities/monkeys/cuidado-personal.png", category: "activity", group: "rutina" },
+  { key: "monkey-desayuno", label: "Desayuno", src: "/assets/activities/monkeys/desayuno.png", category: "activity", group: "comida" },
+  { key: "monkey-despertar", label: "Despertar", src: "/assets/activities/monkeys/despertar.png", category: "activity", group: "rutina" },
+  { key: "monkey-comida", label: "Comida", src: "/assets/activities/monkeys/dinner.png", category: "activity", group: "comida" },
+  { key: "monkey-frutas", label: "Frutas", src: "/assets/activities/monkeys/fruit.png", category: "activity", group: "comida" },
+  { key: "monkey-gym", label: "Gym", src: "/assets/activities/monkeys/gimnacio.png", category: "activity", group: "salud" },
+  { key: "monkey-instrumento", label: "Instrumento", src: "/assets/activities/monkeys/instrumento.png", category: "activity", group: "social" },
+  { key: "monkey-leer", label: "Leer", src: "/assets/activities/monkeys/leer.png", category: "activity", group: "estudio" },
+  { key: "monkey-meditar", label: "Meditar", src: "/assets/activities/monkeys/meditar.png", category: "activity", group: "salud" },
+  { key: "monkey-musica", label: "Música", src: "/assets/activities/monkeys/musica.png", category: "activity", group: "social" },
+  { key: "monkey-salida", label: "Salida", src: "/assets/activities/monkeys/salida.png", category: "activity", group: "social" },
+  { key: "monkey-dormir", label: "Dormir", src: "/assets/activities/monkeys/sleep.png", category: "activity", group: "descanso" },
+  { key: "monkey-futbol", label: "Fútbol", src: "/assets/activities/monkeys/soccer.png", category: "activity", group: "salud" },
+  { key: "monkey-estudiar", label: "Estudiar", src: "/assets/activities/monkeys/study.png", category: "activity", group: "estudio" },
+];
+
 export const walletAssets: AppAsset[] = [
   { key: "wallet-income", label: "Ingresos", src: "/assets/wallet/icons/income/ingresos.png", category: "wallet", group: "income" },
   { key: "wallet-savings", label: "Ahorros", src: "/assets/wallet/icons/income/ahorros.png", category: "wallet", group: "income" },
@@ -102,9 +123,9 @@ export const walletAssets: AppAsset[] = [
   { key: "wallet-healthy", label: "Saludable", src: "/assets/wallet/icons/expense/saludable.png", category: "wallet", group: "expense" }
 ];
 
-export const activityAssetGallery = [...todayQuickAssets, ...activityAssets];
+export const activityAssetGallery = monkeyActivityAssets;
 
-export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...todayQuickAssets, ...activityAssets, ...calendarActivityAssets, ...walletAssets];
+export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...monkeyActivityAssets, ...todayQuickAssets, ...activityAssets, ...calendarActivityAssets, ...walletAssets];
 
 export function getAssetByKey(key?: string | null) {
   if (!key) return null;

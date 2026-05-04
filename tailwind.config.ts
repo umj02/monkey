@@ -50,13 +50,34 @@ const config: Config = {
         slideUp: {
           "0%": { transform: "translateY(24px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" }
+        },
+        completeOut: {
+          "0%": { transform: "translateY(0) scale(1)", opacity: "1", maxHeight: "220px" },
+          "22%": { transform: "translateY(-6px) scale(1.018)", opacity: "1", maxHeight: "220px" },
+          "100%": { transform: "translateY(-18px) scale(.985)", opacity: "0", maxHeight: "0px", marginTop: "0", marginBottom: "0", paddingTop: "0", paddingBottom: "0" }
+        },
+        heroShimmer: {
+          "0%, 100%": { transform: "translateX(-18%)", opacity: ".55" },
+          "50%": { transform: "translateX(12%)", opacity: ".95" }
+        },
+        heroBlob: {
+          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
+          "50%": { transform: "translate3d(-14px,12px,0) scale(1.08)" }
+        },
+        heroBlobSlow: {
+          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
+          "50%": { transform: "translate3d(12px,-10px,0) scale(1.06)" }
         }
       },
       animation: {
         pop: "pop .32s cubic-bezier(.2,.8,.2,1)",
         floaty: "floaty 3.2s ease-in-out infinite",
         checkPulse: "checkPulse .28s ease-out",
-        slideUp: "slideUp .25s ease-out"
+        slideUp: "slideUp .25s ease-out",
+        completeOut: "completeOut .62s cubic-bezier(.2,.8,.2,1) forwards",
+        heroShimmer: "heroShimmer 9s ease-in-out infinite",
+        heroBlob: "heroBlob 8s ease-in-out infinite",
+        heroBlobSlow: "heroBlobSlow 11s ease-in-out infinite"
       }
     }
   },
