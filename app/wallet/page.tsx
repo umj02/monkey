@@ -13,7 +13,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { useWallet } from "@/hooks/use-wallet";
 import { cn } from "@/lib/utils";
 import { getWalletPeriodRange, isTransactionInPeriod } from "@/lib/services/wallet-service";
-import type { WalletPeriod, WalletTransaction, WalletTransactionType } from "@/types";
+import type { WalletGoal, WalletPeriod, WalletTransaction, WalletTransactionType } from "@/types";
 
 const periodLabels: Record<WalletPeriod, string> = {
   monthly: "Mes",
@@ -138,7 +138,7 @@ function toneFor(type: WalletTransactionType) {
 }
 
 export default function WalletPage() {
-  const { wallet, changePeriod, updateWallet, addTransaction, addGoal, deleteTransaction, refreshWallet, syncing, syncStatus, lastError } = useWallet();
+  const { wallet, changePeriod, updateWallet, addTransaction, addGoal, addGoalAmount, deleteTransaction, refreshWallet, syncing, syncStatus, lastError } = useWallet();
   const [toast, setToast] = useState<ToastState>(null);
   const [movementOpen, setMovementOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -156,6 +156,9 @@ export default function WalletPage() {
   const [goalIcon, setGoalIcon] = useState("wallet-savings");
   const [historyFilter, setHistoryFilter] = useState<"all" | WalletTransactionType>("all");
   const [historyPage, setHistoryPage] = useState(0);
+  const [goalContributionOpen, setGoalContributionOpen] = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [goalContributionAmount, setGoalContributionAmount] = useState("");
 
   const periodRange = useMemo(() => getWalletPeriodRange(wallet.period), [wallet.period]);
   const filteredTransactions = useMemo(() => {
@@ -169,8 +172,8 @@ export default function WalletPage() {
   const recentTransactions = filteredTransactions.slice(safePage * 5, safePage * 5 + 5);
 
   const budgetPercent = Math.min(100, Math.round((wallet.expenses / wallet.budgetLimit) * 100));
-  const firstGoal = wallet.goals[0];
-  const goalPercent = firstGoal ? Math.min(100, Math.round((firstGoal.current / firstGoal.target) * 100)) : 0;
+  const visibleGoals = wallet.goals.slice(0, 3);
+  const selectedGoal = selectedGoalId ? wallet.goals.find((goal) => goal.id === selectedGoalId) || null : null;
   const activeCategories = categoriesForType(type);
   const activeWalletAssets = getWalletAssetsByType(type);
 
@@ -220,6 +223,10 @@ export default function WalletPage() {
   function submitGoal() {
     const parsedTarget = Number(goalTarget);
     const parsedCurrent = Number(goalCurrent);
+    if (wallet.goals.length >= 3) {
+      setToast({ message: "Podés tener hasta 3 metas activas. Sumá avances a una meta o completá una antes de crear otra.", type: "error" });
+      return;
+    }
     if (goalTitle.trim().length < 3) {
       setToast({ message: "Agregá un nombre para la meta.", type: "error" });
       return;
@@ -235,6 +242,33 @@ export default function WalletPage() {
     setGoalCurrent("0");
     setGoalIcon("wallet-savings");
     setToast({ message: "Meta de ahorro creada.", type: "success" });
+  }
+
+  function openGoalContribution(goal: WalletGoal) {
+    setSelectedGoalId(goal.id);
+    setGoalContributionAmount("");
+    setGoalContributionOpen(true);
+  }
+
+  function submitGoalContribution() {
+    const parsedAmount = Number(goalContributionAmount);
+    if (!selectedGoal) {
+      setToast({ message: "Elegí una meta para agregar avance.", type: "error" });
+      return;
+    }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setToast({ message: "Ingresá un monto válido mayor a 0.", type: "error" });
+      return;
+    }
+    const ok = addGoalAmount(selectedGoal.id, parsedAmount);
+    if (!ok) {
+      setToast({ message: "No se pudo actualizar esta meta.", type: "error" });
+      return;
+    }
+    setGoalContributionOpen(false);
+    setGoalContributionAmount("");
+    setSelectedGoalId(null);
+    setToast({ message: "Avance agregado a la meta.", type: "success" });
   }
 
   function removeTransaction(id: string) {
@@ -359,12 +393,40 @@ export default function WalletPage() {
         </section>
 
         <section className="mt-4 rounded-card bg-white p-4 shadow-card">
-          <div className="flex items-center justify-between"><h2 className="text-sm font-black">Meta de ahorro</h2><button onClick={() => setGoalOpen(true)} className="text-xs font-black text-monkey-green">+ meta</button></div>
-          {firstGoal ? (
-            <div className="mt-4 grid grid-cols-[48px_1fr_auto] items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-purple-100"><AssetThumb icon={firstGoal.icon} size={34} /></span>
-              <div><p className="text-sm font-black">{firstGoal.title}</p><div className="mt-2 h-2 overflow-hidden rounded-pill bg-gray-100"><div className="h-full rounded-pill bg-monkey-green" style={{ width: `${goalPercent}%` }} /></div></div>
-              <div className="text-right text-xs font-black"><p>{money(firstGoal.current, wallet.currency)} / {money(firstGoal.target, wallet.currency)}</p><p className="mt-1 text-monkey-muted">{goalPercent}%</p></div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black">Metas de ahorro</h2>
+              <p className="mt-1 text-[11px] font-bold text-monkey-muted">Hasta 3 metas activas</p>
+            </div>
+            <button
+              onClick={() => {
+                if (wallet.goals.length >= 3) {
+                  setToast({ message: "Ya tenés 3 metas activas. Agregá avance a una meta existente.", type: "info" });
+                  return;
+                }
+                setGoalOpen(true);
+              }}
+              className={cn("rounded-pill px-3 py-2 text-xs font-black", wallet.goals.length >= 3 ? "bg-gray-100 text-monkey-muted" : "bg-green-50 text-monkey-green")}
+            >
+              + meta
+            </button>
+          </div>
+          {visibleGoals.length ? (
+            <div className="mt-4 space-y-3">
+              {visibleGoals.map((goal) => {
+                const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
+                return (
+                  <article key={goal.id} className="grid grid-cols-[48px_1fr_auto] items-center gap-3 rounded-[18px] bg-gray-50 p-2">
+                    <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-purple-100"><AssetThumb icon={goal.icon} size={34} /></span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black">{goal.title}</p>
+                      <div className="mt-2 h-2 overflow-hidden rounded-pill bg-white"><div className="h-full rounded-pill bg-monkey-green" style={{ width: `${percent}%` }} /></div>
+                      <p className="mt-1 truncate text-[11px] font-bold text-monkey-muted">{money(goal.current, wallet.currency)} / {money(goal.target, wallet.currency)} · {percent}%</p>
+                    </div>
+                    <button type="button" onClick={() => openGoalContribution(goal)} className="rounded-full bg-green-50 px-3 py-2 text-xs font-black text-monkey-green transition active:scale-95">+ monto</button>
+                  </article>
+                );
+              })}
             </div>
           ) : <p className="mt-3 text-sm font-semibold text-monkey-muted">Creá una meta para separar tus ahorros.</p>}
         </section>
@@ -418,6 +480,30 @@ export default function WalletPage() {
         <Field label="Nombre" value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} placeholder="Ej. Viaje, teléfono, emergencia" />
         <Field label="Monto objetivo" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} type="number" min="1" step="1" />
         <Field label="Monto actual" value={goalCurrent} onChange={(event) => setGoalCurrent(event.target.value)} type="number" min="0" step="1" />
+      </FormSheet>
+
+      <FormSheet
+        open={goalContributionOpen}
+        title="Agregar avance"
+        subtitle={selectedGoal ? `Sumá dinero a “${selectedGoal.title}” sin crear la meta de nuevo.` : "Sumá dinero a una meta activa."}
+        submitLabel="Agregar monto"
+        onClose={() => {
+          setGoalContributionOpen(false);
+          setGoalContributionAmount("");
+          setSelectedGoalId(null);
+        }}
+        onSubmit={submitGoalContribution}
+      >
+        {selectedGoal ? (
+          <div className="grid grid-cols-[54px_1fr] items-center gap-3 rounded-[20px] bg-green-50 p-3">
+            <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-white"><AssetThumb icon={selectedGoal.icon} size={34} /></span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-monkey-ink">{selectedGoal.title}</p>
+              <p className="mt-1 text-xs font-bold text-monkey-muted">Actual: {money(selectedGoal.current, wallet.currency)} / {money(selectedGoal.target, wallet.currency)}</p>
+            </div>
+          </div>
+        ) : null}
+        <Field label="Monto a agregar" value={goalContributionAmount} onChange={(event) => setGoalContributionAmount(event.target.value)} type="number" min="1" step="1" placeholder="0" />
       </FormSheet>
     </AppShell>
   );

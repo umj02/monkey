@@ -216,5 +216,16 @@ export function addWalletGoal(data: WalletData, input: WalletGoalInput): WalletD
     targetDate: input.targetDate || null,
     icon: input.icon || "wallet-savings"
   };
-  return normalizeWallet({ ...data, goals: [goal, ...data.goals] });
+  return normalizeWallet({ ...data, goals: [goal, ...(data.goals || []).slice(0, 2)] });
+}
+
+export function updateWalletGoalAmount(data: WalletData, goalId: string, nextCurrent: number): WalletData {
+  return normalizeWallet({
+    ...data,
+    goals: (data.goals || []).map((goal) => (
+      goal.id === goalId
+        ? { ...goal, current: Math.max(0, Math.min(Number(goal.target) || 1, Number(nextCurrent) || 0)) }
+        : goal
+    )),
+  });
 }

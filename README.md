@@ -280,3 +280,25 @@ Pruebas manuales clave:
 - La línea de tiempo del calendario inicia en la primera hora con actividad del día seleccionado para reducir espacios vacíos.
 - Si el día no tiene actividades, se conserva la card de Día libre sin timeline.
 - Mantiene v2.13.2 como base: sync de Wallet, alertas editables, login con `next` y browser alerts.
+
+## v2.13.4 — Wallet Goals + 24h Calendar Timeline
+
+- Wallet permite hasta 3 metas activas.
+- Cada meta conserva su nombre, monto objetivo, monto actual e ícono.
+- Nueva acción `+ monto` por meta para sumar avances sin recrear ni borrar la meta.
+- El avance de metas se sincroniza con Supabase usando el mismo `wallet_goals` existente.
+- El calendario acepta actividades durante las 24 horas del día (`00:00` a `23:59`).
+- La línea de tiempo del calendario inicia en la primera hora con actividad del día seleccionado.
+- Si la primera actividad es a la 01:00, inicia a la 01:00; si es a las 16:00, inicia a las 16:00.
+- Si el día no tiene actividades, mantiene solo la card de Día libre.
+
+### QA recomendado para v2.13.4
+
+1. Crear 3 metas diferentes y verificar que se muestran juntas.
+2. Intentar crear una cuarta meta y confirmar que muestra aviso.
+3. Usar `+ monto` en una meta y verificar que aumenta el monto actual sin modificar objetivo/nombre.
+4. Refrescar Wallet y confirmar persistencia de metas y avances.
+5. Crear actividad a `01:00` en calendario y verificar que la línea inicia a `01:00`.
+6. Crear actividad a `23:00` y confirmar que se visualiza correctamente.
+7. Crear actividad a `00:30` y confirmar que se agrupa en la fila `00:00`.
+8. Validar `npm run validate:assets`, `npm run typecheck` y `npm run build`.

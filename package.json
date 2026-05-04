@@ -1,6 +1,6 @@
 {
   "name": "monkey-checks",
-  "version": "2.13.3",
+  "version": "2.13.4",
   "type": "module",
   "scripts": {
     "dev": "next dev",

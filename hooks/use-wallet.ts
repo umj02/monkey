@@ -11,6 +11,7 @@ import {
   deleteWalletTransaction,
   normalizeWallet,
   updateWalletData,
+  updateWalletGoalAmount,
   type WalletGoalInput,
   type WalletTransactionInput,
   type WalletUpdateInput
@@ -200,5 +201,34 @@ export function useWallet() {
     }
   }
 
-  return { wallet: normalized, setWallet, ready, syncing, syncStatus, lastError, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal };
+  function addGoalAmount(goalId: string, amount: number) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (safeAmount <= 0) return false;
+
+    const existing = normalized.goals.find((goal) => goal.id === goalId);
+    if (!existing) return false;
+
+    const nextCurrent = Math.min(existing.target, existing.current + safeAmount);
+    const updatedGoal: WalletGoal = { ...existing, current: nextCurrent };
+    setWallet((current) => updateWalletGoalAmount(current, goalId, nextCurrent));
+
+    if (session && mode === "supabase") {
+      setSyncStatus("saving");
+      setLastError(null);
+      void upsertWalletGoal(updatedGoal)
+        .then((remote) => {
+          if (remote) replaceGoal(goalId, remote);
+          setSyncStatus(remote ? "synced" : "error");
+          if (!remote) setLastError("No se pudo sincronizar el avance de la meta.");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo sincronizar el avance de la meta.");
+        });
+    }
+
+    return true;
+  }
+
+  return { wallet: normalized, setWallet, ready, syncing, syncStatus, lastError, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal, addGoalAmount };
 }

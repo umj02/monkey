@@ -44,23 +44,7 @@ const monthNames = [
   "Noviembre",
   "Diciembre",
 ];
-const timelineHours = [
-  "06:00",
-  "07:00",
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-];
+const timelineHours = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
 
 const DEFAULT_DURATION_MINUTES = 60;
 const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
@@ -305,22 +289,11 @@ function findScheduleConflict(events: CalendarEvent[], proposedStart: string, pr
 }
 
 function getVisibleTimelineHours(events: CalendarEvent[]) {
-  if (events.length === 0) return timelineHours.filter((hour) => Number(hour.slice(0, 2)) <= 12);
+  if (events.length === 0) return [];
 
-  const eventHours = events.reduce(
-    (range, event) => {
-      const startHour = Math.floor(timeToMinutes(event.time) / 60);
-      const endHour = event.endTime && isValidTime(event.endTime) ? Math.ceil(timeToMinutes(event.endTime) / 60) : startHour;
-      return {
-        min: Math.min(range.min, startHour),
-        max: Math.max(range.max, endHour),
-      };
-    },
-    { min: 24, max: 0 },
-  );
-
-  const firstHour = Math.max(6, Math.min(20, eventHours.min));
-  const finalHour = Math.max(firstHour, Math.min(20, eventHours.max));
+  const startHours = events.map((event) => Math.floor(timeToMinutes(event.time) / 60));
+  const firstHour = Math.max(0, Math.min(23, Math.min(...startHours)));
+  const finalHour = Math.max(firstHour, Math.min(23, Math.max(...startHours)));
 
   return timelineHours.filter((hour) => {
     const value = Number(hour.slice(0, 2));
@@ -483,9 +456,11 @@ export default function CalendarPage() {
   }
 
   function openNew() {
+    const now = new Date();
+    const defaultTime = `${String(now.getHours()).padStart(2, "0")}:00`;
     setEditing(null);
     setTitle("");
-    setTime("09:00");
+    setTime(defaultTime);
     setEndTime("");
     setCategory("study");
     setAlertOption("none");
