@@ -56,7 +56,7 @@ export default function NotesPage() {
         <TextAreaField label="Contenido" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escribí tu nota..." error={errors.body} />
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid grid-cols-5 gap-2">{colors.map((item) => <button type="button" key={item} onClick={() => setColor(item)} className={`h-10 rounded-full ${colorClass[item]} ${color === item ? "ring-4 ring-monkey-green/25" : ""}`} aria-label={item} />)}</div></div>
       </FormSheet>
-      <ConfirmSheet open={!!deleteId} title="¿Eliminar nota?" body="Esta nota se eliminará de tu almacenamiento local." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) deleteNote(deleteId); setDeleteId(null); notify("Nota eliminada"); }} />
+      <ConfirmSheet open={!!deleteId} title="¿Eliminar nota?" body="Esta nota se eliminará de tu cuenta." onCancel={() => setDeleteId(null)} onConfirm={() => { if (deleteId) deleteNote(deleteId); setDeleteId(null); notify("Nota eliminada"); }} />
     </AppShell>
   );
 }

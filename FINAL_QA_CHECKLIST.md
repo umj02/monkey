@@ -113,3 +113,11 @@ npm run build
 ## Nota honesta
 
 No se incluye `package-lock.json` porque el entorno de generación no logró completar `npm install` por timeout. Para producción, se recomienda generar y versionar `package-lock.json` desde una máquina local con instalación completa y luego hacer commit.
+
+## v2.13.1 adicional
+
+- Wallet: crear movimiento, refrescar, eliminar y refrescar otra vez. El movimiento no debe regresar.
+- Wallet: crear meta y refrescar. La meta debe conservar ID remoto.
+- Calendario: crear actividad con alerta, editar solo texto/hora, guardar y confirmar que la alerta sigue en Recordatorios.
+- Login: entrar a `/calendar` sin sesión, iniciar sesión y confirmar que vuelve a `/calendar`.
+- Copys: confirmar que ya no aparecen mensajes de "almacenamiento local" en acciones de usuario final.

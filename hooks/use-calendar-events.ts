@@ -79,7 +79,7 @@ export function useCalendarEvents() {
         return remote;
       }
       setSyncStatus("error");
-      setLastError("La actividad quedó local, pero no se pudo sincronizar.");
+      setLastError("La actividad se guardó temporalmente, pero no se pudo sincronizar con tu cuenta.");
     }
 
     return event;
@@ -101,7 +101,7 @@ export function useCalendarEvents() {
         return remote;
       }
       setSyncStatus("error");
-      setLastError("La actividad quedó local, pero no se pudo sincronizar.");
+      setLastError("La actividad se guardó temporalmente, pero no se pudo sincronizar con tu cuenta.");
     }
 
     return event;

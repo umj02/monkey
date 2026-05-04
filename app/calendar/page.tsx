@@ -220,6 +220,18 @@ function createReminderTime(dateKey: string, time: string, alertOption: AlertOpt
   return date.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
+function inferAlertOption(eventTime: string, reminderTime?: string | null): AlertOption {
+  if (!reminderTime || !isValidTime(eventTime) || !isValidTime(reminderTime)) return "none";
+  const eventMinutes = timeToMinutes(eventTime);
+  const reminderMinutes = timeToMinutes(reminderTime);
+  const diff = eventMinutes - reminderMinutes;
+  if (diff === 0) return "exact";
+  if (diff === 5) return "5";
+  if (diff === 15) return "15";
+  if (diff === 30) return "30";
+  return "exact";
+}
+
 function eventStartHour(event: CalendarEvent) {
   return Math.floor(timeToMinutes(event.time) / 60) * 60;
 }
@@ -389,7 +401,7 @@ function ActivityTypeSelect({
 
 export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
-  const { upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
+  const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [sheetMode, setSheetMode] = useState<CalendarSheetMode>("closed");
@@ -478,7 +490,8 @@ export default function CalendarPage() {
     setTime(event.time);
     setEndTime(event.endTime ?? "");
     setCategory(meta.id);
-    setAlertOption("none");
+    const existingReminder = reminders.find((item) => item.calendarEventId === event.id);
+    setAlertOption(inferAlertOption(event.time, existingReminder?.time));
     setErrors({});
     setSheetMode("event");
   }

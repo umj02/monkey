@@ -116,7 +116,7 @@ function toneFor(type: WalletTransactionType) {
 }
 
 export default function WalletPage() {
-  const { wallet, changePeriod, updateWallet, addTransaction, addGoal, deleteTransaction, refreshWallet, syncing } = useWallet();
+  const { wallet, changePeriod, updateWallet, addTransaction, addGoal, deleteTransaction, refreshWallet, syncing, syncStatus, lastError } = useWallet();
   const [toast, setToast] = useState<ToastState>(null);
   const [movementOpen, setMovementOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -223,7 +223,7 @@ export default function WalletPage() {
   function refreshHistory() {
     refreshWallet();
     setHistoryPage(0);
-    setToast({ message: "Historial actualizado.", type: "success" });
+    setToast({ message: lastError ? "No se pudo actualizar. Revisá tu conexión." : "Historial actualizado.", type: lastError ? "error" : "success" });
   }
 
   function setPeriod(period: WalletPeriod) {
@@ -255,6 +255,9 @@ export default function WalletPage() {
           ))}
         </div>
         <p className="mt-2 flex items-center justify-center gap-1 text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted"><CalendarDays className="h-3.5 w-3.5" />{periodRange.start} · {periodRange.end}</p>
+        <p className={cn("mt-1 text-center text-[11px] font-bold", lastError ? "text-monkey-pink" : syncStatus === "saving" || syncing ? "text-monkey-muted" : "text-monkey-greenDark")}>
+          {lastError || (syncStatus === "saving" ? "Guardando cambios..." : syncing ? "Actualizando Wallet..." : syncStatus === "synced" ? "Wallet sincronizada" : "")}
+        </p>
 
         <section className="mt-5 overflow-hidden rounded-card bg-white p-5 shadow-card">
           <div className="flex items-center justify-between gap-4">

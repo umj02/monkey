@@ -44,7 +44,7 @@ const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
   Otro: { color: "blue", icon: "wallet-extras" }
 };
 
-function getCategoryMeta(category: string, type: WalletTransactionType) {
+export function getWalletTransactionMeta(category: string, type: WalletTransactionType) {
   if (categoryMeta[category]) return categoryMeta[category];
   if (type === "income") return categoryMeta.Mesada;
   if (type === "extra") return categoryMeta.Extra;
@@ -97,7 +97,7 @@ function buildCategories(transactions: WalletTransaction[], period: WalletPeriod
   const total = expenses.reduce((sum, tx) => sum + tx.amount, 0);
   const grouped = expenses.reduce<Record<string, WalletCategory>>((acc, tx) => {
     const key = tx.category || "Otro";
-    const meta = getCategoryMeta(key, "expense");
+    const meta = getWalletTransactionMeta(key, "expense");
     if (!acc[key]) acc[key] = { id: key.toLowerCase().replace(/\s+/g, "-"), name: key, amount: 0, percent: 0, color: meta.color, icon: tx.icon || meta.icon };
     acc[key].amount += tx.amount;
     return acc;
@@ -135,7 +135,7 @@ function buildTip(income: number, expenses: number, savings: number, budgetLimit
 }
 
 function normalizeTransaction(tx: WalletTransaction, currency: WalletCurrency): WalletTransaction {
-  const meta = getCategoryMeta(tx.category, tx.type);
+  const meta = getWalletTransactionMeta(tx.category, tx.type);
   return {
     ...tx,
     amount: Math.max(0, Number(tx.amount) || 0),
@@ -190,7 +190,7 @@ export function changeWalletPeriod(data: WalletData, period: WalletPeriod): Wall
 }
 
 export function addWalletTransaction(data: WalletData, input: WalletTransactionInput): WalletData {
-  const meta = getCategoryMeta(input.category, input.type);
+  const meta = getWalletTransactionMeta(input.category, input.type);
   const transaction: WalletTransaction = {
     ...input,
     id: createId("wallet-tx"),

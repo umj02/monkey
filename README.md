@@ -237,3 +237,36 @@ npm run validate:assets
 npm run typecheck
 npm run build
 ```
+
+
+## v2.13.2 — Wallet TypeScript Build Fix
+
+- Wallet reemplaza IDs temporales por IDs remotos de Supabase al crear movimientos y metas.
+- Eliminar movimientos ya sincronizados usa el ID real remoto; si un movimiento temporal se elimina antes de sincronizar, se limpia también al completar la sincronización.
+- Wallet corrige colores/íconos de movimientos remotos según tipo y categoría.
+- Editar una actividad de calendario conserva su alerta existente; solo se elimina si el usuario elige explícitamente "Sin alerta".
+- Login respeta `?next=/ruta` después de iniciar sesión.
+- Copys finales eliminan referencias confusas a almacenamiento local.
+
+### QA recomendado para v2.13.1
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas manuales clave:
+
+1. Crear movimiento Wallet, refrescar, eliminar y volver a refrescar.
+2. Crear meta Wallet y refrescar.
+3. Crear actividad con alerta, editar solo el nombre/hora y confirmar que la alerta se conserva.
+4. Entrar a una ruta protegida como `/calendar`, iniciar sesión y validar que vuelve a esa ruta.
+
+
+## v2.13.2 — Wallet TypeScript Build Fix
+
+- Corrige inferencia TypeScript `never` en `hooks/use-wallet.ts` al sincronizar movimientos y metas de Wallet.
+- Mantiene los fixes de v2.13.1 para Wallet sync, alertas y redirección de login.
+- Versión orientada a pasar `npm run typecheck` y `npm run build` en Vercel.

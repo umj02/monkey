@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalStorageState } from "@/lib/local-storage";
 import { walletSeed } from "@/lib/mock-data";
 import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from "@/lib/storage-keys";
@@ -17,12 +17,26 @@ import {
 } from "@/lib/services/wallet-service";
 import { deleteWalletTransactionRemote, fetchWallet, upsertWalletBudget, upsertWalletGoal, upsertWalletTransaction } from "@/lib/services/supabase-data-service";
 import { useAuth } from "@/hooks/use-auth";
-import type { WalletData, WalletPeriod } from "@/types";
+import type { WalletData, WalletGoal, WalletPeriod, WalletTransaction } from "@/types";
+
+export type WalletSyncStatus = "idle" | "loading" | "saving" | "synced" | "error";
+
+function isTempWalletTransactionId(id: string) {
+  return id.startsWith("wallet-tx-");
+}
+
+function isTempWalletGoalId(id: string) {
+  return id.startsWith("wallet-goal-");
+}
 
 export function useWallet() {
   const { session, mode } = useAuth();
   const [wallet, setWallet, ready] = useLocalStorageState<WalletData>(STORAGE_KEYS.wallet, normalizeWallet(walletSeed as WalletData), [...LEGACY_STORAGE_KEYS.wallet]);
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<WalletSyncStatus>("idle");
+  const [lastError, setLastError] = useState<string | null>(null);
+  const deletedTempTransactions = useRef<Set<string>>(new Set());
+  const deletedTempGoals = useRef<Set<string>>(new Set());
   const normalized = normalizeWallet(wallet);
 
   function refreshWallet() {
@@ -31,9 +45,21 @@ export function useWallet() {
       return;
     }
     setSyncing(true);
+    setSyncStatus("loading");
+    setLastError(null);
     void fetchWallet()
       .then((remote) => {
-        if (remote) setWallet(remote);
+        if (remote) {
+          setWallet(remote);
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("error");
+          setLastError("No se pudo actualizar Wallet desde tu cuenta.");
+        }
+      })
+      .catch(() => {
+        setSyncStatus("error");
+        setLastError("No se pudo actualizar Wallet desde tu cuenta.");
       })
       .finally(() => setSyncing(false));
   }
@@ -45,7 +71,16 @@ export function useWallet() {
   function updateWallet(input: WalletUpdateInput) {
     setWallet((current) => {
       const next = updateWalletData(current, input);
-      if (session && mode === "supabase" && typeof input.budgetLimit === "number") void upsertWalletBudget(next.period, input.budgetLimit, next.currency);
+      if (session && mode === "supabase" && typeof input.budgetLimit === "number") {
+        setSyncStatus("saving");
+        setLastError(null);
+        void upsertWalletBudget(next.period, input.budgetLimit, next.currency)
+          .then(() => setSyncStatus("synced"))
+          .catch(() => {
+            setSyncStatus("error");
+            setLastError("No se pudo sincronizar el presupuesto.");
+          });
+      }
       return next;
     });
   }
@@ -54,28 +89,116 @@ export function useWallet() {
     setWallet((current) => changeWalletPeriod(current, period));
   }
 
+  function replaceTransaction(tempId: string, remote: WalletTransaction) {
+    setWallet((current) => normalizeWallet({
+      ...current,
+      transactions: current.transactions.map((tx) => (tx.id === tempId ? remote : tx)),
+    }));
+  }
+
+  function replaceGoal(tempId: string, remote: WalletGoal) {
+    setWallet((current) => normalizeWallet({
+      ...current,
+      goals: current.goals.map((goal) => (goal.id === tempId ? remote : goal)),
+    }));
+  }
+
   function addTransaction(input: WalletTransactionInput) {
+    let created: WalletTransaction | null = null;
     setWallet((current) => {
       const next = addWalletTransaction(current, input);
-      const created = next.transactions[0];
-      if (session && mode === "supabase") void upsertWalletTransaction(created);
+      created = next.transactions[0] ?? null;
       return next;
     });
+
+    const createdTransaction = created as WalletTransaction | null;
+    if (session && mode === "supabase" && createdTransaction) {
+      const tempId = createdTransaction.id;
+      setSyncStatus("saving");
+      setLastError(null);
+      void upsertWalletTransaction(createdTransaction)
+        .then((remote) => {
+          if (!remote) {
+            setSyncStatus("error");
+            setLastError("No se pudo sincronizar el movimiento. Intentá refrescar Wallet.");
+            return;
+          }
+          if (deletedTempTransactions.current.has(tempId)) {
+            deletedTempTransactions.current.delete(tempId);
+            void deleteWalletTransactionRemote(remote.id);
+            setSyncStatus("synced");
+            return;
+          }
+          replaceTransaction(tempId, remote);
+          setSyncStatus("synced");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo sincronizar el movimiento. Intentá refrescar Wallet.");
+        });
+    }
   }
 
   function deleteTransaction(transactionId: string) {
     setWallet((current) => deleteWalletTransaction(current, transactionId));
-    if (session && mode === "supabase") void deleteWalletTransactionRemote(transactionId);
+    if (!session || mode !== "supabase") return;
+
+    if (isTempWalletTransactionId(transactionId)) {
+      deletedTempTransactions.current.add(transactionId);
+      return;
+    }
+
+    setSyncStatus("saving");
+    setLastError(null);
+    void deleteWalletTransactionRemote(transactionId)
+      .then((ok) => {
+        if (!ok) {
+          setSyncStatus("error");
+          setLastError("No se pudo eliminar el movimiento de tu cuenta. Refrescá para verificar.");
+          return;
+        }
+        setSyncStatus("synced");
+      })
+      .catch(() => {
+        setSyncStatus("error");
+        setLastError("No se pudo eliminar el movimiento de tu cuenta. Refrescá para verificar.");
+      });
   }
 
   function addGoal(input: WalletGoalInput) {
+    let created: WalletGoal | null = null;
     setWallet((current) => {
       const next = addWalletGoal(current, input);
-      const created = next.goals[0];
-      if (session && mode === "supabase") void upsertWalletGoal(created);
+      created = next.goals[0] ?? null;
       return next;
     });
+
+    const createdGoal = created as WalletGoal | null;
+    if (session && mode === "supabase" && createdGoal) {
+      const tempId = createdGoal.id;
+      setSyncStatus("saving");
+      setLastError(null);
+      void upsertWalletGoal(createdGoal)
+        .then((remote) => {
+          if (!remote) {
+            setSyncStatus("error");
+            setLastError("No se pudo sincronizar la meta. Intentá refrescar Wallet.");
+            return;
+          }
+          if (deletedTempGoals.current.has(tempId)) {
+            deletedTempGoals.current.delete(tempId);
+            setSyncStatus("synced");
+            return;
+          }
+          replaceGoal(tempId, remote);
+          setSyncStatus("synced");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo sincronizar la meta. Intentá refrescar Wallet.");
+        });
+    }
   }
 
-  return { wallet: normalized, setWallet, ready, syncing, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal };
+  return { wallet: normalized, setWallet, ready, syncing, syncStatus, lastError, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal };
 }

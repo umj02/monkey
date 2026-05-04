@@ -13,7 +13,7 @@ import type {
   WalletPeriod,
   WalletTransaction,
 } from "@/types";
-import { normalizeWallet } from "@/lib/services/wallet-service";
+import { getWalletTransactionMeta, normalizeWallet } from "@/lib/services/wallet-service";
 import { walletSeed } from "@/lib/mock-data";
 
 type TableRow<T extends keyof Database["public"]["Tables"]> =
@@ -73,6 +73,24 @@ type WalletGoalRow = Pick<
   | "target_date"
   | "icon"
 >;
+
+function mapWalletTransactionRow(tx: WalletTransactionRow): WalletTransaction {
+  const type = tx.type as WalletTransaction["type"];
+  const category = tx.category || (type === "expense" ? "Otro" : type === "saving" ? "Ahorro" : type === "extra" ? "Extra" : "Mesada");
+  const meta = getWalletTransactionMeta(category, type);
+  return {
+    id: tx.id,
+    type,
+    title: tx.title,
+    amount: Number(tx.amount),
+    currency: tx.currency as WalletTransaction["currency"],
+    category,
+    date: tx.transaction_date,
+    period: tx.period as WalletPeriod,
+    color: meta.color,
+    icon: tx.icon || meta.icon,
+  };
+}
 
 function isTemporaryId(id: string, prefix: string) {
   return id.startsWith(prefix);
@@ -747,20 +765,7 @@ export async function fetchWallet(): Promise<WalletData | null> {
   const budgets: WalletBudgetRow[] = budgetData ?? [];
   const goals: WalletGoalRow[] = goalData ?? [];
 
-  const mappedTransactions: WalletTransaction[] = transactions.map(
-    (tx: WalletTransactionRow): WalletTransaction => ({
-      id: tx.id,
-      type: tx.type as WalletTransaction["type"],
-      title: tx.title,
-      amount: Number(tx.amount),
-      currency: tx.currency as WalletTransaction["currency"],
-      category: tx.category,
-      date: tx.transaction_date,
-      period: tx.period as WalletPeriod,
-      color: "green",
-      icon: tx.icon || "wallet-income",
-    }),
-  );
+  const mappedTransactions: WalletTransaction[] = transactions.map(mapWalletTransactionRow);
 
   const mappedGoals: WalletGoal[] = goals.map(
     (goal: WalletGoalRow): WalletGoal => ({
@@ -808,10 +813,10 @@ export async function upsertWalletBudget(
 
 export async function upsertWalletTransaction(
   tx: WalletTransaction,
-): Promise<void> {
+): Promise<WalletTransaction | null> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
-  if (!supabase || !userId) return;
+  if (!supabase || !userId) return null;
 
   const payload: Database["public"]["Tables"]["wallet_transactions"]["Insert"] =
     {
@@ -826,20 +831,28 @@ export async function upsertWalletTransaction(
       icon: tx.icon,
     };
 
-  if (!isTemporaryId(tx.id, "wallet-tx-")) payload.id = tx.id;
-  await supabase.from("wallet_transactions").upsert(payload);
+  if (!isTemporaryId(tx.id, "wallet-tx-") && isUuid(tx.id)) payload.id = tx.id;
+
+  const { data, error } = await supabase
+    .from("wallet_transactions")
+    .upsert(payload, { onConflict: "id" })
+    .select("id,type,title,amount,currency,category,transaction_date,period,icon")
+    .single();
+
+  return error || !data ? null : mapWalletTransactionRow(data as WalletTransactionRow);
 }
 
-export async function deleteWalletTransactionRemote(id: string): Promise<void> {
+export async function deleteWalletTransactionRemote(id: string): Promise<boolean> {
   const supabase = createOptionalClient() as any;
-  if (!supabase) return;
-  await supabase.from("wallet_transactions").delete().eq("id", id);
+  if (!supabase || !isUuid(id)) return false;
+  const { error } = await supabase.from("wallet_transactions").delete().eq("id", id);
+  return !error;
 }
 
-export async function upsertWalletGoal(goal: WalletGoal): Promise<void> {
+export async function upsertWalletGoal(goal: WalletGoal): Promise<WalletGoal | null> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
-  if (!supabase || !userId) return;
+  if (!supabase || !userId) return null;
 
   const payload: Database["public"]["Tables"]["wallet_goals"]["Insert"] = {
     user_id: userId,
@@ -851,6 +864,23 @@ export async function upsertWalletGoal(goal: WalletGoal): Promise<void> {
     icon: goal.icon,
   };
 
-  if (!isTemporaryId(goal.id, "wallet-goal-")) payload.id = goal.id;
-  await supabase.from("wallet_goals").upsert(payload);
+  if (!isTemporaryId(goal.id, "wallet-goal-") && isUuid(goal.id)) payload.id = goal.id;
+
+  const { data, error } = await supabase
+    .from("wallet_goals")
+    .upsert(payload, { onConflict: "id" })
+    .select("id,title,target_amount,current_amount,currency,target_date,icon")
+    .single();
+
+  if (error || !data) return null;
+  const row = data as WalletGoalRow;
+  return {
+    id: row.id,
+    title: row.title,
+    target: Number(row.target_amount),
+    current: Number(row.current_amount),
+    currency: row.currency as WalletGoal["currency"],
+    targetDate: row.target_date,
+    icon: row.icon || "wallet-savings",
+  };
 }

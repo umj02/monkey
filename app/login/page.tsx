@@ -33,7 +33,9 @@ export default function LoginPage() {
       setToast({ message: result.error || "No se pudo iniciar sesión.", type: "error" });
       return;
     }
-    router.push("/today");
+    const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
+    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/today";
+    router.push(safeNext);
   }
 
   async function social(provider: "google" | "apple") {
