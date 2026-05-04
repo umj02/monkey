@@ -84,6 +84,28 @@ function SelectField({ label, value, options, onChange }: { label: string; value
   );
 }
 
+function HistoryFilterSelect({ value, onChange }: { value: "all" | WalletTransactionType; onChange: (value: "all" | WalletTransactionType) => void }) {
+  return (
+    <label className="mt-3 block">
+      <span className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">
+        <Filter className="h-3.5 w-3.5" /> Agrupar historial
+      </span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value as "all" | WalletTransactionType)}
+          className="h-[48px] w-full appearance-none rounded-[18px] border border-monkey-line bg-gray-50 px-4 pr-10 text-sm font-black text-monkey-ink outline-none transition focus:border-monkey-green focus:bg-white focus:ring-4 focus:ring-green-100"
+        >
+          {filterTabs.map((item) => (
+            <option key={item} value={item}>{filterLabels[item]}</option>
+          ))}
+        </select>
+        <ArrowDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-monkey-muted" />
+      </div>
+    </label>
+  );
+}
+
 function categoriesForType(type: WalletTransactionType) {
   if (type === "income") return incomeCategories;
   if (type === "extra") return extraCategories;
@@ -352,11 +374,7 @@ export default function WalletPage() {
             <div><h2 className="text-sm font-black">Historial reciente</h2><p className="mt-1 text-[11px] font-bold text-monkey-muted">5 movimientos por página</p></div>
             <button onClick={refreshHistory} disabled={syncing} className="grid h-10 w-10 place-items-center rounded-full bg-green-50 text-monkey-green transition active:scale-95 disabled:opacity-60" aria-label="Refrescar historial"><RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} /></button>
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {filterTabs.map((item) => (
-              <button key={item} type="button" onClick={() => { setHistoryFilter(item); setHistoryPage(0); }} className={cn("shrink-0 rounded-pill px-3 py-2 text-[11px] font-black", historyFilter === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted")}><Filter className="mr-1 inline h-3 w-3" />{filterLabels[item]}</button>
-            ))}
-          </div>
+          <HistoryFilterSelect value={historyFilter} onChange={(nextFilter) => { setHistoryFilter(nextFilter); setHistoryPage(0); }} />
           <div className="mt-3 space-y-2">
             {recentTransactions.length > 0 ? recentTransactions.map((transaction: WalletTransaction) => (
               <article key={transaction.id} className="grid grid-cols-[40px_1fr_auto_36px] items-center gap-2 rounded-[16px] bg-gray-50 p-2">

@@ -93,6 +93,11 @@ export const walletAssets: AppAsset[] = [
   { key: "wallet-drinks", label: "Bebidas", src: "/assets/wallet/icons/expense/bebidas.png", category: "wallet", group: "expense" },
   { key: "wallet-sports", label: "Deportes", src: "/assets/wallet/icons/expense/deportes.png", category: "wallet", group: "expense" },
   { key: "wallet-phone", label: "Celular", src: "/assets/wallet/icons/expense/celular.png", category: "wallet", group: "expense" },
+  { key: "wallet-laptop", label: "Laptop", src: "/assets/wallet/icons/expenses/laptop.png", category: "wallet", group: "goal" },
+  { key: "wallet-shoes", label: "Zapatos", src: "/assets/wallet/icons/expenses/shoes.png", category: "wallet", group: "goal" },
+  { key: "wallet-travel", label: "Viaje", src: "/assets/wallet/icons/expenses/viaje.png", category: "wallet", group: "goal" },
+  { key: "wallet-clothes", label: "Ropa", src: "/assets/wallet/icons/expenses/ropa.png", category: "wallet", group: "goal" },
+  { key: "wallet-present", label: "Presente", src: "/assets/wallet/icons/expenses/presente.png", category: "wallet", group: "goal" },
   { key: "wallet-movies", label: "Películas", src: "/assets/wallet/icons/expense/peliculas.png", category: "wallet", group: "expense" },
   { key: "wallet-healthy", label: "Saludable", src: "/assets/wallet/icons/expense/saludable.png", category: "wallet", group: "expense" }
 ];
@@ -115,6 +120,6 @@ export function getAssetSrc(keyOrSrc?: string | null) {
 export function getWalletAssetsByType(type: "income" | "expense" | "saving" | "extra") {
   if (type === "income") return walletAssets.filter((asset) => asset.key === "wallet-income" || asset.key === "wallet-gift");
   if (type === "extra") return walletAssets.filter((asset) => asset.key === "wallet-extras" || asset.key === "wallet-gift" || asset.key === "wallet-income");
-  if (type === "saving") return walletAssets.filter((asset) => asset.key === "wallet-savings" || asset.key === "wallet-phone");
+  if (type === "saving") return walletAssets.filter((asset) => asset.key === "wallet-savings" || asset.key === "wallet-phone" || asset.group === "goal");
   return walletAssets.filter((asset) => asset.group === "expense");
 }

@@ -270,3 +270,13 @@ Pruebas manuales clave:
 - Corrige inferencia TypeScript `never` en `hooks/use-wallet.ts` al sincronizar movimientos y metas de Wallet.
 - Mantiene los fixes de v2.13.1 para Wallet sync, alertas y redirección de login.
 - Versión orientada a pasar `npm run typecheck` y `npm run build` en Vercel.
+
+
+## v2.13.3 — Wallet Group Selector + Smart Calendar Start
+
+- Historial de Wallet usa selector de agrupamiento en lugar de chips horizontales para evitar scroll lateral.
+- Se agregan nuevos íconos de meta: Laptop, Zapatos, Viaje, Ropa y Presente.
+- El selector de meta en Wallet muestra los nuevos íconos desde `assets/wallet/icons/expenses`.
+- La línea de tiempo del calendario inicia en la primera hora con actividad del día seleccionado para reducir espacios vacíos.
+- Si el día no tiene actividades, se conserva la card de Día libre sin timeline.
+- Mantiene v2.13.2 como base: sync de Wallet, alertas editables, login con `next` y browser alerts.

@@ -305,16 +305,26 @@ function findScheduleConflict(events: CalendarEvent[], proposedStart: string, pr
 }
 
 function getVisibleTimelineHours(events: CalendarEvent[]) {
-  const minimumEndHour = 12;
-  const maxEventHour = events.reduce((maxHour, event) => {
-    const startHour = Math.floor(timeToMinutes(event.time) / 60);
-    const endHour = event.endTime && isValidTime(event.endTime) ? Math.ceil(timeToMinutes(event.endTime) / 60) : startHour;
-    return Math.max(maxHour, startHour, endHour);
-  }, minimumEndHour);
-  const finalHour = Math.min(20, Math.max(minimumEndHour, maxEventHour));
+  if (events.length === 0) return timelineHours.filter((hour) => Number(hour.slice(0, 2)) <= 12);
+
+  const eventHours = events.reduce(
+    (range, event) => {
+      const startHour = Math.floor(timeToMinutes(event.time) / 60);
+      const endHour = event.endTime && isValidTime(event.endTime) ? Math.ceil(timeToMinutes(event.endTime) / 60) : startHour;
+      return {
+        min: Math.min(range.min, startHour),
+        max: Math.max(range.max, endHour),
+      };
+    },
+    { min: 24, max: 0 },
+  );
+
+  const firstHour = Math.max(6, Math.min(20, eventHours.min));
+  const finalHour = Math.max(firstHour, Math.min(20, eventHours.max));
+
   return timelineHours.filter((hour) => {
     const value = Number(hour.slice(0, 2));
-    return value <= finalHour;
+    return value >= firstHour && value <= finalHour;
   });
 }
 
