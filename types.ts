@@ -65,6 +65,7 @@ export type CalendarEvent = {
   endTime?: string | null;
   title: string;
   color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
+  iconKey?: string | null;
   recurrenceType?: CalendarRecurrenceType;
   recurrenceDays?: number[] | null;
   recurrenceUntil?: string | null;

@@ -11,6 +11,7 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     time: input.time,
     endTime: input.endTime ?? null,
     color: input.color,
+    iconKey: input.iconKey ?? null,
     recurrenceType: input.recurrenceType ?? "none",
     recurrenceDays: input.recurrenceDays ?? null,
     recurrenceUntil: input.recurrenceUntil ?? null,
@@ -21,6 +22,6 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
 
 export function sortCalendarEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) =>
-    `${a.date} ${a.time} ${a.endTime ?? ""} ${a.recurrenceType ?? "none"}`.localeCompare(`${b.date} ${b.time} ${b.endTime ?? ""} ${b.recurrenceType ?? "none"}`),
+    `${a.date} ${a.time} ${a.endTime ?? ""} ${a.recurrenceType ?? "none"} ${a.title}`.localeCompare(`${b.date} ${b.time} ${b.endTime ?? ""} ${b.recurrenceType ?? "none"} ${b.title}`),
   );
 }

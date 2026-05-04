@@ -232,9 +232,10 @@ function categoryFromEvent(event: CalendarEvent): CategoryMeta {
   if (byTitle) return byTitle;
 
   const byColor = categories.find((category) => category.color === event.color);
-  if (byColor) return byColor;
+  if (byColor) return event.iconKey ? { ...byColor, iconKey: event.iconKey } : byColor;
 
-  return categoryByHour(event.time);
+  const fallback = categoryByHour(event.time);
+  return event.iconKey ? { ...fallback, iconKey: event.iconKey } : fallback;
 }
 
 function categoryByHour(time: string): CategoryMeta {
@@ -612,6 +613,7 @@ export default function CalendarPage() {
       time,
       endTime: cleanEndTime || null,
       color: meta.color,
+      iconKey: meta.iconKey,
       date: editing ? editing.date : selectedDateKey,
       recurrenceType,
       recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,

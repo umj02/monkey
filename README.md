@@ -453,3 +453,22 @@ supabase/migrations/0008_v2137_calendar_event_completions.sql
 3. Abrir Nueva actividad en iPhone/Safari y confirmar que el contenido se puede deslizar arriba/abajo.
 4. Probar modal de Repetición y confirmar que el botón principal queda visible y el contenido scrollea.
 5. Ejecutar `npm run validate:assets`, `npm run typecheck` y `npm run build`.
+
+
+## v2.14 — Today Edit + Calendar Sync Final
+
+- La vista Hoy ahora permite editar actividades que vienen del calendario.
+- Al editar desde Hoy se actualiza el mismo registro en Calendario.
+- La campanita puede activarse o apagarse desde la card de Hoy y desde el editor de Hoy.
+- El editor de Hoy conserva el selector visual de íconos/monitos.
+- Las actividades creadas desde Hoy guardan `icon_key` para conservar el ícono elegido.
+- Nueva migración: `supabase/migrations/0009_v214_calendar_event_icon_key.sql`.
+
+### QA recomendado v2.14
+
+1. Crear una tarea desde Hoy con ícono y hora.
+2. Confirmar que aparece en Calendario en esa fecha.
+3. Volver a Hoy, tocar la card, editar título/hora/color/ícono y guardar.
+4. Confirmar que Calendario refleja el cambio.
+5. Activar la campanita desde Hoy y revisar que aparece en Recordatorios.
+6. Apagar la campanita desde Hoy y revisar que desaparece de Recordatorios.

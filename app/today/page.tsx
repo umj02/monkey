@@ -18,9 +18,10 @@ import { activityAssetGallery } from "@/lib/asset-library";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
+import { useReminders } from "@/hooks/use-reminders";
 import { cn } from "@/lib/utils";
 import { getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
-import type { CalendarEvent, Task, TaskColor, TimeBlock } from "@/types";
+import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
 
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
 const colorLabels: Record<TaskColor, string> = { green: "Verde", blue: "Azul", orange: "Naranja", purple: "Morado", pink: "Rosa", yellow: "Amarillo" };
@@ -116,6 +117,7 @@ function containingLongEvent(events: CalendarEvent[], child: CalendarEvent) {
 }
 
 function calendarIcon(event: CalendarEvent) {
+  if (event.iconKey) return event.iconKey;
   const lower = event.title.toLowerCase();
   if (lower.includes("comida") || lower.includes("almuerzo") || lower.includes("fruta")) return "calendar-food";
   if (lower.includes("clase")) return "calendar-class";
@@ -130,17 +132,31 @@ function CalendarTodayCard({
   done,
   sourceLabel,
   contextLabel,
+  hasReminder,
   onToggle,
+  onEdit,
+  onToggleReminder,
 }: {
   event: CalendarEvent;
   done: boolean;
   sourceLabel: string;
   contextLabel?: string | null;
+  hasReminder: boolean;
   onToggle: (event: CalendarEvent) => void;
+  onEdit: (event: CalendarEvent) => void;
+  onToggleReminder: (event: CalendarEvent) => void;
 }) {
   const style = calendarStyleMap[event.color] ?? calendarStyleMap.blue;
   return (
-    <article className={cn("animate-slideUp rounded-card border p-4 shadow-sm", style.card)}>
+    <article
+      className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", style.card)}
+      onClick={() => onEdit(event)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(keyboardEvent) => {
+        if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") onEdit(event);
+      }}
+    >
       <div className="grid min-w-0 grid-cols-[54px_minmax(0,1fr)] gap-1">
         <div className="pt-1 text-[13px] font-black">{event.time}</div>
         <div className="min-w-0">
@@ -152,25 +168,36 @@ function CalendarTodayCard({
             <span className="rounded-full bg-white/70 px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-monkey-muted">{sourceLabel}</span>
             {contextLabel ? <span className="min-w-0 truncate rounded-full bg-white/70 px-2 py-1 text-[9px] font-black text-monkey-muted">{contextLabel}</span> : null}
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex min-h-10 w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink">
+            <span className={cn("min-w-0 flex-1 truncate", done && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
+            <span className="shrink-0 rounded-pill bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-green">{eventRangeLabel(event)}</span>
             <button
               type="button"
-              onClick={() => onToggle(event)}
-              className="flex min-h-10 w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink transition active:scale-[.98]"
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                onToggleReminder(event);
+              }}
+              className={cn(
+                "grid h-7 w-7 shrink-0 place-items-center rounded-full transition active:scale-95",
+                hasReminder ? "bg-green-50 text-monkey-green" : "bg-gray-100 text-gray-400",
+              )}
+              aria-label={hasReminder ? "Apagar alarma" : "Activar alarma"}
             >
-              <span className={cn("min-w-0 flex-1 truncate", done && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
-              <span className="shrink-0 rounded-pill bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-green">{eventRangeLabel(event)}</span>
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gray-100 text-gray-400" title="Actividad del calendario">
-                {event.endTime ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-              </span>
-              <span
-                className={cn(
-                  "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition",
-                  done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white",
-                )}
-              >
-                {done ? <Check className="h-3.5 w-3.5" /> : null}
-              </span>
+              {hasReminder ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                onToggle(event);
+              }}
+              className={cn(
+                "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition active:scale-95",
+                done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white",
+              )}
+              aria-label={done ? "Marcar pendiente" : "Marcar completada"}
+            >
+              {done ? <Check className="h-3.5 w-3.5" /> : null}
             </button>
           </div>
         </div>
@@ -183,14 +210,17 @@ export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
   const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
+  const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingCalendarEvent, setEditingCalendarEvent] = useState<CalendarEvent | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [blockTitle, setBlockTitle] = useState("Nuevo bloque");
   const [time, setTime] = useState("09:00");
   const [color, setColor] = useState<TaskColor>("green");
   const [icon, setIcon] = useState("activity-study");
+  const [alarmOn, setAlarmOn] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
   const todayLabel = useMemo(() => formatTodayDate(), []);
@@ -203,6 +233,10 @@ export default function TodayPage() {
       .filter((event) => eventOccursOnDate(event, todayDateKey))
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [calendarEvents, todayDateKey]);
+
+  const reminderEventIds = useMemo(() => {
+    return new Set(reminders.filter((item) => item.enabled && item.calendarEventId).map((item) => item.calendarEventId as string));
+  }, [reminders]);
 
   const combinedPercent = useMemo(() => {
     const taskList = visibleBlocks.flatMap((block) => block.tasks);
@@ -230,6 +264,8 @@ export default function TodayPage() {
     setTime("09:00");
     setColor("green");
     setIcon("activity-study");
+    setAlarmOn(false);
+    setEditingCalendarEvent(null);
     setErrors({});
   }
 
@@ -241,22 +277,81 @@ export default function TodayPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    await createEvent({
+    const payload: Omit<CalendarEvent, "id"> = {
       title: cleanTitle,
-      date: todayDateKey,
+      date: editingCalendarEvent?.date ?? todayDateKey,
       time,
-      endTime: null,
+      endTime: editingCalendarEvent?.endTime ?? null,
       color,
-      recurrenceType: "none",
-      recurrenceDays: null,
-      recurrenceUntil: null,
-      recurrenceGroupId: null,
-      done: false,
-    });
+      iconKey: icon,
+      recurrenceType: editingCalendarEvent?.recurrenceType ?? "none",
+      recurrenceDays: editingCalendarEvent?.recurrenceDays ?? null,
+      recurrenceUntil: editingCalendarEvent?.recurrenceUntil ?? null,
+      recurrenceGroupId: editingCalendarEvent?.recurrenceGroupId ?? null,
+      done: editingCalendarEvent?.done ?? false,
+    };
+
+    const wasEditing = Boolean(editingCalendarEvent);
+    const savedEvent = editingCalendarEvent
+      ? await updateEvent(editingCalendarEvent.id, payload)
+      : await createEvent(payload);
+
+    let alarmSynced = true;
+    if (alarmOn) {
+      const result = await upsertCalendarReminder(savedEvent.id, {
+        title: `Alerta: ${cleanTitle}`,
+        time,
+        repeat: (savedEvent.recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
+        calendarEventId: savedEvent.id,
+      });
+      alarmSynced = result.ok;
+    } else if (editingCalendarEvent) {
+      alarmSynced = await deleteCalendarEventReminders(editingCalendarEvent.id);
+    }
+
     setFormOpen(false);
     resetForm();
-    showToast("Tarea creada y agregada al calendario de hoy");
+    if (!alarmSynced) {
+      showToast("Tarea guardada, pero la alarma no se pudo sincronizar.", "error");
+      return;
+    }
+    showToast(wasEditing ? "Tarea actualizada en Hoy y Calendario" : "Tarea creada y agregada al calendario de hoy");
   }
+
+  function openNewTask() {
+    resetForm();
+    const now = new Date();
+    setTime(`${String(now.getHours()).padStart(2, "0")}:00`);
+    setFormOpen(true);
+  }
+
+  function openCalendarEventEditor(event: CalendarEvent) {
+    setEditingCalendarEvent(event);
+    setTaskTitle(stripEmoji(event.title));
+    setTime(event.time);
+    setColor(event.color as TaskColor);
+    setIcon(event.iconKey ?? calendarIcon(event));
+    setAlarmOn(reminderEventIds.has(event.id));
+    setErrors({});
+    setFormOpen(true);
+  }
+
+  async function toggleCalendarReminder(event: CalendarEvent) {
+    const hasReminder = reminderEventIds.has(event.id);
+    if (hasReminder) {
+      const ok = await deleteCalendarEventReminders(event.id);
+      showToast(ok ? "Alarma apagada" : "No se pudo apagar la alarma", ok ? "success" : "error");
+      return;
+    }
+    const result = await upsertCalendarReminder(event.id, {
+      title: `Alerta: ${stripEmoji(event.title)}`,
+      time: event.time,
+      repeat: (event.recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
+      calendarEventId: event.id,
+    });
+    showToast(result.ok ? "Alarma activada" : "No se pudo activar la alarma", result.ok ? "success" : "error");
+  }
+
 
   function handleEditTask(blockId: string, taskId: string, title: string) {
     if (title.trim().length < 3) return;
@@ -328,15 +423,32 @@ export default function TodayPage() {
               done={getCalendarEventDone(item.event, todayDateKey, completionMap)}
               sourceLabel={isRecurringEvent(item.event) ? "Recurrente" : "Calendario"}
               contextLabel={containingLongEvent(calendarTodayEvents, item.event) ? `Dentro de ${stripEmoji(containingLongEvent(calendarTodayEvents, item.event)!.title)}` : null}
+              hasReminder={reminderEventIds.has(item.event.id)}
               onToggle={toggleCalendarEvent}
+              onEdit={openCalendarEventEditor}
+              onToggleReminder={toggleCalendarReminder}
             />
           ))}
         </div>
       </section>
-      <button onClick={() => setFormOpen(true)} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar tarea"><Plus className="h-8 w-8" /></button>
-      <FormSheet open={formOpen} title="Nueva tarea" subtitle="Creá una tarea rápida para hoy. También aparecerá en Calendario." onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel="Crear tarea">
+      <button onClick={openNewTask} className="fixed bottom-[104px] right-[calc(50%-195px)] z-30 grid h-16 w-16 place-items-center rounded-full bg-monkey-green text-white shadow-float transition active:scale-95" aria-label="Agregar tarea"><Plus className="h-8 w-8" /></button>
+      <FormSheet open={formOpen} title={editingCalendarEvent ? "Editar tarea" : "Nueva tarea"} subtitle={editingCalendarEvent ? "Los cambios se actualizan también en Calendario." : "Creá una tarea rápida para hoy. También aparecerá en Calendario."} onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel={editingCalendarEvent ? "Guardar cambios" : "Crear tarea"}>
         <Field label="Tarea" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Ej: Repasar matemáticas" error={errors.title} />
         <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
+        <div>
+          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Alarma</span>
+          <button
+            type="button"
+            onClick={() => setAlarmOn((value) => !value)}
+            className={cn(
+              "flex h-12 w-full items-center justify-between rounded-[18px] border px-4 text-sm font-black transition active:scale-[.99]",
+              alarmOn ? "border-green-200 bg-green-50 text-monkey-green" : "border-gray-100 bg-gray-50 text-monkey-muted",
+            )}
+          >
+            <span>{alarmOn ? "Alarma activa a la hora indicada" : "Sin alarma"}</span>
+            {alarmOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
+        </div>
         
         <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 min-w-0 rounded-pill px-2 text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}><span className="block truncate">{colorLabels[item]}</span></button>)}</div></div>
         <AssetPicker label="Ícono de actividad" assets={activityAssetGallery} value={icon} onChange={setIcon} />
