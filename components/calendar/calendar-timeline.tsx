@@ -50,8 +50,8 @@ export function CalendarTimeline({
   }
 
   return (
-    <div className="mt-4 rounded-[26px] bg-white p-4 shadow-card">
-      <div className="grid grid-cols-[56px_1fr] gap-3">
+    <div className="mt-4 min-w-0 overflow-hidden rounded-[26px] bg-white p-4 shadow-card">
+      <div className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-2 sm:grid-cols-[56px_minmax(0,1fr)] sm:gap-3">
         {hours.map((hour) => {
           const slotKey = `${selectedDateKey}-${hour}`;
           const slotEvents = eventsForHour(events, hour);
@@ -70,12 +70,12 @@ export function CalendarTimeline({
               <div className="flex items-start pt-2" style={{ minHeight: rowHeight }}>
                 <p className="text-[12px] font-black text-monkey-muted">{hour}</p>
               </div>
-              <div className="relative border-b border-gray-100 pb-2 pt-1 last:border-b-0" style={{ minHeight: rowHeight }}>
+              <div className="relative min-w-0 overflow-hidden border-b border-gray-100 pb-2 pt-1 last:border-b-0" style={{ minHeight: rowHeight }}>
                 <span className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gray-100" />
                 {visibleEvents.length ? (
                   <div className="space-y-2">
                     {hiddenByLongEvent ? (
-                      <p className="px-1 text-[10px] font-black uppercase tracking-[.08em] text-monkey-muted">{containingLongEventLabel(visibleEvents[0])}</p>
+                      <span className="block h-1 w-10 rounded-full bg-monkey-green/25" aria-hidden="true" />
                     ) : null}
                     {visibleEvents.map((event) => {
                       const meta = categoryFromEvent(event);
@@ -86,13 +86,14 @@ export function CalendarTimeline({
                           type="button"
                           onClick={() => onEdit(event)}
                           className={cn(
-                            "flex min-h-[52px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3 text-left text-sm font-black transition active:scale-[.98]",
+                            "flex min-h-[52px] w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] px-3 py-3 text-left text-sm font-black transition active:scale-[.98] sm:gap-3 sm:px-4",
+                            hiddenByLongEvent ? "ml-2 w-[calc(100%-8px)] border-l-4 border-white/70" : "",
                             meta.pillClass,
                           )}
                         >
                           <AssetThumb icon={meta.iconKey} size={30} className="rounded-[10px] bg-white/40" />
                           <span className="min-w-0 flex-1 truncate">{stripEmoji(event.title)}</span>
-                          <span className="shrink-0 rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80">
+                          <span className="max-w-[86px] shrink-0 truncate rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80 sm:max-w-[128px]">
                             {long ? eventRangeLabel(event) : event.time}
                           </span>
                         </button>

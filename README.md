@@ -376,3 +376,20 @@ Migración nueva requerida:
 ```txt
 supabase/migrations/0008_v2137_calendar_event_completions.sql
 ```
+
+
+## v2.13.8 — Calendar Overflow + Mobile Sheet UX Fix
+
+- Corrige desbordes horizontales en tarjetas del calendario, especialmente en actividades largas con rango de hora.
+- Elimina la etiqueta textual “Dentro de…” en calendario y la reemplaza por una marca visual más limpia para actividades anidadas.
+- Ajusta el timeline para mobile con columnas más seguras, truncado de títulos y pills de hora compactas.
+- Mejora los bottom sheets en móvil con altura controlada, body lock, scroll interno más estable, header/footer fijos y mejor soporte para Safari/iPhone.
+- No agrega migraciones nuevas; mantiene la base v2.13.7.
+
+### QA recomendado v2.13.8
+
+1. Crear actividad larga 07:30–12:00 con título largo y verificar que no se salga del card.
+2. Crear actividad interna 10:00 dentro del bloque largo y verificar que no aparezca texto “Dentro de…”.
+3. Abrir Nueva actividad en iPhone/Safari y confirmar que el contenido se puede deslizar arriba/abajo.
+4. Probar modal de Repetición y confirmar que el botón principal queda visible y el contenido scrollea.
+5. Ejecutar `npm run validate:assets`, `npm run typecheck` y `npm run build`.
