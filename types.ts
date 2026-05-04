@@ -66,11 +66,29 @@ export type CalendarEvent = {
   title: string;
   color: "yellow" | "blue" | "green" | "pink" | "purple" | "orange";
   iconKey?: string | null;
+  activityTypeKey?: string | null;
   recurrenceType?: CalendarRecurrenceType;
   recurrenceDays?: number[] | null;
   recurrenceUntil?: string | null;
   recurrenceGroupId?: string | null;
   done?: boolean;
+  parentEventId?: string | null;
+  occurrenceDate?: string | null;
+  isOccurrenceOverride?: boolean;
+};
+
+export type CalendarOccurrenceOverride = {
+  id: string;
+  calendarEventId: string;
+  occurrenceDate: string;
+  title?: string | null;
+  time?: string | null;
+  endTime?: string | null;
+  color?: CalendarEvent["color"] | null;
+  iconKey?: string | null;
+  activityTypeKey?: string | null;
+  reminderAt?: string | null;
+  isCancelled?: boolean;
 };
 
 

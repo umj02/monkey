@@ -1,0 +1,13 @@
+{
+  "name": "Monkey Checks",
+  "short_name": "Monkey",
+  "description": "Agenda diaria, recordatorios y wallet para organizar tu día.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#22C55E",
+  "icons": [
+    { "src": "/assets/monkey/faces/face-main.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/monkey/intro/check.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

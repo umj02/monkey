@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent, CalendarOccurrenceOverride } from "@/types";
 
 export const DEFAULT_CALENDAR_DURATION_MINUTES = 60;
 
@@ -98,4 +98,55 @@ export function findContainingLongEvent(events: CalendarEvent[], dateKey: string
     const { start, end } = eventInterval(candidate);
     return start <= childStart && end > childStart;
   }) ?? null;
+}
+
+
+export function calendarOccurrenceBaseId(event: CalendarEvent) {
+  return event.parentEventId || event.id;
+}
+
+export function calendarOccurrenceDate(event: CalendarEvent, fallbackDate: string) {
+  return event.occurrenceDate || fallbackDate;
+}
+
+export function overrideKey(calendarEventId: string, occurrenceDate: string) {
+  return `${calendarEventId}::${occurrenceDate}`;
+}
+
+export function applyCalendarOverridesForDate(
+  events: CalendarEvent[],
+  overrides: CalendarOccurrenceOverride[],
+  dateKey: string,
+) {
+  const byKey = new Map<string, CalendarOccurrenceOverride>();
+  overrides.forEach((override) => byKey.set(overrideKey(override.calendarEventId, override.occurrenceDate), override));
+
+  return events
+    .filter((event) => eventOccursOnDate(event, dateKey))
+    .map((event): CalendarEvent | null => {
+      const override = byKey.get(overrideKey(event.id, dateKey));
+      if (override?.isCancelled) return null;
+      if (!override) {
+        return {
+          ...event,
+          parentEventId: isRecurringEvent(event) ? event.id : null,
+          occurrenceDate: dateKey,
+          isOccurrenceOverride: false,
+        };
+      }
+      return {
+        ...event,
+        id: `occ-${override.id}`,
+        parentEventId: event.id,
+        occurrenceDate: dateKey,
+        isOccurrenceOverride: true,
+        title: override.title ?? event.title,
+        time: override.time ?? event.time,
+        endTime: override.endTime ?? event.endTime ?? null,
+        color: override.color ?? event.color,
+        iconKey: override.iconKey ?? event.iconKey ?? null,
+        activityTypeKey: override.activityTypeKey ?? event.activityTypeKey ?? null,
+      };
+    })
+    .filter((event): event is CalendarEvent => Boolean(event));
 }

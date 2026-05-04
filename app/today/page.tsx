@@ -12,15 +12,16 @@ import { FormSheet } from "@/components/form-sheet";
 import { Field } from "@/components/field";
 import { Toast, ToastState } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
-import { AssetPicker } from "@/components/asset-picker";
+import { ActivityTypePicker } from "@/components/activity-type-picker";
 import { AssetThumb } from "@/components/asset-thumb";
-import { activityAssetGallery } from "@/lib/asset-library";
+import { getActivityTypeByKey, inferActivityTypeFromEvent } from "@/lib/activity-types";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
+import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useReminders } from "@/hooks/use-reminders";
 import { cn } from "@/lib/utils";
-import { getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
 
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
@@ -117,14 +118,7 @@ function containingLongEvent(events: CalendarEvent[], child: CalendarEvent) {
 }
 
 function calendarIcon(event: CalendarEvent) {
-  if (event.iconKey) return event.iconKey;
-  const lower = event.title.toLowerCase();
-  if (lower.includes("comida") || lower.includes("almuerzo") || lower.includes("fruta")) return "calendar-food";
-  if (lower.includes("clase")) return "calendar-class";
-  if (lower.includes("gym") || lower.includes("ejercicio")) return "calendar-exercise";
-  if (lower.includes("descanso")) return "calendar-rest";
-  if (lower.includes("proyecto")) return "calendar-project";
-  return calendarStyleMap[event.color]?.icon ?? "calendar-task";
+  return event.iconKey ?? inferActivityTypeFromEvent(event).iconKey ?? calendarStyleMap[event.color]?.icon ?? "calendar-task";
 }
 
 function CalendarTodayCard({
@@ -210,6 +204,7 @@ export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
   const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
+  const { overrides, saveOverride } = useCalendarOverrides();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -219,8 +214,10 @@ export default function TodayPage() {
   const [blockTitle, setBlockTitle] = useState("Nuevo bloque");
   const [time, setTime] = useState("09:00");
   const [color, setColor] = useState<TaskColor>("green");
-  const [icon, setIcon] = useState("activity-study");
+  const [activityTypeKey, setActivityTypeKey] = useState("study");
   const [alarmOn, setAlarmOn] = useState(false);
+  const [recurringEditScope, setRecurringEditScope] = useState<"series" | "occurrence">("series");
+  const [pendingRecurringEvent, setPendingRecurringEvent] = useState<CalendarEvent | null>(null);
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
   const todayLabel = useMemo(() => formatTodayDate(), []);
@@ -229,10 +226,9 @@ export default function TodayPage() {
   const visibleBlocks = useMemo(() => blocks.filter((block) => !block.date || block.date === todayDateKey), [blocks, todayDateKey]);
 
   const calendarTodayEvents = useMemo(() => {
-    return calendarEvents
-      .filter((event) => eventOccursOnDate(event, todayDateKey))
+    return applyCalendarOverridesForDate(calendarEvents, overrides, todayDateKey)
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [calendarEvents, todayDateKey]);
+  }, [calendarEvents, overrides, todayDateKey]);
 
   const reminderEventIds = useMemo(() => {
     return new Set(reminders.filter((item) => item.enabled && item.calendarEventId).map((item) => item.calendarEventId as string));
@@ -263,7 +259,7 @@ export default function TodayPage() {
     setBlockTitle("Nuevo bloque");
     setTime("09:00");
     setColor("green");
-    setIcon("activity-study");
+    setActivityTypeKey("study");
     setAlarmOn(false);
     setEditingCalendarEvent(null);
     setErrors({});
@@ -277,13 +273,15 @@ export default function TodayPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
+    const meta = getActivityTypeByKey(activityTypeKey);
     const payload: Omit<CalendarEvent, "id"> = {
       title: cleanTitle,
       date: editingCalendarEvent?.date ?? todayDateKey,
       time,
       endTime: editingCalendarEvent?.endTime ?? null,
-      color,
-      iconKey: icon,
+      color: meta.color,
+      iconKey: meta.iconKey,
+      activityTypeKey: meta.key,
       recurrenceType: editingCalendarEvent?.recurrenceType ?? "none",
       recurrenceDays: editingCalendarEvent?.recurrenceDays ?? null,
       recurrenceUntil: editingCalendarEvent?.recurrenceUntil ?? null,
@@ -292,21 +290,41 @@ export default function TodayPage() {
     };
 
     const wasEditing = Boolean(editingCalendarEvent);
-    const savedEvent = editingCalendarEvent
-      ? await updateEvent(editingCalendarEvent.id, payload)
-      : await createEvent(payload);
+    let savedEvent: CalendarEvent;
+    if (editingCalendarEvent && recurringEditScope === "occurrence" && isRecurringEvent(editingCalendarEvent)) {
+      const baseId = calendarOccurrenceBaseId(editingCalendarEvent);
+      const occurrenceDate = calendarOccurrenceDate(editingCalendarEvent, todayDateKey);
+      const result = await saveOverride({
+        calendarEventId: baseId,
+        occurrenceDate,
+        title: payload.title,
+        time: payload.time,
+        endTime: payload.endTime ?? null,
+        color: payload.color,
+        iconKey: payload.iconKey ?? null,
+        activityTypeKey: payload.activityTypeKey ?? null,
+        isCancelled: false,
+      });
+      savedEvent = { ...editingCalendarEvent, ...payload, parentEventId: baseId, occurrenceDate, isOccurrenceOverride: true };
+      if (!result.ok) showToast("El cambio quedó temporal, pero no se pudo sincronizar.", "error");
+    } else {
+      const targetId = editingCalendarEvent ? calendarOccurrenceBaseId(editingCalendarEvent) : null;
+      savedEvent = editingCalendarEvent && targetId
+        ? await updateEvent(targetId, payload)
+        : await createEvent(payload);
+    }
 
     let alarmSynced = true;
     if (alarmOn) {
-      const result = await upsertCalendarReminder(savedEvent.id, {
+      const result = await upsertCalendarReminder(calendarOccurrenceBaseId(savedEvent), {
         title: `Alerta: ${cleanTitle}`,
         time,
         repeat: (savedEvent.recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
-        calendarEventId: savedEvent.id,
+        calendarEventId: calendarOccurrenceBaseId(savedEvent),
       });
       alarmSynced = result.ok;
     } else if (editingCalendarEvent) {
-      alarmSynced = await deleteCalendarEventReminders(editingCalendarEvent.id);
+      alarmSynced = await deleteCalendarEventReminders(calendarOccurrenceBaseId(editingCalendarEvent));
     }
 
     setFormOpen(false);
@@ -325,29 +343,39 @@ export default function TodayPage() {
     setFormOpen(true);
   }
 
-  function openCalendarEventEditor(event: CalendarEvent) {
+  function requestCalendarEventEditor(event: CalendarEvent) {
+    if (isRecurringEvent(event)) {
+      setPendingRecurringEvent(event);
+      return;
+    }
+    openCalendarEventEditor(event, "series");
+  }
+
+  function openCalendarEventEditor(event: CalendarEvent, scope: "series" | "occurrence" = "series") {
+    setRecurringEditScope(scope);
     setEditingCalendarEvent(event);
     setTaskTitle(stripEmoji(event.title));
     setTime(event.time);
     setColor(event.color as TaskColor);
-    setIcon(event.iconKey ?? calendarIcon(event));
-    setAlarmOn(reminderEventIds.has(event.id));
+    setActivityTypeKey(inferActivityTypeFromEvent(event).key);
+    setAlarmOn(reminderEventIds.has(calendarOccurrenceBaseId(event)));
     setErrors({});
     setFormOpen(true);
   }
 
   async function toggleCalendarReminder(event: CalendarEvent) {
-    const hasReminder = reminderEventIds.has(event.id);
+    const baseId = calendarOccurrenceBaseId(event);
+    const hasReminder = reminderEventIds.has(baseId);
     if (hasReminder) {
-      const ok = await deleteCalendarEventReminders(event.id);
+      const ok = await deleteCalendarEventReminders(baseId);
       showToast(ok ? "Alarma apagada" : "No se pudo apagar la alarma", ok ? "success" : "error");
       return;
     }
-    const result = await upsertCalendarReminder(event.id, {
+    const result = await upsertCalendarReminder(baseId, {
       title: `Alerta: ${stripEmoji(event.title)}`,
       time: event.time,
       repeat: (event.recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
-      calendarEventId: event.id,
+      calendarEventId: baseId,
     });
     showToast(result.ok ? "Alarma activada" : "No se pudo activar la alarma", result.ok ? "success" : "error");
   }
@@ -423,9 +451,9 @@ export default function TodayPage() {
               done={getCalendarEventDone(item.event, todayDateKey, completionMap)}
               sourceLabel={isRecurringEvent(item.event) ? "Recurrente" : "Calendario"}
               contextLabel={containingLongEvent(calendarTodayEvents, item.event) ? `Dentro de ${stripEmoji(containingLongEvent(calendarTodayEvents, item.event)!.title)}` : null}
-              hasReminder={reminderEventIds.has(item.event.id)}
+              hasReminder={reminderEventIds.has(calendarOccurrenceBaseId(item.event))}
               onToggle={toggleCalendarEvent}
-              onEdit={openCalendarEventEditor}
+              onEdit={requestCalendarEventEditor}
               onToggleReminder={toggleCalendarReminder}
             />
           ))}
@@ -450,8 +478,43 @@ export default function TodayPage() {
           </button>
         </div>
         
-        <div><span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Color</span><div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">{blockColors.map((item) => <button key={item} type="button" onClick={() => setColor(item)} className={`h-10 min-w-0 rounded-pill px-2 text-xs font-black ${color === item ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted"}`}><span className="block truncate">{colorLabels[item]}</span></button>)}</div></div>
-        <AssetPicker label="Ícono de actividad" assets={activityAssetGallery} value={icon} onChange={setIcon} />
+        <ActivityTypePicker label="Tipo de actividad" value={activityTypeKey} onChange={setActivityTypeKey} />
+      </FormSheet>
+      <FormSheet
+        open={!!pendingRecurringEvent}
+        title="Editar repetición"
+        subtitle="Esta actividad se repite. Elegí si querés cambiar solo esta fecha o toda la repetición."
+        onClose={() => setPendingRecurringEvent(null)}
+        onSubmit={() => {
+          if (pendingRecurringEvent) openCalendarEventEditor(pendingRecurringEvent, "occurrence");
+          setPendingRecurringEvent(null);
+        }}
+        submitLabel="Solo esta fecha"
+      >
+        <div className="grid gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (pendingRecurringEvent) openCalendarEventEditor(pendingRecurringEvent, "occurrence");
+              setPendingRecurringEvent(null);
+            }}
+            className="rounded-[20px] bg-green-50 p-4 text-left transition active:scale-[.99]"
+          >
+            <strong className="block text-sm font-black text-monkey-greenDark">Solo esta fecha</strong>
+            <span className="mt-1 block text-xs leading-5 text-monkey-muted">Ajusta únicamente la ocurrencia de hoy. Las próximas repeticiones siguen iguales.</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (pendingRecurringEvent) openCalendarEventEditor(pendingRecurringEvent, "series");
+              setPendingRecurringEvent(null);
+            }}
+            className="rounded-[20px] bg-gray-50 p-4 text-left transition active:scale-[.99]"
+          >
+            <strong className="block text-sm font-black text-monkey-ink">Toda la repetición</strong>
+            <span className="mt-1 block text-xs leading-5 text-monkey-muted">Actualiza la actividad base y todas las repeticiones futuras.</span>
+          </button>
+        </div>
       </FormSheet>
       <TaskDetailSheet open={!!freshSelectedBlock} block={freshSelectedBlock} task={freshSelectedTask} onClose={() => setSelectedBlock(null)} onToggle={toggleTask} onEdit={handleEditTask} onReminderChange={handleReminderChange} onDelete={handleDeleteTask} />
     </AppShell>

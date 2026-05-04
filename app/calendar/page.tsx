@@ -17,6 +17,7 @@ import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
 import { Toast, ToastState } from "@/components/toast";
 import { AssetThumb } from "@/components/asset-thumb";
+import { ActivityTypePicker } from "@/components/activity-type-picker";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useReminders } from "@/hooks/use-reminders";
 import type { CalendarEvent, CalendarRecurrenceType, Reminder } from "@/types";
@@ -27,6 +28,9 @@ import { CalendarWeekStrip } from "@/components/calendar/calendar-week-strip";
 import { CalendarDaySummary } from "@/components/calendar/calendar-day-summary";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarTimeline } from "@/components/calendar/calendar-timeline";
+import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
+import { ACTIVITY_TYPES, activityTypePillClass, getActivityTypeByKey, inferActivityTypeFromEvent } from "@/lib/activity-types";
+import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -49,8 +53,9 @@ const timelineHours = Array.from({ length: 24 }, (_, hour) => `${String(hour).pa
 const DEFAULT_DURATION_MINUTES = 60;
 const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
 
-type CalendarSheetMode = "closed" | "event" | "settings" | "month" | "recurrence";
-type CalendarCategory = "exercise" | "study" | "class" | "food" | "project" | "rest" | "other";
+type CalendarSheetMode = "closed" | "event" | "settings" | "month" | "recurrence" | "recurringScope";
+type RecurringAction = "edit" | "delete";
+type RecurringScope = "series" | "occurrence";
 type AlertOption = "none" | "exact" | "5" | "15" | "30";
 type RecurrenceType = CalendarRecurrenceType;
 
@@ -67,23 +72,12 @@ type CalendarFormErrors = {
 };
 
 type CategoryMeta = {
-  id: CalendarCategory;
+  key: string;
   label: string;
-  icon: string;
   iconKey: string;
   color: CalendarEvent["color"];
   pillClass: string;
 };
-
-const categories: CategoryMeta[] = [
-  { id: "exercise", label: "Ejercicio", icon: "😊", iconKey: "calendar-exercise", color: "yellow", pillClass: "bg-[#FDF6BA] text-[#A66A00]" },
-  { id: "study", label: "Estudiar", icon: "📝", iconKey: "calendar-study", color: "blue", pillClass: "bg-[#DDF7F7] text-[#187187]" },
-  { id: "class", label: "Clases", icon: "📚", iconKey: "calendar-class", color: "green", pillClass: "bg-[#DDF7D8] text-[#2E7D32]" },
-  { id: "food", label: "Comida", icon: "🍴", iconKey: "calendar-food", color: "pink", pillClass: "bg-[#FFE1E7] text-[#D9415F]" },
-  { id: "project", label: "Proyecto", icon: "💼", iconKey: "calendar-project", color: "purple", pillClass: "bg-[#E8DEFF] text-[#6242B5]" },
-  { id: "rest", label: "Descanso", icon: "🧘", iconKey: "calendar-rest", color: "purple", pillClass: "bg-[#EEE7FF] text-[#7252C7]" },
-  { id: "other", label: "Otro", icon: "✨", iconKey: "calendar-task", color: "orange", pillClass: "bg-[#FFE9D7] text-[#B76119]" },
-];
 
 const alertOptions: { id: AlertOption; label: string; offset: number | null }[] = [
   { id: "none", label: "Sin alerta", offset: null },
@@ -225,28 +219,14 @@ function stripEmoji(title: string) {
 }
 
 function categoryFromEvent(event: CalendarEvent): CategoryMeta {
-  const lowerTitle = event.title.toLowerCase();
-  const byTitle = categories.find((category) =>
-    lowerTitle.includes(category.label.toLowerCase()) || lowerTitle.includes(category.id),
-  );
-  if (byTitle) return byTitle;
-
-  const byColor = categories.find((category) => category.color === event.color);
-  if (byColor) return event.iconKey ? { ...byColor, iconKey: event.iconKey } : byColor;
-
-  const fallback = categoryByHour(event.time);
-  return event.iconKey ? { ...fallback, iconKey: event.iconKey } : fallback;
-}
-
-function categoryByHour(time: string): CategoryMeta {
-  const minutes = timeToMinutes(time);
-  if (minutes < 8 * 60) return categories[0];
-  if (minutes < 10 * 60) return categories[1];
-  if (minutes < 12 * 60) return categories[2];
-  if (minutes < 14 * 60) return categories[3];
-  if (minutes < 16 * 60) return categories[4];
-  if (minutes < 18 * 60) return categories[5];
-  return categories[6];
+  const activityType = inferActivityTypeFromEvent(event);
+  return {
+    key: activityType.key,
+    label: activityType.label,
+    iconKey: event.iconKey ?? activityType.iconKey,
+    color: activityType.color,
+    pillClass: activityTypePillClass(activityType.color),
+  };
 }
 
 function createReminderTime(dateKey: string, time: string, alertOption: AlertOption) {
@@ -411,52 +391,15 @@ function ActivityTypeSelect({
   value,
   onChange,
 }: {
-  value: CalendarCategory;
-  onChange: (value: CalendarCategory) => void;
+  value: string;
+  onChange: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const selected = categories.find((item) => item.id === value) ?? categories[0];
-
-  return (
-    <div className="min-w-0">
-      <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Tipo de actividad</span>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex h-14 w-full min-w-0 items-center gap-3 rounded-[18px] border border-gray-100 bg-gray-50 px-4 text-left font-black text-monkey-ink transition active:scale-[.99]"
-        aria-expanded={open}
-      >
-        <AssetThumb icon={selected.iconKey} size={34} className="rounded-[10px]" />
-        <span className="min-w-0 flex-1 truncate">{selected.label}</span>
-        <ChevronDown className={cn("h-4 w-4 text-monkey-muted transition", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[20px] bg-gray-50 p-2">
-          {categories.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                onChange(item.id);
-                setOpen(false);
-              }}
-              className={cn(
-                "flex min-w-0 items-center gap-2 rounded-[16px] px-3 py-2 text-left text-xs font-black transition active:scale-[.98]",
-                value === item.id ? "bg-monkey-green text-white shadow-sm" : "bg-white text-monkey-muted",
-              )}
-            >
-              <AssetThumb icon={item.iconKey} size={30} className="rounded-[9px] bg-white/40" />
-              <span className="min-w-0 truncate">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
+  return <ActivityTypePicker value={value} onChange={onChange} />;
 }
 
 export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
+  const { overrides, saveOverride } = useCalendarOverrides();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -466,7 +409,7 @@ export default function CalendarPage() {
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("09:00");
   const [endTime, setEndTime] = useState("");
-  const [category, setCategory] = useState<CalendarCategory>("study");
+  const [activityTypeKey, setActivityTypeKey] = useState("study");
   const [alertOption, setAlertOption] = useState<AlertOption>("none");
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>("none");
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
@@ -474,6 +417,8 @@ export default function CalendarPage() {
   const [errors, setErrors] = useState<CalendarFormErrors>({});
   const [toast, setToast] = useState<ToastState>(null);
   const [expandedHourKey, setExpandedHourKey] = useState<string | null>(null);
+  const [recurringScope, setRecurringScope] = useState<RecurringScope>("series");
+  const [pendingRecurringAction, setPendingRecurringAction] = useState<{ action: RecurringAction; event: CalendarEvent } | null>(null);
 
   const selectedDateKey = toDateKey(selectedDate);
   const visibleMonth = monthNames[selectedDate.getMonth()];
@@ -482,10 +427,9 @@ export default function CalendarPage() {
   const monthCells = useMemo(() => getMonthCells(selectedDate), [selectedDate]);
 
   const eventsForSelectedDate = useMemo(() => {
-    return events
-      .filter((event) => eventOccursOnDate(event, selectedDateKey))
+    return applyCalendarOverridesForDate(events, overrides, selectedDateKey)
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [events, selectedDateKey]);
+  }, [events, overrides, selectedDateKey]);
 
   const visibleTimelineHours = useMemo(() => getVisibleTimelineHours(eventsForSelectedDate), [eventsForSelectedDate]);
 
@@ -543,7 +487,7 @@ export default function CalendarPage() {
     setTitle("");
     setTime(defaultTime);
     setEndTime("");
-    setCategory("study");
+    setActivityTypeKey("study");
     setAlertOption("none");
     setRecurrenceType("none");
     setRecurrenceDays([selectedDate.getDay()]);
@@ -552,13 +496,14 @@ export default function CalendarPage() {
     setSheetMode("event");
   }
 
-  function openEdit(event: CalendarEvent) {
+  function openEdit(event: CalendarEvent, scope: RecurringScope = "series") {
+    setRecurringScope(scope);
     const meta = categoryFromEvent(event);
     setEditing(event);
     setTitle(stripEmoji(event.title));
     setTime(event.time);
     setEndTime(event.endTime ?? "");
-    setCategory(meta.id);
+    setActivityTypeKey(meta.key);
     const existingReminder = reminders.find((item) => item.calendarEventId === event.id);
     setAlertOption(inferAlertOption(event.time, existingReminder?.time));
     setRecurrenceType(event.recurrenceType ?? "none");
@@ -566,6 +511,44 @@ export default function CalendarPage() {
     setRecurrenceUntil(event.recurrenceUntil ?? "");
     setErrors({});
     setSheetMode("event");
+  }
+
+  function requestEdit(event: CalendarEvent) {
+    if (isRecurringEvent(event)) {
+      setPendingRecurringAction({ action: "edit", event });
+      setSheetMode("recurringScope");
+      return;
+    }
+    openEdit(event, "series");
+  }
+
+  async function deleteSingleOccurrence(event: CalendarEvent) {
+    const baseId = calendarOccurrenceBaseId(event);
+    const occurrenceDate = calendarOccurrenceDate(event, selectedDateKey);
+    const result = await saveOverride({
+      calendarEventId: baseId,
+      occurrenceDate,
+      isCancelled: true,
+    });
+    if (result.ok) notify("Solo se eliminó esta fecha");
+    else notify("No se pudo sincronizar la eliminación de esta fecha.", "error");
+    setSheetMode("closed");
+  }
+
+  async function chooseRecurringScope(scope: RecurringScope) {
+    if (!pendingRecurringAction) return;
+    const { action, event } = pendingRecurringAction;
+    setPendingRecurringAction(null);
+    if (action === "edit") {
+      openEdit(event, scope);
+      return;
+    }
+    if (scope === "occurrence") {
+      await deleteSingleOccurrence(event);
+      return;
+    }
+    setDeleteId(calendarOccurrenceBaseId(event));
+    setSheetMode("closed");
   }
 
   async function submitEvent() {
@@ -607,13 +590,14 @@ export default function CalendarPage() {
       return;
     }
 
-    const meta = categories.find((item) => item.id === category) || categories[6];
+    const meta = getActivityTypeByKey(activityTypeKey);
     const payload = {
-      title: `${meta.icon} ${cleanTitle}`,
+      title: cleanTitle,
       time,
       endTime: cleanEndTime || null,
       color: meta.color,
       iconKey: meta.iconKey,
+      activityTypeKey: meta.key,
       date: editing ? editing.date : selectedDateKey,
       recurrenceType,
       recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,
@@ -622,20 +606,41 @@ export default function CalendarPage() {
       done: editing?.done ?? false,
     } satisfies Omit<CalendarEvent, "id">;
 
-    const savedEvent = editing ? await updateEvent(editing.id, payload) : await createEvent(payload);
+    const isRecurringOccurrenceEdit = Boolean(editing && recurringScope === "occurrence" && isRecurringEvent(editing));
+    let savedEvent: CalendarEvent;
+    if (isRecurringOccurrenceEdit && editing) {
+      const baseId = calendarOccurrenceBaseId(editing);
+      const occurrenceDate = calendarOccurrenceDate(editing, selectedDateKey);
+      const result = await saveOverride({
+        calendarEventId: baseId,
+        occurrenceDate,
+        title: payload.title,
+        time: payload.time,
+        endTime: payload.endTime ?? null,
+        color: payload.color,
+        iconKey: payload.iconKey ?? null,
+        activityTypeKey: payload.activityTypeKey ?? null,
+        isCancelled: false,
+      });
+      savedEvent = { ...editing, ...payload, parentEventId: baseId, occurrenceDate, isOccurrenceOverride: true };
+      if (!result.ok) notify("El cambio quedó temporal, pero no se pudo sincronizar.", "error");
+    } else {
+      const targetId = editing ? calendarOccurrenceBaseId(editing) : null;
+      savedEvent = editing && targetId ? await updateEvent(targetId, payload) : await createEvent(payload);
+    }
 
     const alertTime = createReminderTime(selectedDateKey, time, alertOption);
     let alertSynced = true;
     if (alertTime) {
-      const result = await upsertCalendarReminder(savedEvent.id, {
+      const result = await upsertCalendarReminder(calendarOccurrenceBaseId(savedEvent), {
         title: `Alerta: ${cleanTitle}`,
         time: alertTime,
         repeat: (recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
-        calendarEventId: savedEvent.id,
+        calendarEventId: calendarOccurrenceBaseId(savedEvent),
       });
       alertSynced = result.ok;
     } else if (editing) {
-      alertSynced = await deleteCalendarEventReminders(editing.id);
+      alertSynced = await deleteCalendarEventReminders(calendarOccurrenceBaseId(editing));
     }
 
     setSheetMode("closed");
@@ -688,7 +693,7 @@ export default function CalendarPage() {
               eventsForHour={eventsForHour}
               isCoveredByPreviousLongEvent={isCoveredByPreviousLongEvent}
               containingLongEventLabel={(event) => containingLongEventLabel(eventsForSelectedDate, event)}
-              onEdit={openEdit}
+              onEdit={requestEdit}
               onExpandHour={setExpandedHourKey}
             />
           </>
@@ -733,7 +738,7 @@ export default function CalendarPage() {
           <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, la actividad ocupa solo su hora. Si agregás fin, se muestra como una actividad larga con flag de duración.</p>
         </div>
 
-        <ActivityTypeSelect value={category} onChange={setCategory} />
+        <ActivityTypeSelect value={activityTypeKey} onChange={setActivityTypeKey} />
 
         <CompactSelect
           label="Alerta"
@@ -755,7 +760,14 @@ export default function CalendarPage() {
         {editing ? (
           <button
             type="button"
-            onClick={() => setDeleteId(editing.id)}
+            onClick={() => {
+              if (isRecurringEvent(editing)) {
+                setPendingRecurringAction({ action: "delete", event: editing });
+                setSheetMode("recurringScope");
+                return;
+              }
+              setDeleteId(calendarOccurrenceBaseId(editing));
+            }}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-pink-50 text-sm font-black text-monkey-pink"
           >
             <Trash2 className="h-4 w-4" />
@@ -848,6 +860,34 @@ export default function CalendarPage() {
         <div className="rounded-[18px] bg-green-50 p-4">
           <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Resumen</p>
           <p className="mt-1 text-sm font-bold text-monkey-muted">{recurrenceSummary(recurrenceType, recurrenceDays, recurrenceUntil || null)}</p>
+        </div>
+      </FormSheet>
+
+      <FormSheet
+        open={sheetMode === "recurringScope"}
+        title={pendingRecurringAction?.action === "delete" ? "Eliminar repetición" : "Editar repetición"}
+        subtitle="Esta actividad se repite. Elegí si el cambio aplica solo a esta fecha o a toda la repetición."
+        onClose={() => { setPendingRecurringAction(null); setSheetMode("closed"); }}
+        onSubmit={() => chooseRecurringScope("occurrence")}
+        submitLabel={pendingRecurringAction?.action === "delete" ? "Solo esta fecha" : "Solo esta fecha"}
+      >
+        <div className="grid gap-3">
+          <button
+            type="button"
+            onClick={() => chooseRecurringScope("occurrence")}
+            className="rounded-[20px] bg-green-50 p-4 text-left transition active:scale-[.99]"
+          >
+            <strong className="block text-sm font-black text-monkey-greenDark">Solo esta fecha</strong>
+            <span className="mt-1 block text-xs leading-5 text-monkey-muted">Cambia o elimina únicamente esta ocurrencia. Las próximas repeticiones se mantienen iguales.</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseRecurringScope("series")}
+            className="rounded-[20px] bg-gray-50 p-4 text-left transition active:scale-[.99]"
+          >
+            <strong className="block text-sm font-black text-monkey-ink">Toda la repetición</strong>
+            <span className="mt-1 block text-xs leading-5 text-monkey-muted">Aplica el cambio a la actividad base y a todas sus repeticiones futuras.</span>
+          </button>
         </div>
       </FormSheet>
 

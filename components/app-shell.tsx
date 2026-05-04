@@ -17,6 +17,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [ready, isAuthenticated, pathname, router]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Push real se configura en v2.16; este registro prepara PWA/notificaciones.
+    });
+  }, []);
+
   if (!ready) {
     return (
       <main className="app-screen grid place-items-center px-6 text-center">

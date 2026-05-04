@@ -12,6 +12,7 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     endTime: input.endTime ?? null,
     color: input.color,
     iconKey: input.iconKey ?? null,
+    activityTypeKey: input.activityTypeKey ?? null,
     recurrenceType: input.recurrenceType ?? "none",
     recurrenceDays: input.recurrenceDays ?? null,
     recurrenceUntil: input.recurrenceUntil ?? null,

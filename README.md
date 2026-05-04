@@ -472,3 +472,35 @@ supabase/migrations/0008_v2137_calendar_event_completions.sql
 4. Confirmar que Calendario refleja el cambio.
 5. Activar la campanita desde Hoy y revisar que aparece en Recordatorios.
 6. Apagar la campanita desde Hoy y revisar que desaparece de Recordatorios.
+
+
+## v2.15 — Recurring Edit/Delete + Unified Activity Types
+
+Base: v2.14 — Today Edit + Calendar Sync Final.
+
+Incluye:
+
+- Control de recurrencias al editar o eliminar: `Solo esta fecha` o `Toda la repetición`.
+- Nueva tabla `calendar_event_occurrence_overrides` para modificar/cancelar ocurrencias individuales sin afectar la serie.
+- Nueva columna `activity_type_key` en `calendar_events` para métricas futuras.
+- Selector único `Tipo de actividad` en Hoy y Calendario.
+- Selector visual compartido con los iconos de actividades/monitos.
+- `icon_key` se mantiene como imagen visual, `activity_type_key` como dato para estadísticas.
+- Preparación PWA básica: `manifest.webmanifest` y `sw.js` para habilitar una siguiente fase de push real.
+
+Migración nueva obligatoria:
+
+```sql
+supabase/migrations/0010_v215_recurring_overrides_activity_types.sql
+```
+
+QA recomendado:
+
+1. Crear actividad recurrente diaria.
+2. Editarla desde Hoy y elegir `Solo esta fecha`.
+3. Confirmar que el día siguiente conserva la serie original.
+4. Editarla desde Calendario y elegir `Toda la repetición`.
+5. Confirmar que todas las ocurrencias futuras cambian.
+6. Eliminar solo una fecha y confirmar que la serie sigue viva.
+7. Crear tarea desde Hoy con tipo de actividad visual.
+8. Confirmar que aparece en Calendario con el mismo icono/tipo.
