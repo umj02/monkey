@@ -134,7 +134,7 @@ Antes de marcar push como producción:
    - `VAPID_SUBJECT`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `CRON_SECRET`
-3. Confirmar que Vercel Cron llame `/api/cron/reminders`.
+3. Confirmar que el scheduler externo llame `/api/cron/reminders` en Hobby, o Vercel Cron si usás Pro.
 4. Iniciar sesión con usuario real.
 5. Ir a Recordatorios y activar alertas.
 6. Crear recordatorio a 1-2 minutos.
@@ -152,3 +152,15 @@ Antes de marcar push como producción:
 - [ ] Apagar campanita y confirmar que el recordatorio se limpia.
 - [ ] Confirmar que manual reminders siguen funcionando.
 - [ ] Confirmar que `/api/cron/reminders` responde con `ok: true` usando `CRON_SECRET`.
+
+
+## v2.16.4 — QA de Vercel Hobby y push background
+
+- [ ] Confirmar que `vercel.json` no tiene `crons` frecuentes.
+- [ ] Confirmar que el deploy en Vercel Hobby ya no falla por límite de cron.
+- [ ] Confirmar que `/api/cron/reminders` sigue respondiendo con `CRON_SECRET`.
+- [ ] Configurar scheduler externo cada 5 minutos si se necesitan push background en Hobby.
+- [ ] Probar header `Authorization: Bearer <CRON_SECRET>`.
+- [ ] Probar header alternativo `x-cron-secret: <CRON_SECRET>`.
+- [ ] Verificar que las alertas in-app sigan funcionando con la app abierta.
+- [ ] Verificar que push background funcione cuando el scheduler externo ejecuta el endpoint.

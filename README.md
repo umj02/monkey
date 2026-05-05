@@ -538,7 +538,7 @@ npx web-push generate-vapid-keys
 
 ### Vercel Cron recomendado
 
-Crear un cron que llame cada minuto o cada 5 minutos a:
+En Vercel Hobby, crear un scheduler externo que llame cada 5 minutos a:
 
 ```txt
 /api/cron/reminders
@@ -558,7 +558,7 @@ Authorization: Bearer <CRON_SECRET>
 4. Aceptar permisos del navegador.
 5. Crear un recordatorio para 1-2 minutos después.
 6. Cerrar la pestaña o dejar la app en segundo plano.
-7. Ejecutar cron o esperar Vercel Cron.
+7. Ejecutar el scheduler externo o llamar manualmente el endpoint de cron.
 8. Confirmar que llega la notificación.
 
 Notas: iOS puede requerir instalar la app como PWA para permitir push web. El modal in-app sigue funcionando cuando la app está abierta.
@@ -648,3 +648,32 @@ QA recomendado:
 4. Confirmar que aparece en Hoy si corresponde al día actual.
 5. Completar actividad en Hoy, deshacer y confirmar que vuelve.
 6. Validar push/background después de redeploy si se cambiaron variables de entorno.
+
+
+## v2.16.4 — Hobby Cron Safe Push Fix
+
+Esta versión corrige el bloqueo de deploy en cuentas Hobby de Vercel causado por cron jobs frecuentes.
+
+### Cambios
+
+- Se elimina el cron frecuente de `vercel.json` para que Vercel Hobby pueda desplegar.
+- Se mantiene activo el endpoint `/api/cron/reminders`.
+- Las push background se pueden activar usando un scheduler externo como `cron-job.org`, `GitHub Actions schedule`, `Upstash QStash` o una función programada externa.
+- Las alertas in-app siguen funcionando mientras la app está abierta.
+- Se agrega `BACKGROUND_PUSH_HOBBY.md` con instrucciones para configurar un scheduler externo.
+
+### Scheduler externo recomendado
+
+Llamar cada 5 minutos:
+
+```txt
+https://TU_DOMINIO.vercel.app/api/cron/reminders
+```
+
+Con header:
+
+```txt
+Authorization: Bearer <CRON_SECRET>
+```
+
+En Vercel Pro se puede reactivar un cron frecuente en `vercel.json`. En Vercel Hobby no se debe usar cron frecuente porque bloquea el deploy.
