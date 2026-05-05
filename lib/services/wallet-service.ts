@@ -177,16 +177,83 @@ function normalizeTransaction(tx: WalletTransaction, currency: WalletCurrency): 
 }
 
 
-export function isPlannedExpenseInPeriod(expense: WalletPlannedExpense, period: WalletPeriod, referenceDate = new Date()) {
+function buildDateKey(year: number, monthIndex: number, day: number) {
+  const last = new Date(year, monthIndex + 1, 0).getDate();
+  return toDateKey(new Date(year, monthIndex, Math.max(1, Math.min(day, last))));
+}
+
+function datesBetween(startKey: string, endKey: string) {
+  const dates: string[] = [];
+  const cursor = parseDateKey(startKey);
+  const end = parseDateKey(endKey);
+  while (cursor <= end) {
+    dates.push(toDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+export function getPlannedExpenseDueDates(expense: WalletPlannedExpense, period: WalletPeriod, referenceDate = new Date()): string[] {
   const range = getWalletPeriodRange(period, referenceDate);
-  const date = expense.dueDate;
-  return date >= range.start && date <= range.end;
+  const base = parseDateKey(expense.dueDate);
+  const baseDay = base.getDate();
+  const rangeStart = parseDateKey(range.start);
+  const candidates = new Set<string>();
+
+  if (expense.frequency === "one_time") candidates.add(expense.dueDate);
+
+  if (expense.frequency === "monthly") {
+    candidates.add(buildDateKey(rangeStart.getFullYear(), rangeStart.getMonth(), baseDay));
+  }
+
+  if (expense.frequency === "biweekly") {
+    const firstHalfDay = baseDay <= 14 ? baseDay : Math.max(1, baseDay - 15);
+    const secondHalfDay = Math.min(firstHalfDay + 15, new Date(rangeStart.getFullYear(), rangeStart.getMonth() + 1, 0).getDate());
+    candidates.add(buildDateKey(rangeStart.getFullYear(), rangeStart.getMonth(), firstHalfDay));
+    candidates.add(buildDateKey(rangeStart.getFullYear(), rangeStart.getMonth(), secondHalfDay));
+  }
+
+  if (expense.frequency === "weekly") {
+    const targetDay = base.getDay();
+    for (const key of datesBetween(range.start, range.end)) {
+      if (parseDateKey(key).getDay() === targetDay) candidates.add(key);
+    }
+  }
+
+  if (expense.frequency === "yearly") {
+    candidates.add(buildDateKey(rangeStart.getFullYear(), base.getMonth(), baseDay));
+  }
+
+  return [...candidates].filter((date) => date >= range.start && date <= range.end).sort();
+}
+
+export function getPlannedExpenseDueLabel(expense: WalletPlannedExpense, period: WalletPeriod, referenceDate = new Date()) {
+  const dates = getPlannedExpenseDueDates(expense, period, referenceDate);
+  if (!dates.length) return expense.dueDate;
+  const formatter = new Intl.DateTimeFormat("es-CR", { day: "2-digit", month: "short" });
+  return dates.map((date) => formatter.format(parseDateKey(date))).join(" y ");
+}
+
+export function isPlannedExpenseInPeriod(expense: WalletPlannedExpense, period: WalletPeriod, referenceDate = new Date()) {
+  return getPlannedExpenseDueDates(expense, period, referenceDate).length > 0;
+}
+
+export function getPlannedExpenseStatusForPeriod(expense: WalletPlannedExpense, period: WalletPeriod, transactions: WalletTransaction[] = [], referenceDate = new Date()): WalletPlannedExpenseStatus {
+  const dueDates = getPlannedExpenseDueDates(expense, period, referenceDate);
+  if (!dueDates.length) return "pending";
+  const range = getWalletPeriodRange(period, referenceDate);
+  const today = toDateKey(referenceDate);
+  const paymentsInRange = transactions.filter((tx) => tx.type === "expense" && tx.expenseKind === "planned" && tx.plannedExpenseId === expense.id && tx.date >= range.start && tx.date <= range.end);
+  if (paymentsInRange.length >= dueDates.length) return "paid";
+  const dueDatesUntilToday = dueDates.filter((date) => date < today || date === today);
+  if (dueDatesUntilToday.length > paymentsInRange.length) return "overdue";
+  return "pending";
 }
 
 export function getPlannedExpenseStatus(expense: WalletPlannedExpense, referenceDate = new Date()): WalletPlannedExpenseStatus {
-  if (expense.status === "paid" || expense.paidAt) return "paid";
+  if (expense.frequency === "one_time" && (expense.status === "paid" || expense.paidAt)) return "paid";
   const today = toDateKey(referenceDate);
-  if (expense.dueDate < today) return "overdue";
+  if (expense.dueDate < today && expense.frequency === "one_time") return "overdue";
   return "pending";
 }
 
@@ -303,7 +370,7 @@ export function deleteWalletPlannedExpense(data: WalletData, expenseId: string):
 export function markWalletPlannedExpensePaid(data: WalletData, expenseId: string, paidDate = toDateKey(new Date())): { wallet: WalletData; transaction?: WalletTransaction; expense?: WalletPlannedExpense } {
   const existing = (data.plannedExpenses || []).find((expense) => expense.id === expenseId);
   if (!existing) return { wallet: normalizeWallet(data) };
-  const paidExpense: WalletPlannedExpense = { ...existing, status: "paid", paidAt: paidDate };
+  const paidExpense: WalletPlannedExpense = { ...existing, status: existing.frequency === "one_time" ? "paid" : "pending", paidAt: paidDate };
   const meta = getWalletTransactionMeta(paidExpense.category, "expense");
   const transaction: WalletTransaction = {
     id: createId("wallet-tx"),
