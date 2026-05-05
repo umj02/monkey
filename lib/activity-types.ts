@@ -31,7 +31,7 @@ const baseActivityTypes: ActivityType[] = [
   { key: "musica", label: "Música", iconKey: "monkey-musica", color: "purple", group: "social", toneClass: "bg-[#F0E8FF]" },
   { key: "instrumento", label: "Instrumento", iconKey: "monkey-instrumento", color: "orange", group: "social", toneClass: "bg-[#FFE9D7]" },
   { key: "salida", label: "Salida", iconKey: "monkey-salida", color: "orange", group: "social", toneClass: "bg-[#FFF1E5]" },
-  { key: "otro", label: "Otro", iconKey: "✨", color: "orange", group: "otro", toneClass: "bg-[#F3F4F6]" },
+  { key: "otro", label: "Otro", iconKey: "monkey-otro", color: "orange", group: "otro", toneClass: "bg-[#FFF1E5]" },
 ];
 
 const legacyKeyAliases: Record<string, string> = {
@@ -64,6 +64,9 @@ const legacyKeyAliases: Record<string, string> = {
   vacation: "salida",
   care: "cuidado-personal",
   other: "otro",
+  "monkey-otro": "otro",
+  "activity-other": "otro",
+  "calendar-other": "otro",
   "activity-study": "estudiar",
   "activity-gym": "gym",
   "activity-food": "comida",

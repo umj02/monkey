@@ -627,3 +627,24 @@ QA recomendado:
 5. No tocar deshacer y confirmar que desaparece de Hoy.
 6. Revisar Calendario: debe permanecer visible como completada/tachada.
 7. Crear una actividad recurrente, completarla solo hoy y validar que mañana siga pendiente.
+
+
+## v2.16.3 — Final Polish + Legacy Asset Cleanup
+
+Esta versión cierra el sistema visual de actividades antes de marcar la app como cliente final:
+
+- Agrega `otro.png` al catálogo de monitos.
+- El selector **Tipo de actividad** usa únicamente `monkeyActivityAssets` como fuente principal.
+- Los assets antiguos de actividades quedan registrados solo como compatibilidad legacy para registros viejos.
+- `Otro` ahora usa un monito real en lugar de fallback con emoji.
+- Mantiene compatibilidad con `icon_key` y `activity_type_key` antiguos mediante alias.
+- No cambia base de datos ni migraciones.
+
+QA recomendado:
+
+1. Crear actividad en Hoy con tipo `Otro`.
+2. Confirmar que aparece en Calendario con el mismo icono.
+3. Crear actividad en Calendario con cualquier monito.
+4. Confirmar que aparece en Hoy si corresponde al día actual.
+5. Completar actividad en Hoy, deshacer y confirmar que vuelve.
+6. Validar push/background después de redeploy si se cambiaron variables de entorno.

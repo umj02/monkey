@@ -85,6 +85,7 @@ export const monkeyActivityAssets: AppAsset[] = [
   { key: "monkey-dormir", label: "Dormir", src: "/assets/activities/monkeys/sleep.png", category: "activity", group: "descanso" },
   { key: "monkey-futbol", label: "Fútbol", src: "/assets/activities/monkeys/soccer.png", category: "activity", group: "salud" },
   { key: "monkey-estudiar", label: "Estudiar", src: "/assets/activities/monkeys/study.png", category: "activity", group: "estudio" },
+  { key: "monkey-otro", label: "Otro", src: "/assets/activities/monkeys/otro.png", category: "activity", group: "otro" },
 ];
 
 export const walletAssets: AppAsset[] = [
@@ -123,9 +124,14 @@ export const walletAssets: AppAsset[] = [
   { key: "wallet-healthy", label: "Saludable", src: "/assets/wallet/icons/expense/saludable.png", category: "wallet", group: "expense" }
 ];
 
+// Selector source of truth: only monkeyActivityAssets should power activity pickers.
 export const activityAssetGallery = monkeyActivityAssets;
 
-export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...monkeyActivityAssets, ...todayQuickAssets, ...activityAssets, ...calendarActivityAssets, ...walletAssets];
+// Legacy activity assets stay registered only as fallbacks for old saved records.
+// Do not use todayQuickAssets/activityAssets/calendarActivityAssets in new pickers.
+export const legacyActivityAssets = [...todayQuickAssets, ...activityAssets, ...calendarActivityAssets];
+
+export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...monkeyActivityAssets, ...legacyActivityAssets, ...walletAssets];
 
 export function getAssetByKey(key?: string | null) {
   if (!key) return null;
