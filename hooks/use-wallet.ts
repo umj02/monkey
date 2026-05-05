@@ -6,19 +6,24 @@ import { walletSeed } from "@/lib/mock-data";
 import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from "@/lib/storage-keys";
 import {
   addWalletGoal,
+  addWalletPlannedExpense,
   addWalletTransaction,
   changeWalletPeriod,
   deleteWalletTransaction,
   normalizeWallet,
   updateWalletData,
   updateWalletGoalAmount,
+  updateWalletPlannedExpense,
+  deleteWalletPlannedExpense,
+  markWalletPlannedExpensePaid,
   type WalletGoalInput,
   type WalletTransactionInput,
+  type WalletPlannedExpenseInput,
   type WalletUpdateInput
 } from "@/lib/services/wallet-service";
-import { deleteWalletTransactionRemote, fetchWallet, upsertWalletBudget, upsertWalletGoal, upsertWalletTransaction } from "@/lib/services/supabase-data-service";
+import { deleteWalletPlannedExpenseRemote, deleteWalletTransactionRemote, fetchWallet, upsertWalletBudget, upsertWalletGoal, upsertWalletPlannedExpense, upsertWalletTransaction } from "@/lib/services/supabase-data-service";
 import { useAuth } from "@/hooks/use-auth";
-import type { WalletData, WalletGoal, WalletPeriod, WalletTransaction } from "@/types";
+import type { WalletData, WalletGoal, WalletPeriod, WalletPlannedExpense, WalletTransaction } from "@/types";
 
 export type WalletSyncStatus = "idle" | "loading" | "saving" | "synced" | "error";
 
@@ -30,6 +35,10 @@ function isTempWalletGoalId(id: string) {
   return id.startsWith("wallet-goal-");
 }
 
+function isTempWalletPlannedExpenseId(id: string) {
+  return id.startsWith("wallet-plan-");
+}
+
 export function useWallet() {
   const { session, mode } = useAuth();
   const [wallet, setWallet, ready] = useLocalStorageState<WalletData>(STORAGE_KEYS.wallet, normalizeWallet(walletSeed as WalletData), [...LEGACY_STORAGE_KEYS.wallet]);
@@ -38,6 +47,7 @@ export function useWallet() {
   const [lastError, setLastError] = useState<string | null>(null);
   const deletedTempTransactions = useRef<Set<string>>(new Set());
   const deletedTempGoals = useRef<Set<string>>(new Set());
+  const deletedTempPlannedExpenses = useRef<Set<string>>(new Set());
   const normalized = normalizeWallet(wallet);
 
   function refreshWallet() {
@@ -101,6 +111,13 @@ export function useWallet() {
     setWallet((current) => normalizeWallet({
       ...current,
       goals: current.goals.map((goal) => (goal.id === tempId ? remote : goal)),
+    }));
+  }
+
+  function replacePlannedExpense(tempId: string, remote: WalletPlannedExpense) {
+    setWallet((current) => normalizeWallet({
+      ...current,
+      plannedExpenses: (current.plannedExpenses || []).map((expense) => (expense.id === tempId ? remote : expense)),
     }));
   }
 
@@ -230,5 +247,107 @@ export function useWallet() {
     return true;
   }
 
-  return { wallet: normalized, setWallet, ready, syncing, syncStatus, lastError, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal, addGoalAmount };
+
+  function addPlannedExpense(input: WalletPlannedExpenseInput) {
+    let created: WalletPlannedExpense | null = null;
+    setWallet((current) => {
+      const next = addWalletPlannedExpense(current, input);
+      created = next.plannedExpenses[0] ?? null;
+      return next;
+    });
+
+    const createdExpense = created as WalletPlannedExpense | null;
+    if (session && mode === "supabase" && createdExpense) {
+      const tempId = createdExpense.id;
+      setSyncStatus("saving");
+      setLastError(null);
+      void upsertWalletPlannedExpense(createdExpense)
+        .then((remote) => {
+          if (!remote) {
+            setSyncStatus("error");
+            setLastError("No se pudo sincronizar el gasto planificado.");
+            return;
+          }
+          if (deletedTempPlannedExpenses.current.has(tempId)) {
+            deletedTempPlannedExpenses.current.delete(tempId);
+            void deleteWalletPlannedExpenseRemote(remote.id);
+            setSyncStatus("synced");
+            return;
+          }
+          replacePlannedExpense(tempId, remote);
+          setSyncStatus("synced");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo sincronizar el gasto planificado.");
+        });
+    }
+  }
+
+  function savePlannedExpense(expense: WalletPlannedExpense) {
+    setWallet((current) => updateWalletPlannedExpense(current, expense));
+    if (session && mode === "supabase") {
+      setSyncStatus("saving");
+      setLastError(null);
+      void upsertWalletPlannedExpense(expense)
+        .then((remote) => {
+          if (remote) replacePlannedExpense(expense.id, remote);
+          setSyncStatus(remote ? "synced" : "error");
+          if (!remote) setLastError("No se pudo actualizar el gasto planificado.");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo actualizar el gasto planificado.");
+        });
+    }
+  }
+
+  function removePlannedExpense(expenseId: string) {
+    setWallet((current) => deleteWalletPlannedExpense(current, expenseId));
+    if (!session || mode !== "supabase") return;
+    if (isTempWalletPlannedExpenseId(expenseId)) {
+      deletedTempPlannedExpenses.current.add(expenseId);
+      return;
+    }
+    setSyncStatus("saving");
+    setLastError(null);
+    void deleteWalletPlannedExpenseRemote(expenseId)
+      .then((ok) => {
+        setSyncStatus(ok ? "synced" : "error");
+        if (!ok) setLastError("No se pudo eliminar el gasto planificado.");
+      })
+      .catch(() => {
+        setSyncStatus("error");
+        setLastError("No se pudo eliminar el gasto planificado.");
+      });
+  }
+
+  function payPlannedExpense(expenseId: string) {
+    let createdTransaction: WalletTransaction | undefined;
+    let paidExpense: WalletPlannedExpense | undefined;
+    setWallet((current) => {
+      const result = markWalletPlannedExpensePaid(current, expenseId);
+      createdTransaction = result.transaction;
+      paidExpense = result.expense;
+      return result.wallet;
+    });
+
+    if (session && mode === "supabase") {
+      setSyncStatus("saving");
+      setLastError(null);
+      const jobs: Promise<unknown>[] = [];
+      if (paidExpense) jobs.push(upsertWalletPlannedExpense(paidExpense));
+      if (createdTransaction) jobs.push(upsertWalletTransaction(createdTransaction).then((remote) => {
+        if (remote && createdTransaction) replaceTransaction(createdTransaction.id, remote);
+      }));
+      void Promise.all(jobs)
+        .then(() => setSyncStatus("synced"))
+        .catch(() => {
+          setSyncStatus("error");
+          setLastError("No se pudo marcar como pagado.");
+        });
+    }
+  }
+
+  return { wallet: normalized, setWallet, ready, syncing, syncStatus, lastError, refreshWallet, updateWallet, changePeriod, addTransaction, deleteTransaction, addGoal, addGoalAmount, addPlannedExpense, savePlannedExpense, removePlannedExpense, payPlannedExpense };
 }

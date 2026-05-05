@@ -7,12 +7,15 @@ import type {
   WalletData,
   WalletGoal,
   WalletPeriod,
+  WalletPlannedExpense,
+  WalletPlannedExpenseStatus,
   WalletTransaction,
   WalletTransactionType
 } from "@/types";
 
 export type WalletUpdateInput = Partial<Pick<WalletData, "income" | "expenses" | "savings" | "budgetLimit" | "balance" | "tip" | "currency">>;
 export type WalletTransactionInput = Omit<WalletTransaction, "id" | "color" | "icon" | "currency"> & { currency?: WalletCurrency; icon?: string };
+export type WalletPlannedExpenseInput = Omit<WalletPlannedExpense, "id" | "status" | "currency" | "icon"> & { currency?: WalletCurrency; icon?: string; status?: WalletPlannedExpenseStatus };
 export type WalletGoalInput = Omit<WalletGoal, "id" | "icon" | "currency"> & { icon?: string; currency?: WalletCurrency };
 
 export const WALLET_DEFAULT_CURRENCY: WalletCurrency = "CRC";
@@ -28,8 +31,31 @@ export const walletPeriodLabels: Record<WalletPeriod, string> = {
   monthly: "Mes"
 };
 
+export const VARIABLE_EXPENSE_CATEGORIES = ["Comida", "Transporte", "Entretenimiento", "Compras", "Escuela", "Café", "Uber", "Otro"];
+export const PLANNED_EXPENSE_CATEGORIES = ["Préstamo", "Casa", "Colegiatura", "Hipoteca", "Vehículo", "Salud", "Pases", "Peajes", "Remodelación", "Celular", "Internet", "Suscripción", "Tarjeta de crédito", "Gastos escolares", "Supermercado", "Ropa y zapatos", "Pólizas / seguros", "Marchamo", "Otro"];
+
 const categoryMeta: Record<string, { color: WalletColor; icon: string }> = {
   Comida: { color: "orange", icon: "wallet-food" },
+  Café: { color: "orange", icon: "wallet-coffee" },
+  Uber: { color: "yellow", icon: "wallet-uber" },
+  Préstamo: { color: "blue", icon: "wallet-materials" },
+  Casa: { color: "blue", icon: "wallet-materials" },
+  Colegiatura: { color: "blue", icon: "wallet-study" },
+  Hipoteca: { color: "blue", icon: "wallet-materials" },
+  Vehículo: { color: "yellow", icon: "wallet-transport" },
+  Salud: { color: "pink", icon: "wallet-healthy" },
+  Pases: { color: "yellow", icon: "wallet-transport" },
+  Peajes: { color: "yellow", icon: "wallet-transport" },
+  Remodelación: { color: "orange", icon: "wallet-materials" },
+  Celular: { color: "blue", icon: "wallet-phone" },
+  Internet: { color: "blue", icon: "wallet-phone" },
+  Suscripción: { color: "purple", icon: "wallet-fun" },
+  "Tarjeta de crédito": { color: "pink", icon: "wallet-shop" },
+  "Gastos escolares": { color: "blue", icon: "wallet-study" },
+  Supermercado: { color: "orange", icon: "wallet-super" },
+  "Ropa y zapatos": { color: "pink", icon: "wallet-clothes" },
+  "Pólizas / seguros": { color: "green", icon: "wallet-income" },
+  Marchamo: { color: "yellow", icon: "wallet-transport" },
   Transporte: { color: "yellow", icon: "wallet-transport" },
   Entretenimiento: { color: "purple", icon: "wallet-fun" },
   Compras: { color: "pink", icon: "wallet-shop" },
@@ -93,7 +119,7 @@ export function isTransactionInPeriod(transaction: WalletTransaction, period: Wa
 }
 
 function buildCategories(transactions: WalletTransaction[], period: WalletPeriod): WalletCategory[] {
-  const expenses = transactions.filter((tx) => tx.type === "expense" && isTransactionInPeriod(tx, period));
+  const expenses = transactions.filter((tx) => tx.type === "expense" && (tx.expenseKind || "variable") === "variable" && isTransactionInPeriod(tx, period));
   const total = expenses.reduce((sum, tx) => sum + tx.amount, 0);
   const grouped = expenses.reduce<Record<string, WalletCategory>>((acc, tx) => {
     const key = tx.category || "Otro";
@@ -144,13 +170,51 @@ function normalizeTransaction(tx: WalletTransaction, currency: WalletCurrency): 
     period: tx.period || "monthly",
     color: tx.color || meta.color,
     icon: tx.icon || meta.icon,
+    expenseKind: tx.type === "expense" ? (tx.expenseKind || "variable") : undefined,
+    plannedExpenseId: tx.plannedExpenseId || null,
+    note: tx.note || null,
   };
+}
+
+
+export function isPlannedExpenseInPeriod(expense: WalletPlannedExpense, period: WalletPeriod, referenceDate = new Date()) {
+  const range = getWalletPeriodRange(period, referenceDate);
+  const date = expense.dueDate;
+  return date >= range.start && date <= range.end;
+}
+
+export function getPlannedExpenseStatus(expense: WalletPlannedExpense, referenceDate = new Date()): WalletPlannedExpenseStatus {
+  if (expense.status === "paid" || expense.paidAt) return "paid";
+  const today = toDateKey(referenceDate);
+  if (expense.dueDate < today) return "overdue";
+  return "pending";
+}
+
+function normalizePlannedExpense(expense: WalletPlannedExpense, currency: WalletCurrency): WalletPlannedExpense {
+  const category = PLANNED_EXPENSE_CATEGORIES.includes(expense.category) ? expense.category : "Otro";
+  const meta = getWalletTransactionMeta(category, "expense");
+  const normalized: WalletPlannedExpense = {
+    ...expense,
+    name: (expense.name || "Gasto planificado").trim(),
+    category,
+    amount: Math.max(0, Number(expense.amount) || 0),
+    currency: expense.currency || currency,
+    dueDate: expense.dueDate || toDateKey(new Date()),
+    frequency: expense.frequency || "monthly",
+    paidAt: expense.paidAt || null,
+    icon: expense.icon || meta.icon,
+    notes: expense.notes || null,
+    enabled: expense.enabled !== false,
+    status: expense.status || "pending",
+  };
+  return { ...normalized, status: getPlannedExpenseStatus(normalized) };
 }
 
 export function normalizeWallet(data: WalletData): WalletData {
   const currency: WalletCurrency = data.currency || WALLET_DEFAULT_CURRENCY;
   const period: WalletPeriod = data.period || "monthly";
   const transactions = Array.isArray(data.transactions) ? data.transactions.map((tx) => normalizeTransaction(tx, currency)) : [];
+  const plannedExpenses = Array.isArray(data.plannedExpenses) ? data.plannedExpenses.map((expense) => normalizePlannedExpense(expense, currency)) : [];
   const periodTransactions = transactions.filter((tx) => isTransactionInPeriod(tx, period));
   const income = periodTransactions.filter((tx) => tx.type === "income").reduce((sum, tx) => sum + tx.amount, 0);
   const extras = periodTransactions.filter((tx) => tx.type === "extra").reduce((sum, tx) => sum + tx.amount, 0);
@@ -176,6 +240,7 @@ export function normalizeWallet(data: WalletData): WalletData {
     categories: safeCategories,
     goals,
     transactions,
+    plannedExpenses,
     badges,
     tip: buildTip(income + extras, expenses, savings, budgetLimit, safeCategories)
   };
@@ -204,6 +269,66 @@ export function addWalletTransaction(data: WalletData, input: WalletTransactionI
 
 export function deleteWalletTransaction(data: WalletData, transactionId: string): WalletData {
   return normalizeWallet({ ...data, transactions: (data.transactions || []).filter((tx) => tx.id !== transactionId) });
+}
+
+
+export function addWalletPlannedExpense(data: WalletData, input: WalletPlannedExpenseInput): WalletData {
+  const meta = getWalletTransactionMeta(input.category, "expense");
+  const plannedExpense: WalletPlannedExpense = {
+    ...input,
+    id: createId("wallet-plan"),
+    name: input.name.trim(),
+    amount: Math.max(0, Number(input.amount) || 0),
+    currency: input.currency || data.currency || WALLET_DEFAULT_CURRENCY,
+    status: input.status || "pending",
+    icon: input.icon || meta.icon,
+    paidAt: input.paidAt || null,
+    notes: input.notes || null,
+    enabled: input.enabled !== false,
+  };
+  return normalizeWallet({ ...data, plannedExpenses: [plannedExpense, ...(data.plannedExpenses || [])] });
+}
+
+export function updateWalletPlannedExpense(data: WalletData, expense: WalletPlannedExpense): WalletData {
+  return normalizeWallet({
+    ...data,
+    plannedExpenses: (data.plannedExpenses || []).map((item) => item.id === expense.id ? expense : item),
+  });
+}
+
+export function deleteWalletPlannedExpense(data: WalletData, expenseId: string): WalletData {
+  return normalizeWallet({ ...data, plannedExpenses: (data.plannedExpenses || []).filter((item) => item.id !== expenseId) });
+}
+
+export function markWalletPlannedExpensePaid(data: WalletData, expenseId: string, paidDate = toDateKey(new Date())): { wallet: WalletData; transaction?: WalletTransaction; expense?: WalletPlannedExpense } {
+  const existing = (data.plannedExpenses || []).find((expense) => expense.id === expenseId);
+  if (!existing) return { wallet: normalizeWallet(data) };
+  const paidExpense: WalletPlannedExpense = { ...existing, status: "paid", paidAt: paidDate };
+  const meta = getWalletTransactionMeta(paidExpense.category, "expense");
+  const transaction: WalletTransaction = {
+    id: createId("wallet-tx"),
+    type: "expense",
+    title: paidExpense.name,
+    amount: paidExpense.amount,
+    currency: paidExpense.currency || data.currency || WALLET_DEFAULT_CURRENCY,
+    category: paidExpense.category,
+    date: paidDate,
+    period: data.period || "monthly",
+    color: meta.color,
+    icon: paidExpense.icon || meta.icon,
+    expenseKind: "planned",
+    plannedExpenseId: paidExpense.id,
+    note: paidExpense.notes || null,
+  };
+  return {
+    wallet: normalizeWallet({
+      ...data,
+      plannedExpenses: (data.plannedExpenses || []).map((item) => item.id === expenseId ? paidExpense : item),
+      transactions: [transaction, ...(data.transactions || [])],
+    }),
+    transaction,
+    expense: paidExpense,
+  };
 }
 
 export function addWalletGoal(data: WalletData, input: WalletGoalInput): WalletData {

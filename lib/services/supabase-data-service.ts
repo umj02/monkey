@@ -13,6 +13,7 @@ import type {
   WalletData,
   WalletGoal,
   WalletPeriod,
+  WalletPlannedExpense,
   WalletTransaction,
 } from "@/types";
 import { getWalletTransactionMeta, normalizeWallet } from "@/lib/services/wallet-service";
@@ -69,6 +70,9 @@ type WalletTransactionRow = Pick<
   | "transaction_date"
   | "period"
   | "icon"
+  | "expense_kind"
+  | "planned_expense_id"
+  | "note"
 >;
 type WalletBudgetRow = Pick<
   TableRow<"wallet_budgets">,
@@ -83,6 +87,21 @@ type WalletGoalRow = Pick<
   | "currency"
   | "target_date"
   | "icon"
+>;
+type WalletPlannedExpenseRow = Pick<
+  TableRow<"wallet_planned_expenses">,
+  | "id"
+  | "name"
+  | "category"
+  | "amount"
+  | "currency"
+  | "due_date"
+  | "frequency"
+  | "status"
+  | "paid_at"
+  | "icon"
+  | "notes"
+  | "enabled"
 >;
 
 function mapWalletTransactionRow(tx: WalletTransactionRow): WalletTransaction {
@@ -100,6 +119,9 @@ function mapWalletTransactionRow(tx: WalletTransactionRow): WalletTransaction {
     period: tx.period as WalletPeriod,
     color: meta.color,
     icon: tx.icon || meta.icon,
+    expenseKind: tx.expense_kind || (type === "expense" ? "variable" : undefined),
+    plannedExpenseId: tx.planned_expense_id || null,
+    note: tx.note || null,
   };
 }
 
@@ -963,12 +985,12 @@ export async function fetchWallet(): Promise<WalletData | null> {
   const userId = await getUserId();
   if (!supabase || !userId) return null;
 
-  const [{ data: transactionData }, { data: budgetData }, { data: goalData }] =
+  const [{ data: transactionData }, { data: budgetData }, { data: goalData }, { data: plannedExpenseData }] =
     await Promise.all([
       supabase
         .from("wallet_transactions")
         .select(
-          "id,type,title,amount,currency,category,transaction_date,period,icon",
+          "id,type,title,amount,currency,category,transaction_date,period,icon,expense_kind,planned_expense_id,note",
         )
         .eq("user_id", userId)
         .order("transaction_date", { ascending: false }),
@@ -983,12 +1005,19 @@ export async function fetchWallet(): Promise<WalletData | null> {
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("wallet_planned_expenses")
+        .select("id,name,category,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
+        .eq("user_id", userId)
+        .eq("enabled", true)
+        .order("due_date", { ascending: true }),
     ]);
 
   const seed = normalizeWallet(walletSeed as WalletData);
   const transactions: WalletTransactionRow[] = transactionData ?? [];
   const budgets: WalletBudgetRow[] = budgetData ?? [];
   const goals: WalletGoalRow[] = goalData ?? [];
+  const plannedExpenses: WalletPlannedExpenseRow[] = plannedExpenseData ?? [];
 
   const mappedTransactions: WalletTransaction[] = transactions.map(mapWalletTransactionRow);
 
@@ -1004,6 +1033,21 @@ export async function fetchWallet(): Promise<WalletData | null> {
     }),
   );
 
+  const mappedPlannedExpenses: WalletPlannedExpense[] = plannedExpenses.map((expense: WalletPlannedExpenseRow): WalletPlannedExpense => ({
+    id: expense.id,
+    name: expense.name,
+    category: expense.category,
+    amount: Number(expense.amount),
+    currency: expense.currency as WalletPlannedExpense["currency"],
+    dueDate: expense.due_date,
+    frequency: expense.frequency as WalletPlannedExpense["frequency"],
+    status: expense.status as WalletPlannedExpense["status"],
+    paidAt: expense.paid_at,
+    icon: expense.icon || "wallet-materials",
+    notes: expense.notes,
+    enabled: expense.enabled,
+  }));
+
   const activeBudget = budgets.find(
     (budget: WalletBudgetRow) =>
       budget.period === seed.period && budget.currency === seed.currency,
@@ -1013,6 +1057,7 @@ export async function fetchWallet(): Promise<WalletData | null> {
     ...seed,
     transactions: mappedTransactions,
     goals: mappedGoals.length ? mappedGoals : seed.goals,
+    plannedExpenses: mappedPlannedExpenses,
     budgetLimit: activeBudget
       ? Number(activeBudget.limit_amount)
       : seed.budgetLimit,
@@ -1054,6 +1099,9 @@ export async function upsertWalletTransaction(
       transaction_date: tx.date,
       period: tx.period,
       icon: tx.icon,
+      expense_kind: tx.expenseKind || null,
+      planned_expense_id: tx.plannedExpenseId || null,
+      note: tx.note || null,
     };
 
   if (!isTemporaryId(tx.id, "wallet-tx-") && isUuid(tx.id)) payload.id = tx.id;
@@ -1061,7 +1109,7 @@ export async function upsertWalletTransaction(
   const { data, error } = await supabase
     .from("wallet_transactions")
     .upsert(payload, { onConflict: "id" })
-    .select("id,type,title,amount,currency,category,transaction_date,period,icon")
+    .select("id,type,title,amount,currency,category,transaction_date,period,icon,expense_kind,planned_expense_id,note")
     .single();
 
   return error || !data ? null : mapWalletTransactionRow(data as WalletTransactionRow);
@@ -1071,6 +1119,60 @@ export async function deleteWalletTransactionRemote(id: string): Promise<boolean
   const supabase = createOptionalClient() as any;
   if (!supabase || !isUuid(id)) return false;
   const { error } = await supabase.from("wallet_transactions").delete().eq("id", id);
+  return !error;
+}
+
+
+export async function upsertWalletPlannedExpense(expense: WalletPlannedExpense): Promise<WalletPlannedExpense | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const payload: Database["public"]["Tables"]["wallet_planned_expenses"]["Insert"] = {
+    user_id: userId,
+    name: expense.name,
+    category: expense.category,
+    amount: expense.amount,
+    currency: expense.currency || "CRC",
+    due_date: expense.dueDate,
+    frequency: expense.frequency || "monthly",
+    status: expense.status || "pending",
+    paid_at: expense.paidAt || null,
+    icon: expense.icon,
+    notes: expense.notes || null,
+    enabled: expense.enabled !== false,
+  };
+
+  if (!isTemporaryId(expense.id, "wallet-plan-") && isUuid(expense.id)) payload.id = expense.id;
+
+  const { data, error } = await supabase
+    .from("wallet_planned_expenses")
+    .upsert(payload, { onConflict: "id" })
+    .select("id,name,category,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
+    .single();
+
+  if (error || !data) return null;
+  const row = data as WalletPlannedExpenseRow;
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    amount: Number(row.amount),
+    currency: row.currency as WalletPlannedExpense["currency"],
+    dueDate: row.due_date,
+    frequency: row.frequency as WalletPlannedExpense["frequency"],
+    status: row.status as WalletPlannedExpense["status"],
+    paidAt: row.paid_at,
+    icon: row.icon || "wallet-materials",
+    notes: row.notes,
+    enabled: row.enabled,
+  };
+}
+
+export async function deleteWalletPlannedExpenseRemote(id: string): Promise<boolean> {
+  const supabase = createOptionalClient() as any;
+  if (!supabase || !isUuid(id)) return false;
+  const { error } = await supabase.from("wallet_planned_expenses").update({ enabled: false }).eq("id", id);
   return !error;
 }
 

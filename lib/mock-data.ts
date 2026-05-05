@@ -59,6 +59,10 @@ export const walletSeed = {
   goals: [
     { id: "iphone", title: "iPhone 15", target: 250000, current: 15000, currency: "CRC" as const, icon: "wallet-phone" }
   ],
+  plannedExpenses: [
+    { id: "plan-internet", name: "Internet", category: "Internet", amount: 38000, currency: "CRC" as const, dueDate: "2026-05-15", frequency: "monthly" as const, status: "pending" as const, paidAt: null, icon: "wallet-phone", notes: "Plan casa", enabled: true },
+    { id: "plan-card", name: "Tarjeta de crédito", category: "Tarjeta de crédito", amount: 80000, currency: "CRC" as const, dueDate: "2026-05-20", frequency: "monthly" as const, status: "pending" as const, paidAt: null, icon: "wallet-shop", notes: null, enabled: true }
+  ],
   transactions: [
     { id: "tx-1", type: "income" as const, title: "Mesada", amount: 60000, currency: "CRC" as const, category: "Mesada", date: "2026-05-14", period: "monthly" as const, color: "green" as const, icon: "wallet-income" },
     { id: "tx-2", type: "expense" as const, title: "Almuerzo", amount: 8000, currency: "CRC" as const, category: "Comida", date: "2026-05-14", period: "monthly" as const, color: "orange" as const, icon: "wallet-food" },

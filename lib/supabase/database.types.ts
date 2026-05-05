@@ -57,9 +57,9 @@ export type Database = {
         Update: { id?: string; user_id?: string; reminder_id?: string; scheduled_for?: string; sent_at?: string | null; status?: string | null; error_message?: string | null; created_at?: string | null };
       };
       wallet_transactions: {
-        Row: { id: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency: "CRC" | "USD"; category: string; icon: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; created_at: string | null; updated_at: string | null };
-        Insert: { id?: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency?: "CRC" | "USD"; category: string; icon?: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; created_at?: string | null; updated_at?: string | null };
-        Update: { id?: string; user_id?: string; type?: "income" | "expense" | "saving" | "extra"; title?: string; amount?: number; currency?: "CRC" | "USD"; category?: string; icon?: string | null; transaction_date?: string; period?: "weekly" | "biweekly" | "monthly"; created_at?: string | null; updated_at?: string | null };
+        Row: { id: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency: "CRC" | "USD"; category: string; icon: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; expense_kind: "variable" | "planned" | null; planned_expense_id: string | null; note: string | null; created_at: string | null; updated_at: string | null };
+        Insert: { id?: string; user_id: string; type: "income" | "expense" | "saving" | "extra"; title: string; amount: number; currency?: "CRC" | "USD"; category: string; icon?: string | null; transaction_date: string; period: "weekly" | "biweekly" | "monthly"; expense_kind?: "variable" | "planned" | null; planned_expense_id?: string | null; note?: string | null; created_at?: string | null; updated_at?: string | null };
+        Update: { id?: string; user_id?: string; type?: "income" | "expense" | "saving" | "extra"; title?: string; amount?: number; currency?: "CRC" | "USD"; category?: string; icon?: string | null; transaction_date?: string; period?: "weekly" | "biweekly" | "monthly"; expense_kind?: "variable" | "planned" | null; planned_expense_id?: string | null; note?: string | null; created_at?: string | null; updated_at?: string | null };
       };
       wallet_budgets: {
         Row: { id: string; user_id: string; period: "weekly" | "biweekly" | "monthly"; limit_amount: number; currency: "CRC" | "USD"; created_at: string | null; updated_at: string | null };
@@ -70,6 +70,12 @@ export type Database = {
         Row: { id: string; user_id: string; title: string; target_amount: number; current_amount: number; currency: "CRC" | "USD"; target_date: string | null; icon: string | null; created_at: string | null; updated_at: string | null };
         Insert: { id?: string; user_id: string; title: string; target_amount: number; current_amount?: number; currency?: "CRC" | "USD"; target_date?: string | null; icon?: string | null; created_at?: string | null; updated_at?: string | null };
         Update: { id?: string; user_id?: string; title?: string; target_amount?: number; current_amount?: number; currency?: "CRC" | "USD"; target_date?: string | null; icon?: string | null; created_at?: string | null; updated_at?: string | null };
+      };
+
+      wallet_planned_expenses: {
+        Row: { id: string; user_id: string; name: string; category: string; amount: number; currency: "CRC" | "USD"; due_date: string; frequency: "weekly" | "biweekly" | "monthly" | "yearly" | "one_time"; status: "pending" | "paid" | "overdue"; paid_at: string | null; icon: string | null; notes: string | null; enabled: boolean; created_at: string | null; updated_at: string | null };
+        Insert: { id?: string; user_id: string; name: string; category: string; amount: number; currency?: "CRC" | "USD"; due_date: string; frequency?: "weekly" | "biweekly" | "monthly" | "yearly" | "one_time"; status?: "pending" | "paid" | "overdue"; paid_at?: string | null; icon?: string | null; notes?: string | null; enabled?: boolean; created_at?: string | null; updated_at?: string | null };
+        Update: { id?: string; user_id?: string; name?: string; category?: string; amount?: number; currency?: "CRC" | "USD"; due_date?: string; frequency?: "weekly" | "biweekly" | "monthly" | "yearly" | "one_time"; status?: "pending" | "paid" | "overdue"; paid_at?: string | null; icon?: string | null; notes?: string | null; enabled?: boolean; created_at?: string | null; updated_at?: string | null };
       };
       wallet_categories: {
         Row: { id: string; user_id: string | null; name: string; type: "income" | "expense" | "saving" | "extra"; color: string; icon: string | null; sort_order: number | null; created_at: string | null; updated_at: string | null };
