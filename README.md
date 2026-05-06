@@ -112,3 +112,14 @@ Probar:
 - Card principal ahora usa altura mínima 620px para separar mejor título, texto, visual y botones.
 - Reduce tamaños de título/texto y mueve el bloque superior para evitar sobreposición con la imagen.
 - Mantiene Omitir guía/Cerrar guía fuera del card y no cambia la lógica de onboarding.
+
+## v2.18.6 — Welcome Final Motion + Copy Fit
+
+- Ajusta el onboarding sobre la base v2.18.5.
+- Reduce ligeramente las imágenes de fondo para que no queden tan justas dentro del card.
+- Simplifica los textos descriptivos de los 8 cards.
+- Elimina el difuminado blanco que cubría los visuales.
+- Mejora la transición entre cards con animación de copy + imagen.
+- Agrega animación sutil al botón “Siguiente / Ir a Hoy”.
+- Cambia el botón Learn de Hoy de ícono “?” a ícono de librito.
+- No cambia Supabase, migraciones, autenticación, Wallet, calendario ni push.

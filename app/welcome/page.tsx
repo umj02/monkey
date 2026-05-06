@@ -25,7 +25,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/tu-dia-01.png",
     titleGreen: "Tu día en",
     titleDark: "un solo lugar",
-    description: "En Hoy vas a ver tus actividades,\nrecordatorios y calendario\nen un solo lugar.",
+    description: "Tus actividades, recordatorios\ny calendario en un solo lugar.",
     alt: "Pantalla de Hoy con actividades, recordatorios y calendario en un solo lugar.",
   },
   {
@@ -33,7 +33,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/actividades-02.png",
     titleGreen: "Creá actividades",
     titleDark: "rápidas",
-    description: "Tocá el botón verde + para agregar\nalgo a tu día: estudiar, tomar agua,\nentrenar, dormir o cualquier rutina.",
+    description: "Tocá el botón verde + y agregá\nrutinas, estudio, agua o descanso.",
     alt: "Formulario de nueva actividad con tipo, hora y alerta.",
   },
   {
@@ -41,7 +41,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/calendario-03.png",
     titleGreen: "Planificá",
     titleDark: "por horas",
-    description: "En Calendario podés organizar actividades\npor día, repetirlas y ver bloques largos\ncon tareas internas.",
+    description: "Organizá actividades por hora,\nrepetilas y agrupá tareas internas.",
     alt: "Calendario por horas con actividades organizadas en bloques.",
   },
   {
@@ -49,7 +49,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/alertas-04.png",
     titleGreen: "No se te",
     titleDark: "olvida nada",
-    description: "Recibí recordatorios aunque no tengas\nla app abierta. En iPhone, agregala\na pantalla de inicio para mejores alertas.",
+    description: "Activá la campanita y recibí\nrecordatorios importantes a tiempo.",
     alt: "Recordatorios y notificación de Monkey Checks.",
   },
   {
@@ -57,7 +57,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/avances-05.png",
     titleGreen: "Marcá",
     titleDark: "avances",
-    description: "Cuando completás una actividad,\ndesaparece de Hoy con una animación\ny queda registrada en Calendario.",
+    description: "Completá actividades, deshacé errores\ny dejá tu avance registrado.",
     alt: "Actividad completada con opción para deshacer.",
   },
   {
@@ -65,7 +65,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/wallet-06.png",
     titleGreen: "Controlá",
     titleDark: "tu dinero",
-    description: "Separá ingresos, gastos variables,\ngastos planificados, ahorros y metas.",
+    description: "Separá ingresos, gastos, ahorros\ny metas sin complicarte.",
     alt: "Wallet con ingresos, gastos variables, gastos planificados, ahorros y metas.",
   },
   {
@@ -73,7 +73,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/medallas-07.png",
     titleGreen: "Ganate",
     titleDark: "medallas",
-    description: "Cumplí rutinas, completá categorías\ny mantené constancia para desbloquear logros.",
+    description: "Cumplí rutinas, mantené constancia\ny desbloqueá medallas.",
     alt: "Pantalla de logros con medallas, rachas y progreso.",
   },
   {
@@ -81,19 +81,19 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/lograste-08.png",
     titleGreen: "¡Todo",
     titleDark: "listo!",
-    description: "Empezá con una actividad pequeña.\nMonkey Checks te ayuda a avanzar\npaso a paso.",
+    description: "Empezá pequeño. Monkey Checks\nte acompaña paso a paso.",
     alt: "Mono celebrando con cards de Hoy, Calendario, Wallet y Logros.",
   },
 ];
 
 function WelcomeTitle({ card }: { card: WelcomeCard }) {
   return (
-    <div className="pointer-events-none absolute left-0 right-0 top-[6.8%] z-10 px-7 text-center sm:top-[7.2%]">
-      <h1 className="mx-auto max-w-[300px] text-[32px] font-black leading-[.96] tracking-[-.05em] text-monkey-ink drop-shadow-[0_8px_18px_rgba(17,24,39,.07)] sm:max-w-[330px] sm:text-[38px]">
+    <div className="pointer-events-none absolute left-0 right-0 top-[7.4%] z-20 px-7 text-center sm:top-[7.8%]">
+      <h1 className="mx-auto max-w-[292px] text-[29px] font-black leading-[.94] tracking-[-.045em] text-monkey-ink drop-shadow-[0_8px_18px_rgba(17,24,39,.07)] sm:max-w-[320px] sm:text-[34px]">
         <span className="block text-monkey-green">{card.titleGreen}</span>
         {card.titleDark ? <span className="block text-monkey-ink">{card.titleDark}</span> : null}
       </h1>
-      <p className="mx-auto mt-2.5 max-w-[292px] whitespace-pre-line text-[12.5px] font-bold leading-[1.38] text-monkey-ink/82 sm:mt-3 sm:max-w-[315px] sm:text-[14px]">
+      <p className="mx-auto mt-2 max-w-[282px] whitespace-pre-line text-[11.5px] font-extrabold leading-[1.28] text-monkey-ink/78 sm:mt-2.5 sm:max-w-[305px] sm:text-[12.75px]">
         {card.description}
       </p>
     </div>
@@ -165,7 +165,7 @@ function WelcomePageContent() {
             <button
               type="button"
               onClick={() => router.replace("/today")}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-4 py-2 text-[12px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3.5 py-1.5 text-[11.5px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
             >
               <X className="h-4 w-4" /> Cerrar guía
             </button>
@@ -173,7 +173,7 @@ function WelcomePageContent() {
             <button
               type="button"
               onClick={finish}
-              className="inline-flex items-center rounded-full bg-white/90 px-4 py-2 text-[12px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
+              className="inline-flex items-center rounded-full bg-white/90 px-3.5 py-1.5 text-[11.5px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
             >
               Omitir guía
             </button>
@@ -185,7 +185,7 @@ function WelcomePageContent() {
           onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null; }}
           onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0]?.clientX ?? 0)}
         >
-          <div className="relative aspect-[2/3] w-full min-h-[620px] max-h-[calc(100dvh-106px-var(--safe-top)-var(--safe-bottom))]">
+          <div className="relative aspect-[2/3] w-full min-h-[620px] max-h-[calc(100dvh-104px-var(--safe-top)-var(--safe-bottom))]">
             <Image
               key={active.id}
               src={active.image}
@@ -193,13 +193,12 @@ function WelcomePageContent() {
               fill
               priority={index <= 1}
               sizes="410px"
-              className="select-none object-cover animate-welcomeImage"
+              className="select-none object-contain scale-[.91] animate-welcomeImageSoft"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.98)_0%,rgba(255,255,255,.86)_26%,rgba(255,255,255,.20)_42%,rgba(255,255,255,0)_66%,rgba(255,255,255,.92)_100%)]" />
-            <WelcomeTitle card={active} />
+            <div key={`copy-${active.id}`} className="animate-welcomeCopy"><WelcomeTitle card={active} /></div>
           </div>
 
-          <div className="absolute left-1/2 top-[3.2%] z-30 flex -translate-x-1/2 gap-2.5" aria-label={`Paso ${index + 1} de ${cards.length}`}>
+          <div className="absolute left-1/2 top-[3.4%] z-30 flex -translate-x-1/2 gap-2" aria-label={`Paso ${index + 1} de ${cards.length}`}>
             {cards.map((card, dotIndex) => (
               <button
                 key={card.id}
@@ -207,7 +206,7 @@ function WelcomePageContent() {
                 aria-label={`Ir al paso ${dotIndex + 1}`}
                 onClick={() => setIndex(dotIndex)}
                 className={cn(
-                  "h-3 w-3 rounded-full transition-all duration-300",
+                  "h-2.5 w-2.5 rounded-full transition-all duration-300",
                   dotIndex < index
                     ? "bg-monkey-green shadow-[0_6px_16px_rgba(34,197,94,.28)]"
                     : dotIndex === index
@@ -218,12 +217,12 @@ function WelcomePageContent() {
             ))}
           </div>
 
-          <div className={cn("absolute bottom-[2.8%] left-[6%] right-[6%] z-30 grid gap-3", isFirst ? "grid-cols-1" : "grid-cols-[.62fr_1.38fr]")}> 
+          <div className={cn("absolute bottom-[3.3%] left-[6%] right-[6%] z-30 grid gap-3", isFirst ? "grid-cols-1" : "grid-cols-[.62fr_1.38fr]")}> 
             {!isFirst ? (
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-[20px] bg-white text-[15px] font-black text-monkey-ink shadow-[0_12px_32px_rgba(17,24,39,.10)] transition hover:-translate-y-0.5 active:scale-95"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-[18px] bg-white text-[14px] font-black text-monkey-ink shadow-[0_12px_30px_rgba(17,24,39,.10)] transition hover:-translate-y-0.5 active:scale-95"
               >
                 <ArrowLeft className="h-4 w-4" /> Atrás
               </button>
@@ -232,7 +231,7 @@ function WelcomePageContent() {
             <button
               type="button"
               onClick={next}
-              className="inline-flex h-12 items-center justify-center gap-3 rounded-[20px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[17px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.28)] transition hover:-translate-y-0.5 active:scale-95"
+              className="inline-flex h-11 items-center justify-center gap-3 rounded-[18px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[16px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.26)] transition hover:-translate-y-0.5 active:scale-95 animate-nextCta"
             >
               {nextLabel}
               <ArrowRight className="h-5 w-5" />
