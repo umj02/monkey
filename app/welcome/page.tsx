@@ -193,7 +193,7 @@ function WelcomePageContent() {
               fill
               priority={index <= 1}
               sizes="410px"
-              className="select-none object-contain scale-[.955] translate-y-[10px] animate-welcomeImageSoft"
+              className="select-none object-contain scale-[.975] translate-y-[10px] will-change-transform animate-welcomeImageSoft"
             />
             <div key={`copy-${active.id}`} className="animate-welcomeCopy"><WelcomeTitle card={active} /></div>
           </div>
@@ -210,7 +210,7 @@ function WelcomePageContent() {
                   dotIndex < index
                     ? "bg-monkey-green shadow-[0_6px_16px_rgba(34,197,94,.28)]"
                     : dotIndex === index
-                      ? "border-2 border-monkey-green bg-white"
+                      ? "border-2 border-monkey-green bg-white animate-welcomeDotPop"
                       : "bg-gray-300/90",
                 )}
               />
@@ -231,10 +231,10 @@ function WelcomePageContent() {
             <button
               type="button"
               onClick={next}
-              className="inline-flex h-11 items-center justify-center gap-3 rounded-[18px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[16px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.24)] transition hover:-translate-y-0.5 active:scale-95 animate-nextCta"
+              className="group inline-flex h-11 items-center justify-center gap-3 rounded-[18px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[16px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.24)] transition hover:-translate-y-0.5 active:scale-95 animate-nextCta"
             >
               {nextLabel}
-              <ArrowRight className="h-5 w-5" />
+              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1 animate-nextArrow" />
             </button>
           </div>
         </div>

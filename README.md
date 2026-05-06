@@ -1,3 +1,12 @@
+
+## v2.18.8 — Welcome Visual Scale + Playful Motion Polish
+
+- Aumenta ligeramente el visual principal del onboarding sin tocar el alto del card.
+- Agrega entrada con rebote suave para imagen y copy.
+- Mejora la microinteracción del botón **Siguiente / Ir a Hoy** con respiración y flecha animada.
+- Agrega bounce sutil al dot activo del carrusel.
+- Mantiene la composición aprobada de v2.18.7, el flujo `/welcome`, `/welcome?review=1`, `hasCompletedOnboarding`, Learn desde Hoy y acceso desde Settings.
+
 # Monkey Checks v2.18 — Welcome Onboarding UX
 
 Base: v2.17.1 — Planned Expenses Frequency UX Fix.
