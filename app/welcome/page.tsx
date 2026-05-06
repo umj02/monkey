@@ -88,17 +88,18 @@ const cards: WelcomeCard[] = [
 
 function WelcomeTitle({ card }: { card: WelcomeCard }) {
   return (
-    <div className="pointer-events-none absolute left-0 right-0 top-[9%] z-10 px-7 text-center">
-      <h1 className="mx-auto max-w-[320px] text-[41px] font-black leading-[.98] tracking-[-.045em] text-monkey-ink drop-shadow-[0_10px_22px_rgba(17,24,39,.08)] sm:text-[46px]">
+    <div className="pointer-events-none absolute left-0 right-0 top-[7.2%] z-10 px-7 text-center sm:top-[7.8%]">
+      <h1 className="mx-auto max-w-[300px] text-[34px] font-black leading-[.96] tracking-[-.05em] text-monkey-ink drop-shadow-[0_8px_18px_rgba(17,24,39,.07)] sm:max-w-[330px] sm:text-[40px]">
         <span className="block text-monkey-green">{card.titleGreen}</span>
         {card.titleDark ? <span className="block text-monkey-ink">{card.titleDark}</span> : null}
       </h1>
-      <p className="mx-auto mt-5 max-w-[310px] whitespace-pre-line text-[16px] font-semibold leading-[1.45] text-monkey-ink/90 sm:text-[17px]">
+      <p className="mx-auto mt-3 max-w-[278px] whitespace-pre-line text-[13.5px] font-bold leading-[1.38] text-monkey-ink/82 sm:mt-4 sm:max-w-[315px] sm:text-[15px]">
         {card.description}
       </p>
     </div>
   );
 }
+
 
 function WelcomePageContent() {
   const router = useRouter();
@@ -157,38 +158,48 @@ function WelcomePageContent() {
   }
 
   return (
-    <main className="app-screen overflow-hidden bg-[#F7F9FC] px-4 py-[calc(18px+var(--safe-top))]">
-      <section className="relative mx-auto flex min-h-[calc(100dvh-36px-var(--safe-top)-var(--safe-bottom))] max-w-[390px] flex-col items-center justify-center">
+    <main className="app-screen overflow-hidden bg-[#F7F9FC] px-4 py-[calc(14px+var(--safe-top))]">
+      <section className="relative mx-auto flex min-h-[calc(100dvh-28px-var(--safe-top)-var(--safe-bottom))] max-w-[410px] flex-col items-center justify-center gap-3">
+        <div className="flex h-9 w-full items-center justify-end px-1">
+          {reviewMode ? (
+            <button
+              type="button"
+              onClick={() => router.replace("/today")}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-4 py-2 text-[12px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
+            >
+              <X className="h-4 w-4" /> Cerrar guía
+            </button>
+          ) : isFirst ? (
+            <button
+              type="button"
+              onClick={finish}
+              className="inline-flex items-center rounded-full bg-white/90 px-4 py-2 text-[12px] font-black text-monkey-muted shadow-[0_10px_26px_rgba(17,24,39,.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
+            >
+              Omitir guía
+            </button>
+          ) : null}
+        </div>
+
         <div
           className="relative w-full overflow-hidden rounded-[30px] bg-white shadow-[0_22px_70px_rgba(17,24,39,.12)] animate-welcomeCard"
           onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null; }}
           onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0]?.clientX ?? 0)}
         >
-          <div className="relative aspect-[2/3] w-full">
+          <div className="relative aspect-[2/3] w-full min-h-[590px] max-h-[calc(100dvh-116px-var(--safe-top)-var(--safe-bottom))]">
             <Image
               key={active.id}
               src={active.image}
               alt={active.alt}
               fill
               priority={index <= 1}
-              sizes="390px"
+              sizes="410px"
               className="select-none object-cover animate-welcomeImage"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.92)_0%,rgba(255,255,255,.62)_24%,rgba(255,255,255,0)_43%,rgba(255,255,255,0)_73%,rgba(255,255,255,.86)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.95)_0%,rgba(255,255,255,.72)_22%,rgba(255,255,255,.06)_41%,rgba(255,255,255,0)_68%,rgba(255,255,255,.90)_100%)]" />
             <WelcomeTitle card={active} />
           </div>
 
-          {isFirst ? (
-            <button
-              type="button"
-              onClick={finish}
-              className="absolute right-4 top-4 z-30 rounded-full border border-black/5 bg-white/92 px-4 py-2 text-xs font-black text-monkey-muted shadow-card backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
-            >
-              Omitir guía
-            </button>
-          ) : null}
-
-          <div className="absolute left-1/2 top-[4.2%] z-30 flex -translate-x-1/2 gap-2.5" aria-label={`Paso ${index + 1} de ${cards.length}`}>
+          <div className="absolute left-1/2 top-[3.4%] z-30 flex -translate-x-1/2 gap-2.5" aria-label={`Paso ${index + 1} de ${cards.length}`}>
             {cards.map((card, dotIndex) => (
               <button
                 key={card.id}
@@ -196,63 +207,38 @@ function WelcomePageContent() {
                 aria-label={`Ir al paso ${dotIndex + 1}`}
                 onClick={() => setIndex(dotIndex)}
                 className={cn(
-                  "h-3.5 w-3.5 rounded-full transition-all duration-300",
+                  "h-3 w-3 rounded-full transition-all duration-300",
                   dotIndex < index
                     ? "bg-monkey-green shadow-[0_6px_16px_rgba(34,197,94,.28)]"
                     : dotIndex === index
-                      ? "w-3.5 border-2 border-monkey-green bg-white"
+                      ? "border-2 border-monkey-green bg-white"
                       : "bg-gray-300/90",
                 )}
               />
             ))}
           </div>
 
-          <div className={cn("absolute bottom-[3.6%] left-[6%] right-[6%] z-30 grid gap-3", isFirst || isLast ? "grid-cols-1" : "grid-cols-[.68fr_1.32fr]")}> 
-            {!isFirst && !isLast ? (
+          <div className={cn("absolute bottom-[3.2%] left-[6%] right-[6%] z-30 grid gap-3", isFirst ? "grid-cols-1" : "grid-cols-[.62fr_1.38fr]")}> 
+            {!isFirst ? (
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex h-14 items-center justify-center gap-2 rounded-[22px] bg-white text-base font-black text-monkey-ink shadow-[0_12px_32px_rgba(17,24,39,.10)] transition hover:-translate-y-0.5 active:scale-95"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-[20px] bg-white text-[15px] font-black text-monkey-ink shadow-[0_12px_32px_rgba(17,24,39,.10)] transition hover:-translate-y-0.5 active:scale-95"
               >
-                <ArrowLeft className="h-5 w-5" /> Atrás
+                <ArrowLeft className="h-4 w-4" /> Atrás
               </button>
             ) : null}
-
-            {!isFirst && isLast ? null : null}
 
             <button
               type="button"
               onClick={next}
-              className={cn(
-                "inline-flex h-14 items-center justify-center gap-3 rounded-[22px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-lg font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.30)] transition hover:-translate-y-0.5 active:scale-95",
-                isFirst || isLast ? "w-full" : "",
-              )}
+              className="inline-flex h-12 items-center justify-center gap-3 rounded-[20px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[17px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.28)] transition hover:-translate-y-0.5 active:scale-95"
             >
               {nextLabel}
-              <ArrowRight className="h-6 w-6" />
+              <ArrowRight className="h-5 w-5" />
             </button>
           </div>
-
-          {isLast && !isFirst ? (
-            <button
-              type="button"
-              onClick={back}
-              className="absolute bottom-[12.4%] left-[6%] z-30 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-monkey-ink shadow-card transition hover:-translate-y-0.5 active:scale-95"
-            >
-              <ArrowLeft className="h-4 w-4" /> Atrás
-            </button>
-          ) : null}
         </div>
-
-        {reviewMode ? (
-          <button
-            type="button"
-            onClick={() => router.replace("/today")}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-monkey-muted shadow-card transition hover:-translate-y-0.5 active:scale-95"
-          >
-            <X className="h-4 w-4" /> Cerrar guía
-          </button>
-        ) : null}
       </section>
     </main>
   );

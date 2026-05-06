@@ -92,3 +92,15 @@ Probar:
 - Botón “Omitir guía” en el primer card.
 - Botones Atrás/Siguiente/Ir a Hoy reales, accesibles y animados.
 - Conserva swipe móvil, review desde Hoy y acceso desde Settings.
+
+## v2.18.4 — Welcome Layout Polish + Mobile Fit
+
+- Regenerada desde base limpia v2.18.3.
+- Ajusta el layout responsive de `/welcome` para que textos, imagen y botones no se monten entre sí.
+- Botón **Omitir guía** queda fuera del card en el primer paso.
+- Botón **Cerrar guía** queda fuera del card cuando se abre en modo repaso (`/welcome?review=1`).
+- Títulos y textos se reducen para móvil y quedan mejor contenidos en el área superior.
+- Dots más compactos.
+- Botones Atrás/Siguiente/Ir a Hoy más proporcionados.
+- Card más estable usando `100dvh`, safe-area y altura mínima controlada.
+- No modifica la lógica de onboarding, perfiles, migraciones, push, wallet ni calendario.
