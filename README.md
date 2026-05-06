@@ -104,3 +104,11 @@ Probar:
 - Botones Atrás/Siguiente/Ir a Hoy más proporcionados.
 - Card más estable usando `100dvh`, safe-area y altura mínima controlada.
 - No modifica la lógica de onboarding, perfiles, migraciones, push, wallet ni calendario.
+
+
+## v2.18.5 — Welcome Card Height + Overlay Fit
+
+- Ajusta el onboarding sobre base v2.18.4.
+- Card principal ahora usa altura mínima 620px para separar mejor título, texto, visual y botones.
+- Reduce tamaños de título/texto y mueve el bloque superior para evitar sobreposición con la imagen.
+- Mantiene Omitir guía/Cerrar guía fuera del card y no cambia la lógica de onboarding.
