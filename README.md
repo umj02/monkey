@@ -113,7 +113,7 @@ Probar:
 - Reduce tamaños de título/texto y mueve el bloque superior para evitar sobreposición con la imagen.
 - Mantiene Omitir guía/Cerrar guía fuera del card y no cambia la lógica de onboarding.
 
-## v2.18.6 — Welcome Final Motion + Copy Fit
+## v2.18.7 — Welcome Final Motion + Copy Fit
 
 - Ajusta el onboarding sobre la base v2.18.5.
 - Reduce ligeramente las imágenes de fondo para que no queden tan justas dentro del card.
@@ -123,3 +123,11 @@ Probar:
 - Agrega animación sutil al botón “Siguiente / Ir a Hoy”.
 - Cambia el botón Learn de Hoy de ícono “?” a ícono de librito.
 - No cambia Supabase, migraciones, autenticación, Wallet, calendario ni push.
+
+
+## v2.18.7 — Welcome Typography + Composition Fix
+
+- Ajusta composición del onboarding para evitar que los dots se monten sobre los títulos.
+- Aumenta ligeramente el visual de fondo sin cambiar el alto del card.
+- Reduce y compacta copy para separar mejor texto, imagen y botones.
+- Mantiene la lógica de onboarding de v2.18.x sin migraciones nuevas.

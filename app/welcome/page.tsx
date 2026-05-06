@@ -41,7 +41,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/calendario-03.png",
     titleGreen: "Planificá",
     titleDark: "por horas",
-    description: "Organizá actividades por hora,\nrepetilas y agrupá tareas internas.",
+    description: "Organizá por hora y repetí\nrutinas cuando lo necesités.",
     alt: "Calendario por horas con actividades organizadas en bloques.",
   },
   {
@@ -57,7 +57,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/avances-05.png",
     titleGreen: "Marcá",
     titleDark: "avances",
-    description: "Completá actividades, deshacé errores\ny dejá tu avance registrado.",
+    description: "Completá, deshacé errores\ny seguí tu progreso.",
     alt: "Actividad completada con opción para deshacer.",
   },
   {
@@ -65,7 +65,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/wallet-06.png",
     titleGreen: "Controlá",
     titleDark: "tu dinero",
-    description: "Separá ingresos, gastos, ahorros\ny metas sin complicarte.",
+    description: "Ingresos, gastos, ahorros\ny metas en orden.",
     alt: "Wallet con ingresos, gastos variables, gastos planificados, ahorros y metas.",
   },
   {
@@ -73,7 +73,7 @@ const cards: WelcomeCard[] = [
     image: "/assets/onboarding/medallas-07.png",
     titleGreen: "Ganate",
     titleDark: "medallas",
-    description: "Cumplí rutinas, mantené constancia\ny desbloqueá medallas.",
+    description: "Mantené constancia\ny desbloqueá medallas.",
     alt: "Pantalla de logros con medallas, rachas y progreso.",
   },
   {
@@ -88,12 +88,12 @@ const cards: WelcomeCard[] = [
 
 function WelcomeTitle({ card }: { card: WelcomeCard }) {
   return (
-    <div className="pointer-events-none absolute left-0 right-0 top-[7.4%] z-20 px-7 text-center sm:top-[7.8%]">
-      <h1 className="mx-auto max-w-[292px] text-[29px] font-black leading-[.94] tracking-[-.045em] text-monkey-ink drop-shadow-[0_8px_18px_rgba(17,24,39,.07)] sm:max-w-[320px] sm:text-[34px]">
+    <div className="pointer-events-none absolute left-0 right-0 top-[58px] z-20 px-7 text-center sm:top-[62px]">
+      <h1 className="mx-auto max-w-[286px] text-[27px] font-black leading-[.96] tracking-[-.042em] text-monkey-ink drop-shadow-[0_8px_18px_rgba(17,24,39,.055)] sm:max-w-[316px] sm:text-[31px]">
         <span className="block text-monkey-green">{card.titleGreen}</span>
         {card.titleDark ? <span className="block text-monkey-ink">{card.titleDark}</span> : null}
       </h1>
-      <p className="mx-auto mt-2 max-w-[282px] whitespace-pre-line text-[11.5px] font-extrabold leading-[1.28] text-monkey-ink/78 sm:mt-2.5 sm:max-w-[305px] sm:text-[12.75px]">
+      <p className="mx-auto mt-2 max-w-[258px] whitespace-pre-line text-[10.75px] font-extrabold leading-[1.24] text-monkey-ink/72 sm:mt-2 sm:max-w-[286px] sm:text-[11.75px]">
         {card.description}
       </p>
     </div>
@@ -158,8 +158,8 @@ function WelcomePageContent() {
   }
 
   return (
-    <main className="app-screen overflow-hidden bg-[#F7F9FC] px-4 py-[calc(14px+var(--safe-top))]">
-      <section className="relative mx-auto flex min-h-[calc(100dvh-28px-var(--safe-top)-var(--safe-bottom))] max-w-[410px] flex-col items-center justify-center gap-2">
+    <main className="app-screen overflow-hidden bg-[#F7F9FC] px-4 py-[calc(12px+var(--safe-top))]">
+      <section className="relative mx-auto flex min-h-[calc(100dvh-28px-var(--safe-top)-var(--safe-bottom))] max-w-[420px] flex-col items-center justify-center gap-2">
         <div className="flex h-9 w-full items-center justify-end px-1">
           {reviewMode ? (
             <button
@@ -181,11 +181,11 @@ function WelcomePageContent() {
         </div>
 
         <div
-          className="relative w-full overflow-hidden rounded-[30px] bg-white shadow-[0_22px_70px_rgba(17,24,39,.12)] animate-welcomeCard"
+          className="relative w-full overflow-hidden rounded-[32px] bg-white shadow-[0_22px_70px_rgba(17,24,39,.12)] animate-welcomeCard"
           onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null; }}
           onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0]?.clientX ?? 0)}
         >
-          <div className="relative aspect-[2/3] w-full min-h-[620px] max-h-[calc(100dvh-104px-var(--safe-top)-var(--safe-bottom))]">
+          <div className="relative aspect-[2/3] w-full min-h-[620px] max-h-[calc(100dvh-92px-var(--safe-top)-var(--safe-bottom))]">
             <Image
               key={active.id}
               src={active.image}
@@ -193,12 +193,12 @@ function WelcomePageContent() {
               fill
               priority={index <= 1}
               sizes="410px"
-              className="select-none object-contain scale-[.91] animate-welcomeImageSoft"
+              className="select-none object-contain scale-[.955] translate-y-[10px] animate-welcomeImageSoft"
             />
             <div key={`copy-${active.id}`} className="animate-welcomeCopy"><WelcomeTitle card={active} /></div>
           </div>
 
-          <div className="absolute left-1/2 top-[3.4%] z-30 flex -translate-x-1/2 gap-2" aria-label={`Paso ${index + 1} de ${cards.length}`}>
+          <div className="absolute left-1/2 top-[18px] z-30 flex -translate-x-1/2 gap-2" aria-label={`Paso ${index + 1} de ${cards.length}`}>
             {cards.map((card, dotIndex) => (
               <button
                 key={card.id}
@@ -206,7 +206,7 @@ function WelcomePageContent() {
                 aria-label={`Ir al paso ${dotIndex + 1}`}
                 onClick={() => setIndex(dotIndex)}
                 className={cn(
-                  "h-2.5 w-2.5 rounded-full transition-all duration-300",
+                  "h-2.5 w-2.5 rounded-full transition-all duration-300 sm:h-2.5 sm:w-2.5",
                   dotIndex < index
                     ? "bg-monkey-green shadow-[0_6px_16px_rgba(34,197,94,.28)]"
                     : dotIndex === index
@@ -217,7 +217,7 @@ function WelcomePageContent() {
             ))}
           </div>
 
-          <div className={cn("absolute bottom-[3.3%] left-[6%] right-[6%] z-30 grid gap-3", isFirst ? "grid-cols-1" : "grid-cols-[.62fr_1.38fr]")}> 
+          <div className={cn("absolute bottom-[22px] left-[6%] right-[6%] z-30 grid gap-3", isFirst ? "grid-cols-1" : "grid-cols-[.62fr_1.38fr]")}> 
             {!isFirst ? (
               <button
                 type="button"
@@ -231,7 +231,7 @@ function WelcomePageContent() {
             <button
               type="button"
               onClick={next}
-              className="inline-flex h-11 items-center justify-center gap-3 rounded-[18px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[16px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.26)] transition hover:-translate-y-0.5 active:scale-95 animate-nextCta"
+              className="inline-flex h-11 items-center justify-center gap-3 rounded-[18px] bg-gradient-to-r from-[#55C432] to-[#1CA80B] text-[16px] font-black text-white shadow-[0_18px_36px_rgba(34,197,94,.24)] transition hover:-translate-y-0.5 active:scale-95 animate-nextCta"
             >
               {nextLabel}
               <ArrowRight className="h-5 w-5" />
