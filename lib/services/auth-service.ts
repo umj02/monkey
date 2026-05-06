@@ -62,7 +62,7 @@ export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
   if (!supabase) {
     if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
-    return { session: createMockSession({ name: "Juan", email: input.email.trim() }), error: null, mode: "local" };
+    return { session: createMockSession({ name: "Juan", email: input.email.trim(), hasCompletedOnboarding: false }), error: null, mode: "local" };
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email: input.email.trim(), password: input.password });
@@ -77,7 +77,7 @@ export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult>
   const supabase = createOptionalClient();
   if (!supabase) {
     if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
-    return { session: createMockSession({ name: input.name.trim(), email: input.email.trim() }), error: null, mode: "local" };
+    return { session: createMockSession({ name: input.name.trim(), email: input.email.trim(), hasCompletedOnboarding: false }), error: null, mode: "local" };
   }
 
   const emailRedirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined;

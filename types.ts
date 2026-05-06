@@ -102,6 +102,7 @@ export type CalendarEventCompletion = {
 export type Profile = {
   name: string;
   email: string;
+  hasCompletedOnboarding: boolean;
 };
 
 export type Settings = {

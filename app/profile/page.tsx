@@ -29,7 +29,7 @@ export default function ProfilePage() {
     if (!validateEmail(email)) nextErrors.email = "Agregá un email válido.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    setProfile({ name: name.trim(), email: email.trim() });
+    setProfile({ ...profile, name: name.trim(), email: email.trim() });
     setSheetOpen(false);
     notify("Perfil actualizado");
   }

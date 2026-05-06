@@ -2,6 +2,7 @@
 @import "tailwindcss";
 
 :root {
+  --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --app-bg: #F9FAFB;
   --app-ink: #111827;
@@ -272,3 +273,16 @@ button { cursor: pointer; }
   .page-pad { padding-left: 18px; padding-right: 18px; }
   select, input { max-width: 100%; }
 }
+
+
+/* v2.18 — Welcome Onboarding UX */
+@keyframes welcomeCard {
+  0% { opacity: 0; transform: translateY(16px) scale(.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes welcomeImage {
+  0% { opacity: .72; transform: scale(1.018); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-welcomeCard { animation: welcomeCard .46s cubic-bezier(.2,.8,.2,1) both; }
+.animate-welcomeImage { animation: welcomeImage .42s cubic-bezier(.2,.8,.2,1) both; }

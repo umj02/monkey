@@ -1,4 +1,4 @@
-export type AssetCategory = "intro" | "hero" | "face" | "wallet" | "activity" | "calendar";
+export type AssetCategory = "intro" | "hero" | "face" | "wallet" | "activity" | "calendar" | "onboarding";
 
 export type AppAsset = {
   key: string;
@@ -7,6 +7,18 @@ export type AppAsset = {
   category: AssetCategory;
   group?: string;
 };
+
+
+export const onboardingAssets: AppAsset[] = [
+  { key: "onboarding-tu-dia", label: "Tu día", src: "/assets/onboarding/tu-dia-01.png", category: "onboarding" },
+  { key: "onboarding-actividades", label: "Actividades", src: "/assets/onboarding/actividades-02.png", category: "onboarding" },
+  { key: "onboarding-calendario", label: "Calendario", src: "/assets/onboarding/calendario-03.png", category: "onboarding" },
+  { key: "onboarding-alertas", label: "Alertas", src: "/assets/onboarding/alertas-04.png", category: "onboarding" },
+  { key: "onboarding-avances", label: "Avances", src: "/assets/onboarding/avances-05.png", category: "onboarding" },
+  { key: "onboarding-wallet", label: "Wallet", src: "/assets/onboarding/wallet-06.png", category: "onboarding" },
+  { key: "onboarding-medallas", label: "Medallas", src: "/assets/onboarding/medallas-07.png", category: "onboarding" },
+  { key: "onboarding-lograste", label: "Todo listo", src: "/assets/onboarding/lograste-08.png", category: "onboarding" },
+];
 
 export const introAssets: AppAsset[] = [
   { key: "intro-check", label: "Check", src: "/assets/monkey/intro/check.png", category: "intro" },
@@ -131,7 +143,7 @@ export const activityAssetGallery = monkeyActivityAssets;
 // Do not use todayQuickAssets/activityAssets/calendarActivityAssets in new pickers.
 export const legacyActivityAssets = [...todayQuickAssets, ...activityAssets, ...calendarActivityAssets];
 
-export const appAssets = [...introAssets, ...heroAssets, ...faceAssets, ...monkeyActivityAssets, ...legacyActivityAssets, ...walletAssets];
+export const appAssets = [...onboardingAssets, ...introAssets, ...heroAssets, ...faceAssets, ...monkeyActivityAssets, ...legacyActivityAssets, ...walletAssets];
 
 export function getAssetByKey(key?: string | null) {
   if (!key) return null;

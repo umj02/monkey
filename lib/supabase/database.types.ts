@@ -4,9 +4,9 @@ export type Database = {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; display_name: string | null; email: string | null; avatar_url: string | null; theme: string | null; created_at: string | null; updated_at: string | null };
-        Insert: { id: string; display_name?: string | null; email?: string | null; avatar_url?: string | null; theme?: string | null; created_at?: string | null; updated_at?: string | null };
-        Update: { id?: string; display_name?: string | null; email?: string | null; avatar_url?: string | null; theme?: string | null; created_at?: string | null; updated_at?: string | null };
+        Row: { id: string; display_name: string | null; email: string | null; avatar_url: string | null; theme: string | null; has_completed_onboarding: boolean | null; created_at: string | null; updated_at: string | null };
+        Insert: { id: string; display_name?: string | null; email?: string | null; avatar_url?: string | null; theme?: string | null; has_completed_onboarding?: boolean | null; created_at?: string | null; updated_at?: string | null };
+        Update: { id?: string; display_name?: string | null; email?: string | null; avatar_url?: string | null; theme?: string | null; has_completed_onboarding?: boolean | null; created_at?: string | null; updated_at?: string | null };
       };
       time_blocks: {
         Row: { id: string; user_id: string; block_date: string; start_time: string | null; title: string; color: string; icon: string | null; sort_order: number | null; created_at: string | null; updated_at: string | null };

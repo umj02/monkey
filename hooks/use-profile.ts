@@ -23,5 +23,7 @@ export function useProfile() {
     if (session && mode === "supabase") void upsertSupabaseProfile(session.userId, next);
   }
 
-  return { profile, setProfile, ready };
+  const normalizedProfile: Profile = { ...profile, hasCompletedOnboarding: profile.hasCompletedOnboarding ?? true };
+
+  return { profile: normalizedProfile, setProfile, ready };
 }

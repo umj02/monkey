@@ -1,28 +1,38 @@
-# Monkey Checks v2.17 — Budget Planned Expenses + Expense Detail UX
+# Monkey Checks v2.18 — Welcome Onboarding UX
 
-Base: v2.16.4 — Hobby Cron Safe Push Fix.
+Base: v2.17.1 — Planned Expenses Frequency UX Fix.
 
 ## Cambios principales
 
-- Wallet/Budget separa gastos en dos secciones: **Variables** y **Planificados**.
-- Los gastos variables usan categorías cerradas para evitar inventar categorías y mantener métricas limpias.
-- Los gastos planificados usan un selector de **Categoría** con opciones comunes: préstamos, casa, colegiatura, hipoteca, vehículo, salud, pases, peajes, remodelación, celular, internet, suscripciones, tarjetas, supermercado, ropa/zapatos, pólizas, marchamo y otros.
-- Los íconos de gastos planificados quedan previstos con los assets actuales; se pueden reemplazar por una galería específica más adelante.
-- Los gastos planificados tienen estado: pendiente, pagado o vencido.
-- Se puede marcar un gasto planificado como pagado. Al pagarlo, se crea un movimiento de gasto planificado en el historial.
-- Los gastos planificados se filtran por el mismo periodo de Wallet: mes, quincena o semana.
-- El historial ahora permite abrir el detalle de un movimiento con tap/click.
-- Desde el detalle se puede editar o eliminar un movimiento.
-- Los gastos planificados también tienen detalle, edición y eliminación.
-- El Consejo inteligente contempla gastos planificados pendientes/vencidos.
+- Nueva ruta `/welcome` con onboarding visual de 8 cards.
+- Las pantallas de onboarding usan los fondos entregados en `Pantallas.zip`.
+- El onboarding aparece automáticamente después del login cuando el usuario todavía no lo completó.
+- El primer card **Tu día** incluye botón **Omitir**, que marca la guía como vista y envía al usuario a `/today`.
+- La última pantalla usa **Ir a Hoy** y también marca la guía como completada.
+- En la vista **Hoy** se agregó botón de ayuda/learn para repasar la guía cuando el usuario quiera.
+- En **Configuración** se agregó acceso **Ver guía de uso**.
+- El carrusel soporta avanzar, regresar y swipe horizontal en móvil.
+- Se agregó estado persistente `profiles.has_completed_onboarding` para que la guía solo se muestre una vez a usuarios nuevos.
+- Usuarios existentes quedan marcados como onboarding completado en la migración para no forzarles la guía después del upgrade.
+
+## Cards incluidas
+
+1. Tu día en un solo lugar.
+2. Creá actividades rápidas.
+3. Planificá por horas.
+4. No se te olvida nada.
+5. Marcá avances.
+6. Controlá tu dinero.
+7. Ganate medallas.
+8. Todo listo.
 
 ## Migración nueva
 
 ```txt
-supabase/migrations/0013_v217_budget_planned_expenses.sql
+supabase/migrations/0014_v218_welcome_onboarding.sql
 ```
 
-Esta migración agrega campos a `wallet_transactions` y crea `wallet_planned_expenses`.
+Esta migración agrega `has_completed_onboarding` a `profiles`.
 
 ## QA recomendado
 
@@ -35,32 +45,41 @@ npm run build
 
 Probar:
 
-- Crear un gasto variable con categoría cerrada.
-- Abrir el detalle del movimiento, editarlo y eliminarlo.
-- Crear un gasto planificado con categoría cerrada.
-- Verlo en la pestaña Planificados.
-- Marcarlo como pagado.
-- Confirmar que aparece un movimiento en el historial como gasto planificado.
-- Cambiar entre Mes, Quincena y Semana para confirmar filtrado.
-- Refrescar y validar persistencia en Supabase.
+- Login con usuario nuevo → debe ir a `/welcome`.
+- En el primer card tocar **Omitir** → debe ir a `/today` y no volver a mostrar onboarding.
+- Completar las 8 cards → **Ir a Hoy** marca la guía como completada.
+- Cerrar sesión y volver a entrar → debe ir directo a `/today`.
+- En `/today` tocar el botón learn/ayuda → debe abrir `/welcome?review=1`.
+- En Configuración → **Ver guía de uso** abre el onboarding para repaso.
+- Validar swipe horizontal en móvil.
+
+## Migraciones acumuladas requeridas
+
+```txt
+0001_v25_full_schema.sql
+0002_v259_data_stability.sql
+0003_v210_calendar_end_time.sql
+0004_v2121_calendar_event_reminders.sql
+0005_v213_wallet_extra_period_filters.sql
+0006_v2135_calendar_recurrence.sql
+0007_v2136_calendar_done_today_sync.sql
+0008_v2137_calendar_event_completions.sql
+0009_v214_calendar_event_icon_key.sql
+0010_v215_recurring_overrides_activity_types.sql
+0011_v216_background_push_notifications.sql
+0012_v2161_reminder_upsert_fix.sql
+0013_v217_budget_planned_expenses.sql
+0014_v218_welcome_onboarding.sql
+```
 
 
-## v2.17.1 — Planned Expenses Frequency UX Fix
+## v2.18.2 — Register Onboarding Type Fix
 
-- El selector de frecuencia de gastos planificados ahora muestra etiquetas en español: Mensual, Quincenal, Semanal, Anual y Una sola vez.
-- La frecuencia sigue guardándose con valores técnicos estables (`monthly`, `biweekly`, `weekly`, `yearly`, `one_time`) para Supabase y métricas.
-- Los gastos planificados se reactivan por periodo: un pago mensual pagado en mayo vuelve a aparecer pendiente en junio.
-- Quincenal usa la fecha base y calcula la segunda quincena con +15 días, por ejemplo día 5 y día 20.
-- Semanal usa el día de la semana de la fecha base.
-- Anual usa la misma fecha cada año.
-- Una sola vez no se reactiva después de pagarse.
-- El formulario ahora explica cómo funciona la frecuencia seleccionada para evitar confusión.
-- La vista de detalle muestra el vencimiento correspondiente al periodo actual, no solo la fecha base original.
+- Corrige el typecheck de `app/register/page.tsx` agregando `hasCompletedOnboarding: false` al perfil creado en registro.
+- Si un registro local/mock crea sesión inmediata, redirige a `/welcome` para mantener el flujo de onboarding.
 
-### QA recomendado v2.17.1
 
-1. Crear un gasto planificado mensual con fecha base día 5.
-2. Marcarlo como pagado en el periodo actual y confirmar que aparece como pagado solo en ese periodo.
-3. Cambiar filtros Mes / Quincena / Semana y validar que los vencimientos se recalculan.
-4. Crear un gasto quincenal día 5 y verificar que en vista mensual se muestre como día 5 y día 20.
-5. Confirmar que el selector de frecuencia nunca muestra valores internos como `monthly` o `biweekly`.
+## v2.18.2 — Welcome Suspense Build Fix
+
+- Corrige el build de Next.js en `/welcome` envolviendo `useSearchParams` dentro de un `Suspense` boundary.
+- Mantiene el onboarding de 8 cards, botón Omitir, botón Learn en Hoy y acceso desde Settings.

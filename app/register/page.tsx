@@ -51,7 +51,7 @@ export default function RegisterPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    const profile = { name: name.trim(), email: email.trim() };
+    const profile = { name: name.trim(), email: email.trim(), hasCompletedOnboarding: false };
     setSubmitting(true);
     const result = await register({ name: profile.name, email: profile.email, password });
     setSubmitting(false);
@@ -85,7 +85,7 @@ export default function RegisterPage() {
     }
 
     setProfile(profile);
-    router.push("/today");
+    router.push("/welcome");
   }
 
   async function resendEmail() {
