@@ -73,13 +73,22 @@ Probar:
 ```
 
 
-## v2.18.2 — Register Onboarding Type Fix
+## v2.18.3 — Register Onboarding Type Fix
 
 - Corrige el typecheck de `app/register/page.tsx` agregando `hasCompletedOnboarding: false` al perfil creado en registro.
 - Si un registro local/mock crea sesión inmediata, redirige a `/welcome` para mantener el flujo de onboarding.
 
 
-## v2.18.2 — Welcome Suspense Build Fix
+## v2.18.3 — Welcome Suspense Build Fix
 
 - Corrige el build de Next.js en `/welcome` envolviendo `useSearchParams` dentro de un `Suspense` boundary.
 - Mantiene el onboarding de 8 cards, botón Omitir, botón Learn en Hoy y acceso desde Settings.
+
+
+## v2.18.3 — Welcome Overlay Copy Polish
+
+- Onboarding renderiza textos, dots y botones reales sobre los fondos visuales.
+- Se mantiene el diseño de las 8 pantallas de bienvenida, pero ya no depende de que los textos estén incrustados en la imagen.
+- Botón “Omitir guía” en el primer card.
+- Botones Atrás/Siguiente/Ir a Hoy reales, accesibles y animados.
+- Conserva swipe móvil, review desde Hoy y acceso desde Settings.
