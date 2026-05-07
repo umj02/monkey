@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   CheckSquare2,
+  ClipboardList,
   Flame,
   PiggyBank,
   Plus,
@@ -462,6 +463,21 @@ export default function AnalyticsPage() {
             <SourceRow label="Hoy" value={`${summary.taskTotal} checks`} status={tasksSyncing ? "Actualizando" : "OK"} />
             <SourceRow label="Calendario" value={`${summary.calendarTotal} actividades`} status={calendarError ? "Revisar" : calendarSyncing ? "Actualizando" : "OK"} />
             <SourceRow label="Wallet" value={`${walletTransactionsInRange.length} movimientos`} status={walletError ? "Revisar" : walletSyncing ? "Actualizando" : "OK"} />
+          </div>
+        </section>
+
+
+
+        <section className="mt-6 rounded-[28px] border border-monkey-green/20 bg-green-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><ClipboardList className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-black">Resumen semanal</h2>
+              <p className="text-xs font-bold text-monkey-muted">Reporte de 7 días con checks, calendario, wallet y logros.</p>
+            </div>
+            <Link href="/weekly-summary" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-card transition active:scale-95">
+              Ver
+            </Link>
           </div>
         </section>
 

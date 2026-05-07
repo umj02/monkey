@@ -393,7 +393,7 @@ Pruebas manuales:
 6. Desbloquear varios logros en una acción y confirmar que se agrupan en una sola notificación.
 
 
-## v2.22.1 — Reward Moment UX Polish + Mobile QA
+## v2.23.0 — Reward Moment UX Polish + Mobile QA
 - Integra assets dedicados de trofeo y medallas oro/plata/bronce.
 - Usa ilustraciones del mono para reward moments según tier.
 - Ajusta el momento de recompensa para móvil con overlay, CTA más claros y cierre manual.
