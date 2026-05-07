@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchAchievementUnlocks, upsertAchievementUnlocks } from "@/lib/services/supabase-data-service";
 import { mergePersistentAchievementUnlocks, type AchievementResult, type PersistentAchievementUnlock } from "@/lib/achievements";
@@ -106,6 +106,8 @@ export function usePersistentAchievements(result: AchievementResult) {
     };
   }, []);
 
+  const clearRecentUnlocks = useCallback(() => setRecentUnlockIds([]), []);
+
   return {
     result: merged,
     persistedUnlocks: persisted,
@@ -113,7 +115,7 @@ export function usePersistentAchievements(result: AchievementResult) {
     lastError,
     recentUnlockIds,
     lastSyncedAt,
-    clearRecentUnlocks: () => setRecentUnlockIds([]),
+    clearRecentUnlocks,
     isPersistent: Boolean(session && mode === "supabase"),
   };
 }

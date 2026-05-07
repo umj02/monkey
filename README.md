@@ -357,3 +357,37 @@ Validación funcional sugerida:
 4. Recargar la página.
 5. Confirmar que la medalla sigue guardada, pero no vuelve a animarse como nueva.
 6. Revisar `achievement_unlocks` y confirmar que no se duplican registros por usuario/logro.
+
+
+## v2.22 — Achievement Notifications + Reward Moment Polish
+
+Base: v2.21.1 — Achievement Sync Polish + Unlock Feedback.
+
+Incluye:
+
+- Nuevo motor global `AchievementRewardEngine` montado dentro de `AppShell`.
+- Feedback visual de logro desbloqueado desde pantallas protegidas como Hoy, Calendario, Wallet, Analítica, Perfil y Settings.
+- Evita duplicar el feedback dentro de `/achievements`, donde ya existe el banner propio de medallas.
+- Agrupa varios logros desbloqueados juntos para evitar spam visual.
+- Auto-cierre con barra de tiempo de 7.2s.
+- Botones rápidos hacia `/achievements` y `/analytics`.
+- Respeta la persistencia de v2.21: las medallas ya guardadas no se vuelven a mostrar como nuevas al recargar.
+- Sin migraciones nuevas; reutiliza `achievement_unlocks`.
+
+QA recomendado:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas manuales:
+
+1. Iniciar sesión con usuario real de Supabase.
+2. Desbloquear un logro desde Hoy o Calendario.
+3. Confirmar que aparece el reward moment global.
+4. Refrescar la app y confirmar que el mismo logro no se anima otra vez.
+5. Ir a `/achievements` y confirmar fecha/estado persistido.
+6. Desbloquear varios logros en una acción y confirmar que se agrupan en una sola notificación.

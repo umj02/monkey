@@ -6,6 +6,7 @@ import { BottomNav } from "./bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { BrowserAlertEngine } from "@/components/browser-alert-engine";
+import { AchievementRewardEngine } from "@/components/achievement-reward-engine";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -68,6 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <main className="app-screen pb-[calc(96px+var(--safe-bottom))]">
       {children}
       <BrowserAlertEngine />
+      <AchievementRewardEngine />
       <BottomNav />
     </main>
   );

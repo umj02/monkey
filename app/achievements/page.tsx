@@ -466,7 +466,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.21.1, cuando una medalla se desbloquea se guarda una sola vez en Supabase, conserva su fecha original y solo las nuevas muestran feedback visual.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22, cuando una medalla se desbloquea se guarda una sola vez en Supabase y también puede mostrar un momento de recompensa desde Hoy, Calendario, Wallet o Analítica sin repetir animaciones al recargar.
           </p>
         </div>
       </div>

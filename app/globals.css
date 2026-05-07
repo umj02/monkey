@@ -325,3 +325,12 @@ button { cursor: pointer; }
   .animate-welcomeDotPop,
   .animate-welcomeCard { animation: none !important; }
 }
+
+@keyframes monkeyRewardTimer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.reward-timer {
+  animation: monkeyRewardTimer 7.2s linear forwards;
+}
