@@ -9,9 +9,12 @@ import {
   BarChart3,
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Flame,
+  HelpCircle,
   Lock,
   Medal,
+  PartyPopper,
   PiggyBank,
   Repeat2,
   Sparkles,
@@ -37,6 +40,13 @@ const groupLabels: Record<AchievementGroup, string> = {
   calendar: "Calendario",
   wallet: "Wallet",
   growth: "Crecimiento",
+};
+
+const groupHints: Record<AchievementGroup, string> = {
+  daily: "Checks, tareas y avance de tu día.",
+  calendar: "Actividades planeadas y completadas.",
+  wallet: "Movimientos, metas y presupuesto.",
+  growth: "Rachas, rutinas y hábitos constantes.",
 };
 
 const tierLabels: Record<AchievementTier, string> = {
@@ -92,6 +102,7 @@ export default function AchievementsPage() {
     total: result.achievements.filter((achievement) => achievement.group === group).length,
     done: result.achievements.filter((achievement) => achievement.group === group && achievement.unlocked).length,
   }));
+  const hasAnyActivity = result.stats.totalTasks > 0 || result.stats.totalCalendarEvents > 0 || result.stats.totalWalletTransactions > 0 || profile.hasCompletedOnboarding;
 
   return (
     <AppShell>
@@ -109,7 +120,7 @@ export default function AchievementsPage() {
           </div>
         </header>
 
-        <section className="mt-5 overflow-hidden rounded-[30px] bg-gradient-to-br from-monkey-purple via-monkey-greenDark to-monkey-green p-5 text-white shadow-soft">
+        <section className="mt-5 overflow-hidden rounded-[32px] bg-gradient-to-br from-monkey-purple via-monkey-greenDark to-monkey-green p-5 text-white shadow-soft">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-bold text-white/80">Progreso de medallas</p>
@@ -123,57 +134,99 @@ export default function AchievementsPage() {
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/25" aria-label={`Progreso ${result.completion}%`}>
             <div className="h-full rounded-full bg-white transition-all" style={{ width: `${result.completion}%` }} />
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-black">
-            <span className="rounded-full bg-white/20 px-3 py-1.5">{syncing ? "Actualizando…" : "Sincronizado"}</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">Racha {result.stats.streak} días</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">{result.stats.activeDays} días activos</span>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
+            <MiniStat label="Estado" value={syncing ? "Actualizando" : "Listo"} />
+            <MiniStat label="Racha" value={`${result.stats.streak} días`} />
+            <MiniStat label="Activos" value={`${result.stats.activeDays} días`} />
           </div>
         </section>
 
-        {result.nextAchievement ? <NextAchievementCard achievement={result.nextAchievement} /> : <AllDoneCard />}
+        {!hasAnyActivity ? <StarterEmptyState /> : null}
+        {hasAnyActivity && result.nextAchievement ? <NextAchievementCard achievement={result.nextAchievement} /> : null}
+        {hasAnyActivity && !result.nextAchievement ? <AllDoneCard /> : null}
 
         <section className="mt-5 grid grid-cols-2 gap-3">
           {groups.map(({ group, done, total }) => (
-            <article key={group} className="rounded-card bg-white p-4 shadow-card">
-              <p className="text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">{groupLabels[group]}</p>
-              <p className="mt-1 text-2xl font-black">{done}/{total}</p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
-                <div className="h-full rounded-full bg-monkey-green" style={{ width: `${total ? Math.round((done / total) * 100) : 0}%` }} />
-              </div>
-            </article>
+            <GroupProgressCard key={group} group={group} done={done} total={total} />
           ))}
         </section>
 
-        <div className="mt-5 grid grid-cols-3 rounded-[22px] bg-gray-100 p-1 text-sm font-black" role="tablist" aria-label="Filtro de logros">
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")} label="Todos" />
-          <FilterButton active={filter === "unlocked"} onClick={() => setFilter("unlocked")} label="Ganados" />
-          <FilterButton active={filter === "locked"} onClick={() => setFilter("locked")} label="Próximos" />
-        </div>
-
-        <section className="mt-5 grid gap-3">
-          {visibleAchievements.map((achievement) => <AchievementCard key={achievement.id} achievement={achievement} />)}
-        </section>
-
-        <section className="mt-6 rounded-[28px] border border-monkey-green/15 bg-white p-4 shadow-card">
-          <div className="flex items-start gap-3">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-green-50 text-monkey-greenDark">
-              <BarChart3 className="h-5 w-5" />
+        <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-black">Explorar medallas</h2>
+              <p className="text-xs font-bold text-monkey-muted">Filtrá para ver lo ganado o lo que sigue.</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base font-black">Cómo se calculan</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-                Esta primera base no crea tablas nuevas: las medallas se calculan con tus tareas, calendario, completions, onboarding y Wallet. Más adelante se pueden persistir en Supabase si queremos historial exacto de fecha de desbloqueo.
-              </p>
-            </div>
+            <span className="rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-black text-monkey-muted">{visibleAchievements.length} visibles</span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 rounded-[22px] bg-gray-100 p-1 text-sm font-black" role="tablist" aria-label="Filtro de logros">
+            <FilterButton active={filter === "all"} onClick={() => setFilter("all")} label="Todos" count={result.totalCount} />
+            <FilterButton active={filter === "unlocked"} onClick={() => setFilter("unlocked")} label="Ganados" count={result.unlockedCount} />
+            <FilterButton active={filter === "locked"} onClick={() => setFilter("locked")} label="Próximos" count={result.totalCount - result.unlockedCount} />
           </div>
         </section>
+
+        {visibleAchievements.length ? (
+          <section className="mt-5 grid gap-3">
+            {visibleAchievements.map((achievement) => <AchievementCard key={achievement.id} achievement={achievement} />)}
+          </section>
+        ) : (
+          <FilterEmptyState filter={filter} />
+        )}
+
+        <TipsSection />
+        <SourcesSection />
       </section>
     </AppShell>
   );
 }
 
-function FilterButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return <button type="button" onClick={onClick} className={cn("h-11 rounded-[18px] transition active:scale-[.99]", active ? "bg-white text-monkey-green shadow-card" : "text-monkey-muted")} aria-pressed={active}>{label}</button>;
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[18px] bg-white/15 px-2 py-2 backdrop-blur">
+      <p className="text-[10px] uppercase tracking-[.08em] text-white/70">{label}</p>
+      <p className="mt-0.5 truncate text-xs text-white">{value}</p>
+    </div>
+  );
+}
+
+function FilterButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("flex h-11 items-center justify-center gap-1 rounded-[18px] transition active:scale-[.99]", active ? "bg-white text-monkey-green shadow-card" : "text-monkey-muted")} aria-pressed={active}>
+      <span>{label}</span>
+      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px]", active ? "bg-green-50" : "bg-white/80")}>{count}</span>
+    </button>
+  );
+}
+
+function StarterEmptyState() {
+  return (
+    <section className="mt-5 rounded-[30px] border border-dashed border-monkey-green/35 bg-green-50/70 p-5">
+      <div className="flex items-start gap-4">
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[22px] bg-white shadow-card">
+          <MonkeyAvatar size={40} variant="face" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">Primeros pasos</p>
+          <h2 className="mt-1 text-lg font-black">Tus medallas se activan cuando empezás a usar la app</h2>
+          <p className="mt-1 text-sm font-bold leading-relaxed text-monkey-muted">Creá una tarea, planeá una actividad o registrá un movimiento para que Monkey Checks empiece a calcular tus logros.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <QuickLink href="/today" label="Crear tarea" />
+            <QuickLink href="/calendar" label="Planear día" />
+            <QuickLink href="/wallet" label="Abrir Wallet" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuickLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="flex h-11 items-center justify-between rounded-[18px] bg-white px-3 text-xs font-black text-monkey-greenDark shadow-card transition active:scale-[.98]">
+      {label}<ChevronRight className="h-4 w-4" />
+    </Link>
+  );
 }
 
 function NextAchievementCard({ achievement }: { achievement: Achievement }) {
@@ -187,8 +240,11 @@ function NextAchievementCard({ achievement }: { achievement: Achievement }) {
           <p className="text-[11px] font-black uppercase tracking-[.08em] text-orange-700">Próximo logro</p>
           <h2 className="mt-1 text-base font-black">{achievement.title}</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{achievement.helper}</p>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-            <div className="h-full rounded-full bg-monkey-yellow" style={{ width: `${achievement.progress}%` }} />
+          <div className="mt-3 flex items-center gap-2">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+              <div className="h-full rounded-full bg-monkey-yellow" style={{ width: `${achievement.progress}%` }} />
+            </div>
+            <span className="text-xs font-black text-orange-700">{achievement.progress}%</span>
           </div>
         </div>
       </div>
@@ -200,40 +256,122 @@ function AllDoneCard() {
   return (
     <section className="mt-5 rounded-[28px] bg-green-50 p-4 text-monkey-greenDark">
       <div className="flex items-center gap-3">
-        <BadgeCheck className="h-7 w-7" />
+        <PartyPopper className="h-7 w-7" />
         <div>
           <h2 className="text-base font-black">¡Tablero completo!</h2>
-          <p className="text-xs font-bold opacity-80">Ya desbloqueaste todas las medallas base.</p>
+          <p className="text-xs font-bold opacity-80">Ya desbloqueaste todas las medallas base. La próxima etapa puede guardar historial en Supabase.</p>
         </div>
       </div>
     </section>
   );
 }
 
-function AchievementCard({ achievement }: { achievement: Achievement }) {
+function GroupProgressCard({ group, done, total }: { group: AchievementGroup; done: number; total: number }) {
+  const value = total ? Math.round((done / total) * 100) : 0;
   return (
-    <article className={cn("rounded-[26px] border p-4 shadow-card", achievement.unlocked ? "border-monkey-green/15 bg-white" : "border-gray-100 bg-gray-50")}> 
-      <div className="flex items-center gap-3">
-        <div className={cn("grid h-14 w-14 shrink-0 place-items-center rounded-[22px]", achievement.unlocked ? "bg-green-50 text-monkey-greenDark" : "bg-white text-monkey-muted")}> 
-          {achievement.unlocked ? achievementIcon(achievement.icon, "h-6 w-6") : <Lock className="h-5 w-5" />}
+    <article className="rounded-card bg-white p-4 shadow-card">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[.08em] text-monkey-muted">{groupLabels[group]}</p>
+          <p className="mt-1 text-2xl font-black">{done}/{total}</p>
+        </div>
+        <span className="rounded-full bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-greenDark">{value}%</span>
+      </div>
+      <p className="mt-2 min-h-8 text-[11px] font-bold leading-snug text-monkey-muted">{groupHints[group]}</p>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full bg-monkey-green" style={{ width: `${value}%` }} />
+      </div>
+    </article>
+  );
+}
+
+function AchievementCard({ achievement }: { achievement: Achievement }) {
+  const unlocked = achievement.unlocked;
+  return (
+    <article className={cn("rounded-[26px] border p-4 shadow-card transition", unlocked ? "border-monkey-green/15 bg-white" : "border-gray-100 bg-gray-50")}> 
+      <div className="flex items-start gap-3">
+        <div className={cn("grid h-14 w-14 shrink-0 place-items-center rounded-[22px]", unlocked ? "bg-green-50 text-monkey-greenDark" : "bg-white text-monkey-muted")}> 
+          {unlocked ? achievementIcon(achievement.icon, "h-6 w-6") : <Lock className="h-5 w-5" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-black">{achievement.title}</h3>
-            {achievement.unlocked ? <BadgeCheck className="h-4 w-4 shrink-0 text-monkey-green" /> : null}
+            {unlocked ? <BadgeCheck className="h-4 w-4 shrink-0 text-monkey-green" /> : null}
           </div>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{achievement.description}</p>
+          {!unlocked ? <p className="mt-2 rounded-[16px] bg-white px-3 py-2 text-[11px] font-bold leading-snug text-monkey-muted">{achievement.helper}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{groupLabels[achievement.group]}</span>
             <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black", tierClass(achievement.tier))}>{tierLabels[achievement.tier]}</span>
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{achievement.progress}%</span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-            <div className={cn("h-full rounded-full", achievement.unlocked ? "bg-monkey-green" : "bg-gray-300")} style={{ width: `${achievement.progress}%` }} />
+            <div className={cn("h-full rounded-full", unlocked ? "bg-monkey-green" : "bg-gray-300")} style={{ width: `${achievement.progress}%` }} />
           </div>
         </div>
       </div>
     </article>
+  );
+}
+
+function FilterEmptyState({ filter }: { filter: FilterMode }) {
+  const copy = filter === "unlocked"
+    ? { title: "Todavía no hay medallas ganadas", body: "Completá tu primer check para desbloquear la primera medalla." }
+    : { title: "No hay medallas en este filtro", body: "Probá con Todos para ver el tablero completo." };
+  return (
+    <section className="mt-5 rounded-[28px] bg-white p-5 text-center shadow-card">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-[22px] bg-gray-50 text-monkey-muted">
+        <HelpCircle className="h-6 w-6" />
+      </div>
+      <h2 className="mt-3 text-base font-black">{copy.title}</h2>
+      <p className="mx-auto mt-1 max-w-[260px] text-sm font-bold leading-relaxed text-monkey-muted">{copy.body}</p>
+    </section>
+  );
+}
+
+function TipsSection() {
+  const tips = [
+    { title: "Para ganar rápido", body: "Marcá una tarea como lista en Hoy.", href: "/today", label: "Ir a Hoy", icon: CheckCircle2 },
+    { title: "Para crear rutina", body: "Repetí una actividad 3 veces en calendario.", href: "/calendar", label: "Abrir calendario", icon: Repeat2 },
+    { title: "Para Wallet", body: "Registrá un movimiento o creá una meta.", href: "/wallet", label: "Abrir Wallet", icon: WalletCards },
+  ];
+  return (
+    <section className="mt-6 rounded-[28px] bg-white p-4 shadow-card">
+      <h2 className="text-base font-black">Cómo desbloquear más</h2>
+      <div className="mt-3 grid gap-3">
+        {tips.map((tip) => (
+          <Link key={tip.title} href={tip.href} className="flex items-center gap-3 rounded-[22px] bg-gray-50 p-3 transition active:scale-[.99]">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[18px] bg-white text-monkey-greenDark shadow-sm">
+              <tip.icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-black">{tip.title}</h3>
+              <p className="text-xs font-bold text-monkey-muted">{tip.body}</p>
+            </div>
+            <span className="hidden text-[11px] font-black text-monkey-green sm:inline">{tip.label}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-monkey-muted" />
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SourcesSection() {
+  return (
+    <section className="mt-6 rounded-[28px] border border-monkey-green/15 bg-white p-4 shadow-card">
+      <div className="flex items-start gap-3">
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-green-50 text-monkey-greenDark">
+          <BarChart3 className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-black">Cómo se calculan</h2>
+          <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
+            En esta etapa no se crean tablas nuevas: las medallas se calculan con tus tareas, calendario, completions, onboarding y Wallet. Más adelante se pueden persistir en Supabase para guardar fecha exacta de desbloqueo.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 

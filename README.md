@@ -231,7 +231,7 @@ Probar en `/analytics`:
 - Cambiar Semana/Mes sin perder layout ni romper scroll móvil.
 
 
-## v2.20 — Achievements + Badges Foundation
+## v2.20.1 — Achievements UX Polish + Empty States
 
 Base validada: `v2.19.2 — Analytics UX Polish + Empty States`.
 
@@ -273,3 +273,30 @@ Validar manualmente:
 - Filtros no rompen layout mobile.
 - `/analytics` muestra conteo real de logros.
 - Perfil y Settings enlazan correctamente a Logros.
+
+
+## v2.20.1 — Achievements UX Polish + Empty States
+
+Base: v2.20.0 validada.
+
+Cambios principales:
+
+- Pulido visual completo de `/achievements`.
+- Empty state inicial para usuarios sin datos.
+- Empty state por filtro cuando no hay medallas ganadas o próximas visibles.
+- Conteos visibles en filtros Todos / Ganados / Próximos.
+- Cards de grupo con descripción breve para Hoy, Calendario, Wallet y Crecimiento.
+- Card de próximo logro con porcentaje explícito.
+- Tips accionables para desbloquear medallas desde Hoy, Calendario y Wallet.
+- Mensajes más humanos para medallas bloqueadas.
+- Versión visible actualizada a 2.20.1.
+- Sin migraciones nuevas de Supabase.
+
+Validación recomendada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
