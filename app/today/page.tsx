@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bell, BellOff, BookOpen, CalendarDays, Check, Plus, RefreshCw } from "lucide-react";
+import { BarChart3, Bell, BellOff, BookOpen, CalendarDays, Check, Plus, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { ProgressCard } from "@/components/progress-card";
@@ -494,6 +494,7 @@ export default function TodayPage() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Link href="/analytics" className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-card transition active:scale-95" aria-label="Ver analítica"><BarChart3 className="h-4 w-4 text-monkey-purple" /></Link>
             <Link href="/welcome?review=1" className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-card transition active:scale-95" aria-label="Guía de uso de Monkey Checks"><BookOpen className="h-4 w-4 text-monkey-green" /></Link>
             <button type="button" onClick={refreshToday} className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-card transition active:scale-95" aria-label="Actualizar Hoy"><RefreshCw className="h-4 w-4 text-monkey-muted" /></button>
             <Link href="/calendar" className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-card transition active:scale-95" aria-label="Ir al calendario"><CalendarDays className="h-5 w-5 text-monkey-muted" /></Link>

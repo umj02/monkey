@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronRight, Lock, LogOut, Palette, Pencil } from "lucide-react";
+import { BarChart3, Bell, ChevronRight, Lock, LogOut, Palette, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const rows = [
     { label: "Editar información", icon: Pencil, action: openEdit },
     { label: "Cambiar contraseña", icon: Lock, action: () => notify("Función lista para activar recuperación con Supabase Auth") },
+    { label: "Analítica", icon: BarChart3, href: "/analytics" },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
     { label: "Tema", icon: Palette, href: "/settings" },
     { label: session ? "Cerrar sesión" : "Sesión inactiva", icon: LogOut, action: () => { logout(); notify("Sesión cerrada"); } }

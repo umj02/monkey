@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -30,14 +32,15 @@ export default function SettingsPage() {
             <h2 className="mb-2 text-sm font-black">General</h2>
             <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}>
               <button className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Idioma</span><span className="text-monkey-muted">Español ›</span></button>
-              <a href="/welcome?review=1" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Ver guía de uso</span><span className="text-monkey-muted">Aprender ›</span></a>
+              <Link href="/analytics" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-monkey-purple" /> Analítica</span><span className="text-monkey-muted">Ver avances ›</span></Link>
+              <Link href="/welcome?review=1" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Ver guía de uso</span><span className="text-monkey-muted">Aprender ›</span></Link>
               <div className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Sonidos</span><Toggle on={settings.sounds} onClick={() => setSettings((value) => ({ ...value, sounds: !value.sounds }))} /></div>
               <div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Sincronización</span><Toggle on={settings.sync} onClick={() => setSettings((value) => ({ ...value, sync: !value.sync }))} /></div>
             </div>
           </section>
           <section>
             <h2 className="mb-2 text-sm font-black">Acerca de</h2>
-            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.18.0</span></div></div>
+            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.19.1</span></div></div>
           </section>
         </div>
       </section>

@@ -140,3 +140,51 @@ Probar:
 - Aumenta ligeramente el visual de fondo sin cambiar el alto del card.
 - Reduce y compacta copy para separar mejor texto, imagen y botones.
 - Mantiene la lógica de onboarding de v2.18.x sin migraciones nuevas.
+
+## v2.19.1 — Analytics Foundation Regenerada Full Pro
+
+Base validada: `v2.18.8 — Welcome Visual Scale + Playful Motion Polish`.
+
+Esta versión regenera la capa de analítica desde una base limpia, sin reutilizar el ZIP v2.19/v2.19.1 anterior.
+
+### Incluye
+
+- Nueva ruta protegida `/analytics` dentro de `AppShell`.
+- Acceso a Analítica desde:
+  - Hoy.
+  - Perfil.
+  - Configuración.
+- Selector Semana / Mes.
+- Resumen de cumplimiento general.
+- Conteo de actividades completadas vs. total.
+- Días activos.
+- Racha de días con actividad completada.
+- Métricas combinadas de:
+  - tareas de Hoy,
+  - calendario,
+  - completions de calendario,
+  - Wallet/Budget.
+- Actividades por tipo usando `AssetThumb` correctamente con `icon`.
+- Rutinas constantes por repetición de actividad.
+- Resumen financiero de Wallet:
+  - ingresos,
+  - extras,
+  - gastos,
+  - ahorros,
+  - uso de presupuesto,
+  - meta principal.
+- Card futura para Logros y Medallas.
+- Versión visible en Settings actualizada a `2.19.1`.
+
+### Validación recomendada
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+### Nota técnica
+
+No se agregan migraciones nuevas en esta versión. Analytics consume información existente de tareas, calendario, completions y Wallet.
