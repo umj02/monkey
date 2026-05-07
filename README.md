@@ -393,8 +393,17 @@ Pruebas manuales:
 6. Desbloquear varios logros en una acción y confirmar que se agrupan en una sola notificación.
 
 
-## v2.23.0 — Reward Moment UX Polish + Mobile QA
+## v2.24.0 — Reward Moment UX Polish + Mobile QA
 - Integra assets dedicados de trofeo y medallas oro/plata/bronce.
 - Usa ilustraciones del mono para reward moments según tier.
 - Ajusta el momento de recompensa para móvil con overlay, CTA más claros y cierre manual.
 - Mejora tarjetas de logros y el resumen de analítica con iconografía visual de logros.
+
+
+## v2.24 — Parent/Guardian View + Shared Progress
+- Nueva ruta `/guardian-share`.
+- Genera una vista segura de solo lectura para padre/madre/encargado.
+- Comparte snapshot de progreso semanal sin datos de login ni capacidad de edición.
+- Permite controlar alias visible y si se incluye o no el resumen Wallet.
+- Integra acceso desde Perfil, Configuración, Analítica y Resumen semanal.
+- No requiere migración nueva de Supabase.

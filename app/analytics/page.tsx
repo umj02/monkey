@@ -15,6 +15,7 @@ import {
   PiggyBank,
   Plus,
   Sparkles,
+  ShieldCheck,
   Target,
   Trophy,
   WalletCards,
@@ -477,6 +478,21 @@ export default function AnalyticsPage() {
             </div>
             <Link href="/weekly-summary" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-card transition active:scale-95">
               Ver
+            </Link>
+          </div>
+        </section>
+
+
+
+        <section className="mt-6 rounded-[28px] border border-monkey-green/20 bg-green-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><ShieldCheck className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-black">Vista encargado</h2>
+              <p className="text-xs font-bold text-monkey-muted">Compartí una vista segura de solo lectura con progreso semanal.</p>
+            </div>
+            <Link href="/guardian-share" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-card transition active:scale-95">
+              Compartir
             </Link>
           </div>
         </section>

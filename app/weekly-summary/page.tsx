@@ -10,6 +10,7 @@ import {
   Flame,
   PiggyBank,
   Sparkles,
+  ShieldCheck,
   Trophy,
   WalletCards,
 } from "lucide-react";
@@ -246,7 +247,7 @@ export default function WeeklySummaryPage() {
         <section className="mt-6 rounded-[28px] border border-monkey-green/15 bg-green-50 p-4">
           <div className="flex items-start gap-3">
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card">
-              <PiggyBank className="h-5 w-5" />
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Siguiente enfoque</h2>
@@ -256,7 +257,7 @@ export default function WeeklySummaryPage() {
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-black text-monkey-greenDark">
                 <QuickLink href="/today" label="Hoy" />
                 <QuickLink href="/calendar" label="Calendario" />
-                <QuickLink href="/analytics" label="Analítica" />
+                <QuickLink href="/guardian-share" label="Compartir" />
               </div>
             </div>
           </div>
