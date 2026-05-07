@@ -188,3 +188,44 @@ npm run build
 ### Nota técnica
 
 No se agregan migraciones nuevas en esta versión. Analytics consume información existente de tareas, calendario, completions y Wallet.
+
+## v2.19.2 — Analytics UX Polish + Empty States
+
+Base validada: `v2.19.1 — Analytics Foundation Regenerada Full Pro`.
+
+### Incluye
+
+- Pulido UX/UI completo de `/analytics` sin cambiar Supabase ni migraciones.
+- Empty states reales para:
+  - primer reporte sin datos,
+  - ritmo por día,
+  - actividades por tipo,
+  - rutinas constantes,
+  - Wallet/Budget.
+- CTAs contextuales hacia Hoy, Calendario y Wallet cuando no hay información suficiente.
+- Nuevas tarjetas de insight:
+  - mejor día,
+  - actividad top,
+  - balance del período.
+- Banner de sincronización/error más claro.
+- Bloque “Fuentes del reporte” para explicar de dónde salen los números.
+- Selector Semana/Mes con `aria-pressed` para accesibilidad.
+- Versión visible en Settings actualizada a `2.19.2`.
+- No agrega migraciones nuevas.
+
+### QA recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Probar en `/analytics`:
+
+- Usuario sin datos: debe mostrar empty states y CTAs.
+- Usuario con tareas de Hoy completadas: debe mostrar porcentaje, ritmo por día y actividades por tipo.
+- Usuario con eventos de calendario completados: debe sumarlos al reporte.
+- Usuario con Wallet/Budget: debe mostrar resumen financiero y balance.
+- Cambiar Semana/Mes sin perder layout ni romper scroll móvil.
