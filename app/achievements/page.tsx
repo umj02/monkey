@@ -13,7 +13,6 @@ import {
   Flame,
   HelpCircle,
   Lock,
-  Medal,
   PartyPopper,
   PiggyBank,
   Repeat2,
@@ -21,9 +20,11 @@ import {
   Target,
   Trophy,
   WalletCards,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
+import { getRewardCelebrationArt, getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useProfile } from "@/hooks/use-profile";
@@ -130,7 +131,7 @@ export default function AchievementsPage() {
             <h1 className="text-2xl font-black tracking-tight">Mis medallas</h1>
           </div>
           <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white shadow-card">
-            <Medal className="h-6 w-6 text-monkey-yellow" />
+            <img src={getRewardTrophyIcon()} alt="Trofeo" className="h-8 w-8 object-contain" />
           </div>
         </header>
 
@@ -142,7 +143,7 @@ export default function AchievementsPage() {
               <p className="mt-2 text-sm font-bold text-white/85">{result.completion}% del tablero desbloqueado</p>
             </div>
             <div className="rounded-[24px] bg-white/20 p-3 backdrop-blur">
-              <Trophy className="h-8 w-8" />
+              <img src={getRewardTrophyIcon()} alt="Trofeo de logros" className="h-10 w-10 object-contain" />
             </div>
           </div>
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/25" aria-label={`Progreso ${result.completion}%`}>
@@ -250,17 +251,27 @@ function formatSyncTime(value?: string | null) {
 }
 
 function UnlockFeedbackBanner({ achievements, onClose }: { achievements: Achievement[]; onClose: () => void }) {
+  const primary = achievements[0];
   const title = achievements.length === 1 ? achievements[0]?.title : `${achievements.length} medallas nuevas`;
+  const tier = primary?.tier ?? "bronze";
   return (
     <section className="mt-5 overflow-hidden rounded-[30px] border border-monkey-yellow/40 bg-gradient-to-br from-yellow-50 via-white to-green-50 p-4 shadow-card">
-      <div className="flex items-start gap-3">
-        <div className="grid h-14 w-14 shrink-0 animate-bounce place-items-center rounded-[22px] bg-monkey-yellow text-orange-800 shadow-card">
-          <PartyPopper className="h-6 w-6" />
-        </div>
+      <div className="flex items-end gap-3">
+        <img src={getRewardCelebrationArt(tier)} alt="Mono celebrando" className="hidden h-28 w-24 shrink-0 object-contain sm:block" />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Logro desbloqueado</p>
-          <h2 className="mt-1 text-lg font-black">{title}</h2>
-          <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Se guardó en tu historial y no se volverá a animar como nuevo cuando recargués.</p>
+          <div className="flex items-start gap-3">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[22px] bg-white shadow-card">
+              <img src={getRewardMedalIcon(tier)} alt="Medalla desbloqueada" className="h-10 w-10 object-contain" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Desbloqueada ahora</p>
+              <h2 className="mt-1 text-lg font-black">{title}</h2>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Tus medallas nuevas ya se guardan y este banner solo aparece para desbloqueos recientes.</p>
+            </div>
+            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-white text-monkey-muted shadow-sm transition active:scale-95" aria-label="Cerrar banner de logro">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {achievements.slice(0, 3).map((achievement) => (
               <span key={achievement.id} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-monkey-greenDark shadow-sm">
@@ -269,9 +280,6 @@ function UnlockFeedbackBanner({ achievements, onClose }: { achievements: Achieve
             ))}
           </div>
         </div>
-        <button type="button" onClick={onClose} className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-muted shadow-sm transition active:scale-95">
-          OK
-        </button>
       </div>
     </section>
   );
@@ -329,8 +337,8 @@ function NextAchievementCard({ achievement }: { achievement: Achievement }) {
   return (
     <section className="mt-5 rounded-[28px] border border-monkey-yellow/30 bg-yellow-50 p-4">
       <div className="flex items-start gap-3">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white text-orange-700 shadow-card">
-          {achievementIcon(achievement.icon)}
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[22px] bg-white shadow-card">
+          <img src={getRewardMedalIcon(achievement.tier)} alt={`Medalla ${tierLabels[achievement.tier]}`} className="h-10 w-10 object-contain" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-black uppercase tracking-[.08em] text-orange-700">Próximo logro</p>
@@ -352,7 +360,7 @@ function AllDoneCard() {
   return (
     <section className="mt-5 rounded-[28px] bg-green-50 p-4 text-monkey-greenDark">
       <div className="flex items-center gap-3">
-        <PartyPopper className="h-7 w-7" />
+        <img src={getRewardTrophyIcon()} alt="Trofeo" className="h-8 w-8 object-contain" />
         <div>
           <h2 className="text-base font-black">¡Tablero completo!</h2>
           <p className="text-xs font-bold opacity-80">Ya desbloqueaste todas las medallas base. La próxima etapa puede guardar historial en Supabase.</p>
@@ -383,11 +391,13 @@ function GroupProgressCard({ group, done, total }: { group: AchievementGroup; do
 
 function AchievementCard({ achievement, recentlyUnlocked }: { achievement: Achievement; recentlyUnlocked: boolean }) {
   const unlocked = achievement.unlocked;
+  const medalSrc = getRewardMedalIcon(achievement.tier);
   return (
     <article className={cn("rounded-[26px] border p-4 shadow-card transition", recentlyUnlocked && "ring-4 ring-monkey-yellow/40", unlocked ? "border-monkey-green/15 bg-white" : "border-gray-100 bg-gray-50")}> 
       <div className="flex items-start gap-3">
-        <div className={cn("grid h-14 w-14 shrink-0 place-items-center rounded-[22px]", unlocked ? "bg-green-50 text-monkey-greenDark" : "bg-white text-monkey-muted")}> 
-          {unlocked ? achievementIcon(achievement.icon, "h-6 w-6") : <Lock className="h-5 w-5" />}
+        <div className={cn("relative grid h-14 w-14 shrink-0 place-items-center rounded-[22px] shadow-sm", unlocked ? "bg-green-50" : "bg-white")}> 
+          <img src={medalSrc} alt={`Medalla ${tierLabels[achievement.tier]}`} className={cn("h-10 w-10 object-contain", !unlocked && "opacity-45 grayscale")} />
+          {!unlocked ? <span className="absolute -right-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-slate-900 text-white"><Lock className="h-3.5 w-3.5" /></span> : null}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -466,7 +476,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22, cuando una medalla se desbloquea se guarda una sola vez en Supabase y también puede mostrar un momento de recompensa desde Hoy, Calendario, Wallet o Analítica sin repetir animaciones al recargar.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22.1, el momento de recompensa usa arte dedicado de oro, plata y bronce, respeta mejor el espacio móvil, conserva el guardado en Supabase y evita repetir animaciones al recargar.
           </p>
         </div>
       </div>

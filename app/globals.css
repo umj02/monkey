@@ -334,3 +334,12 @@ button { cursor: pointer; }
 .reward-timer {
   animation: monkeyRewardTimer 7.2s linear forwards;
 }
+
+
+@media (max-width: 380px) {
+  .reward-timer { animation-duration: 6.6s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-timer { animation: none !important; }
+}

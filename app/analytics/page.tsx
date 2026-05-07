@@ -29,6 +29,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { useProfile } from "@/hooks/use-profile";
 import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { buildAchievements } from "@/lib/achievements";
+import { getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
 import { activityTypePillClass, inferActivityTypeFromEvent, inferActivityTypeFromIcon } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
@@ -466,7 +467,7 @@ export default function AnalyticsPage() {
 
         <section className="mt-6 rounded-[28px] border border-monkey-purple/20 bg-purple-50 p-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-purple shadow-card"><Trophy className="h-5 w-5" /></div>
+            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white shadow-card"><img src={getRewardTrophyIcon()} alt="Trofeo" className="h-8 w-8 object-contain" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Logros y medallas</h2>
               <p className="text-xs font-bold text-monkey-muted">
@@ -482,9 +483,10 @@ export default function AnalyticsPage() {
           </div>
           <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Calculado localmente" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Sync pendiente" : "Historial conectado a Supabase"}</p>
           {achievementResult.nextAchievement ? (
-            <p className="mt-2 text-[11px] font-bold text-monkey-muted">
-              Próximo: <span className="font-black text-monkey-purple">{achievementResult.nextAchievement.title}</span> · {achievementResult.nextAchievement.helper}
-            </p>
+            <div className="mt-2 flex items-start gap-2 text-[11px] font-bold text-monkey-muted">
+              <img src={getRewardMedalIcon(achievementResult.nextAchievement.tier)} alt="Próxima medalla" className="mt-0.5 h-5 w-5 shrink-0 object-contain" />
+              <p>Próximo: <span className="font-black text-monkey-purple">{achievementResult.nextAchievement.title}</span> · {achievementResult.nextAchievement.helper}</p>
+            </div>
           ) : (
             <p className="mt-2 text-[11px] font-bold text-monkey-muted">¡Tablero base completo!</p>
           )}
