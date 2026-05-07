@@ -1246,21 +1246,36 @@ export async function upsertAchievementUnlocks(achievements: Achievement[]): Pro
   const unlocked = achievements.filter((achievement) => achievement.unlocked);
   if (!unlocked.length) return [];
 
-  const payload: Database["public"]["Tables"]["achievement_unlocks"]["Insert"][] = unlocked.map((achievement) => ({
+  const achievementIds = unlocked.map((achievement) => achievement.id);
+  const { data: existingRows, error: existingError } = await supabase
+    .from("achievement_unlocks")
+    .select("achievement_id")
+    .eq("user_id", userId)
+    .in("achievement_id", achievementIds);
+
+  if (existingError) return null;
+
+  const existingIds = new Set((existingRows ?? []).map((row: { achievement_id: string }) => row.achievement_id));
+  const newlyUnlocked = unlocked.filter((achievement) => !existingIds.has(achievement.id));
+  if (!newlyUnlocked.length) return [];
+
+  const now = new Date().toISOString();
+  const payload: Database["public"]["Tables"]["achievement_unlocks"]["Insert"][] = newlyUnlocked.map((achievement) => ({
     user_id: userId,
     achievement_id: achievement.id,
-    unlocked_at: achievement.unlockedAt || new Date().toISOString(),
+    unlocked_at: achievement.unlockedAt || now,
     source_progress: Math.max(achievement.progress, 100),
     metadata: {
       title: achievement.title,
       group: achievement.group,
       tier: achievement.tier,
+      first_synced_at: now,
     },
   }));
 
   const { data, error } = await supabase
     .from("achievement_unlocks")
-    .upsert(payload, { onConflict: "user_id,achievement_id", ignoreDuplicates: false })
+    .upsert(payload, { onConflict: "user_id,achievement_id", ignoreDuplicates: true })
     .select("achievement_id, unlocked_at, source_progress")
     .order("unlocked_at", { ascending: false });
 

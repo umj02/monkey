@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Award,
@@ -90,13 +90,25 @@ export default function AchievementsPage() {
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
     todayKey,
   }), [blocks, completionMap, events, profile.hasCompletedOnboarding, todayKey, wallet]);
-  const { result, persistedUnlocks, syncStatus, lastError, isPersistent } = usePersistentAchievements(calculatedResult);
+  const { result, persistedUnlocks, syncStatus, lastError, isPersistent, recentUnlockIds, lastSyncedAt, clearRecentUnlocks } = usePersistentAchievements(calculatedResult);
+  const [showUnlockFeedback, setShowUnlockFeedback] = useState(false);
 
-  const visibleAchievements = result.achievements.filter((achievement) => {
-    if (filter === "unlocked") return achievement.unlocked;
-    if (filter === "locked") return !achievement.unlocked;
-    return true;
-  });
+  useEffect(() => {
+    if (!recentUnlockIds.length) return;
+    setShowUnlockFeedback(true);
+  }, [recentUnlockIds]);
+
+  const visibleAchievements = result.achievements
+    .filter((achievement) => {
+      if (filter === "unlocked") return achievement.unlocked;
+      if (filter === "locked") return !achievement.unlocked;
+      return true;
+    })
+    .sort((a, b) => {
+      if (filter === "unlocked") return (b.unlockedAt ?? "").localeCompare(a.unlockedAt ?? "");
+      if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+      return b.progress - a.progress;
+    });
 
   const syncing = tasksSyncing || calendarSyncing || completionSyncStatus === "loading" || walletSyncing;
   const groups = (["daily", "calendar", "wallet", "growth"] as AchievementGroup[]).map((group) => ({
@@ -143,7 +155,16 @@ export default function AchievementsPage() {
           </div>
         </section>
 
-        <PersistenceStatusCard syncStatus={syncStatus} lastError={lastError} isPersistent={isPersistent} persistedCount={persistedUnlocks.length} />
+        <PersistenceStatusCard syncStatus={syncStatus} lastError={lastError} isPersistent={isPersistent} persistedCount={persistedUnlocks.length} lastSyncedAt={lastSyncedAt} />
+        {showUnlockFeedback && recentUnlockIds.length ? (
+          <UnlockFeedbackBanner
+            achievements={result.achievements.filter((achievement) => recentUnlockIds.includes(achievement.id))}
+            onClose={() => {
+              setShowUnlockFeedback(false);
+              clearRecentUnlocks();
+            }}
+          />
+        ) : null}
         {!hasAnyActivity ? <StarterEmptyState /> : null}
         {hasAnyActivity && result.nextAchievement ? <NextAchievementCard achievement={result.nextAchievement} /> : null}
         {hasAnyActivity && !result.nextAchievement ? <AllDoneCard /> : null}
@@ -171,7 +192,7 @@ export default function AchievementsPage() {
 
         {visibleAchievements.length ? (
           <section className="mt-5 grid gap-3">
-            {visibleAchievements.map((achievement) => <AchievementCard key={achievement.id} achievement={achievement} />)}
+            {visibleAchievements.map((achievement) => <AchievementCard key={achievement.id} achievement={achievement} recentlyUnlocked={recentUnlockIds.includes(achievement.id)} />)}
           </section>
         ) : (
           <FilterEmptyState filter={filter} />
@@ -184,7 +205,7 @@ export default function AchievementsPage() {
   );
 }
 
-function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedCount }: { syncStatus: string; lastError: string | null; isPersistent: boolean; persistedCount: number }) {
+function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedCount, lastSyncedAt }: { syncStatus: string; lastError: string | null; isPersistent: boolean; persistedCount: number; lastSyncedAt: string | null }) {
   const copy = !isPersistent
     ? { title: "Modo local", body: "Los logros se calculan en este dispositivo. Al iniciar sesión con Supabase se guardarán con fecha de desbloqueo." }
     : syncStatus === "saving"
@@ -193,7 +214,7 @@ function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedC
         ? { title: "Cargando historial", body: "Buscando tus medallas guardadas en tu cuenta." }
         : syncStatus === "error"
           ? { title: "Sincronización pendiente", body: lastError || "No se pudo sincronizar el historial de logros." }
-          : { title: "Historial sincronizado", body: persistedCount ? `${persistedCount} medallas guardadas con fecha de desbloqueo.` : "Cuando ganés una medalla, quedará guardada en tu cuenta." };
+          : { title: "Historial sincronizado", body: persistedCount ? `${persistedCount} medallas guardadas${lastSyncedAt ? ` · ${formatSyncTime(lastSyncedAt)}` : ""}.` : "Cuando ganés una medalla, quedará guardada en tu cuenta." };
 
   return (
     <section className={cn("mt-5 rounded-[24px] border p-4", syncStatus === "error" ? "border-orange-200 bg-orange-50" : "border-monkey-green/15 bg-white")}>
@@ -217,6 +238,43 @@ function formatUnlockedAt(value?: string | null) {
   } catch {
     return null;
   }
+}
+
+function formatSyncTime(value?: string | null) {
+  if (!value) return null;
+  try {
+    return new Intl.DateTimeFormat("es-CR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  } catch {
+    return null;
+  }
+}
+
+function UnlockFeedbackBanner({ achievements, onClose }: { achievements: Achievement[]; onClose: () => void }) {
+  const title = achievements.length === 1 ? achievements[0]?.title : `${achievements.length} medallas nuevas`;
+  return (
+    <section className="mt-5 overflow-hidden rounded-[30px] border border-monkey-yellow/40 bg-gradient-to-br from-yellow-50 via-white to-green-50 p-4 shadow-card">
+      <div className="flex items-start gap-3">
+        <div className="grid h-14 w-14 shrink-0 animate-bounce place-items-center rounded-[22px] bg-monkey-yellow text-orange-800 shadow-card">
+          <PartyPopper className="h-6 w-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Logro desbloqueado</p>
+          <h2 className="mt-1 text-lg font-black">{title}</h2>
+          <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Se guardó en tu historial y no se volverá a animar como nuevo cuando recargués.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {achievements.slice(0, 3).map((achievement) => (
+              <span key={achievement.id} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-monkey-greenDark shadow-sm">
+                {achievement.title}
+              </span>
+            ))}
+          </div>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-muted shadow-sm transition active:scale-95">
+          OK
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
@@ -323,10 +381,10 @@ function GroupProgressCard({ group, done, total }: { group: AchievementGroup; do
   );
 }
 
-function AchievementCard({ achievement }: { achievement: Achievement }) {
+function AchievementCard({ achievement, recentlyUnlocked }: { achievement: Achievement; recentlyUnlocked: boolean }) {
   const unlocked = achievement.unlocked;
   return (
-    <article className={cn("rounded-[26px] border p-4 shadow-card transition", unlocked ? "border-monkey-green/15 bg-white" : "border-gray-100 bg-gray-50")}> 
+    <article className={cn("rounded-[26px] border p-4 shadow-card transition", recentlyUnlocked && "ring-4 ring-monkey-yellow/40", unlocked ? "border-monkey-green/15 bg-white" : "border-gray-100 bg-gray-50")}> 
       <div className="flex items-start gap-3">
         <div className={cn("grid h-14 w-14 shrink-0 place-items-center rounded-[22px]", unlocked ? "bg-green-50 text-monkey-greenDark" : "bg-white text-monkey-muted")}> 
           {unlocked ? achievementIcon(achievement.icon, "h-6 w-6") : <Lock className="h-5 w-5" />}
@@ -343,6 +401,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{groupLabels[achievement.group]}</span>
             <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black", tierClass(achievement.tier))}>{tierLabels[achievement.tier]}</span>
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{achievement.progress}%</span>
+            {recentlyUnlocked ? <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-[10px] font-black text-orange-700">Nueva</span> : null}
             {achievement.persisted ? <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-black text-monkey-greenDark">Guardada</span> : null}
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
@@ -407,7 +466,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.21, cuando una medalla se desbloquea se guarda en Supabase con fecha para conservar historial.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.21.1, cuando una medalla se desbloquea se guarda una sola vez en Supabase, conserva su fecha original y solo las nuevas muestran feedback visual.
           </p>
         </div>
       </div>

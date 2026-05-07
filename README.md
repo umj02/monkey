@@ -282,7 +282,7 @@ Esta versión convierte los logros en un sistema persistente conectado a Supabas
 - Las cards muestran fecha de desbloqueo cuando el logro ya está sincronizado.
 - `/analytics` lee el resultado persistente y muestra estado de sync de medallas.
 - Se mantiene el cálculo local/derivado como fallback y como fuente para detectar nuevos desbloqueos.
-- Versión visible en Settings actualizada a `2.21.0`.
+- Versión visible en Settings actualizada a `2.21.1`.
 
 ### Migraciones requeridas
 
@@ -321,3 +321,39 @@ Pruebas manuales clave:
 - Revisar que `/analytics` muestre el avance persistente.
 - Confirmar en Supabase que se cree una fila en `achievement_unlocks`.
 
+
+
+## v2.21.1 — Achievement Sync Polish + Unlock Feedback
+
+Base: `v2.21 — Persistent Achievements + Supabase Sync`.
+
+Cambios principales:
+
+- Feedback visual cuando se desbloquean nuevas medallas.
+- Las medallas ya persistidas no se vuelven a animar como nuevas al recargar.
+- `usePersistentAchievements` expone `recentUnlockIds`, `lastSyncedAt` y `clearRecentUnlocks`.
+- El guardado de logros revisa primero los existentes y solo inserta desbloqueos nuevos.
+- El `upsert` usa `ignoreDuplicates: true` para evitar actualizar innecesariamente registros ya guardados.
+- El historial conserva `unlocked_at` como fecha original del logro.
+- Cards de logros resaltan medallas recién desbloqueadas con estado `Nueva`.
+- Logros ganados se ordenan por fecha de desbloqueo para una lectura más natural.
+- Estado de sincronización muestra la hora del último sync.
+- Sin migraciones nuevas; usa `0015_v221_persistent_achievements.sql`.
+
+QA recomendado:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Validación funcional sugerida:
+
+1. Entrar con usuario real Supabase.
+2. Crear o completar una acción que desbloquee una medalla.
+3. Confirmar banner de logro nuevo.
+4. Recargar la página.
+5. Confirmar que la medalla sigue guardada, pero no vuelve a animarse como nueva.
+6. Revisar `achievement_unlocks` y confirmar que no se duplican registros por usuario/logro.

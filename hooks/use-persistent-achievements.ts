@@ -12,17 +12,24 @@ export function usePersistentAchievements(result: AchievementResult) {
   const [persisted, setPersisted] = useState<PersistentAchievementUnlock[]>([]);
   const [syncStatus, setSyncStatus] = useState<AchievementSyncStatus>("local");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [recentUnlockIds, setRecentUnlockIds] = useState<string[]>([]);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const syncedKeyRef = useRef("");
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!session || mode !== "supabase") {
       setPersisted([]);
       setSyncStatus("local");
       setLastError(null);
+      setRecentUnlockIds([]);
+      setLastSyncedAt(null);
+      syncedKeyRef.current = "";
       return;
     }
 
     let mounted = true;
+    syncedKeyRef.current = "";
     setSyncStatus("loading");
     setLastError(null);
 
@@ -36,6 +43,7 @@ export function usePersistentAchievements(result: AchievementResult) {
         }
         setPersisted(rows);
         setSyncStatus("synced");
+        setLastSyncedAt(new Date().toISOString());
       })
       .catch(() => {
         if (!mounted) return;
@@ -76,6 +84,13 @@ export function usePersistentAchievements(result: AchievementResult) {
           rows.forEach((unlock) => next.set(unlock.achievementId, unlock));
           return Array.from(next.values()).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
         });
+        const ids = rows.map((unlock) => unlock.achievementId);
+        if (ids.length) {
+          setRecentUnlockIds(ids);
+          if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+          clearTimerRef.current = setTimeout(() => setRecentUnlockIds([]), 7000);
+        }
+        setLastSyncedAt(new Date().toISOString());
         setSyncStatus("synced");
       })
       .catch(() => {
@@ -84,11 +99,21 @@ export function usePersistentAchievements(result: AchievementResult) {
       });
   }, [mode, persisted, result.achievements, session?.userId]);
 
+
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    };
+  }, []);
+
   return {
     result: merged,
     persistedUnlocks: persisted,
     syncStatus,
     lastError,
+    recentUnlockIds,
+    lastSyncedAt,
+    clearRecentUnlocks: () => setRecentUnlockIds([]),
     isPersistent: Boolean(session && mode === "supabase"),
   };
 }
