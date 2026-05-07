@@ -230,8 +230,7 @@ Probar en `/analytics`:
 - Usuario con Wallet/Budget: debe mostrar resumen financiero y balance.
 - Cambiar Semana/Mes sin perder layout ni romper scroll móvil.
 
-
-## v2.20.1 — Achievements UX Polish + Empty States
+## v2.20 — Achievements + Badges Foundation
 
 Base validada: `v2.19.2 — Analytics UX Polish + Empty States`.
 
@@ -253,33 +252,11 @@ Esta versión activa la base real de logros y medallas sin agregar migraciones n
 - Accesos desde Perfil y Configuración.
 - Versión visible en Settings actualizada a `2.20.0`.
 
-### Decisión técnica
-
-No se agregó tabla nueva en Supabase. En esta primera etapa los logros se calculan desde datos existentes para validar UX y reglas. Si la experiencia se aprueba, una versión posterior puede persistir desbloqueos y fechas exactas en Supabase.
-
-### QA recomendado
-
-```bash
-npm install
-npm run validate:assets
-npm run typecheck
-npm run build
-```
-
-Validar manualmente:
-
-- `/achievements` carga sin sesión solamente después de login/onboarding.
-- Medallas ganadas y bloqueadas se muestran correctamente.
-- Filtros no rompen layout mobile.
-- `/analytics` muestra conteo real de logros.
-- Perfil y Settings enlazan correctamente a Logros.
-
-
 ## v2.20.1 — Achievements UX Polish + Empty States
 
-Base: v2.20.0 validada.
+Base validada: `v2.20.0 — Achievements + Badges Foundation`.
 
-Cambios principales:
+### Incluye
 
 - Pulido visual completo de `/achievements`.
 - Empty state inicial para usuarios sin datos.
@@ -289,10 +266,45 @@ Cambios principales:
 - Card de próximo logro con porcentaje explícito.
 - Tips accionables para desbloquear medallas desde Hoy, Calendario y Wallet.
 - Mensajes más humanos para medallas bloqueadas.
-- Versión visible actualizada a 2.20.1.
+- Versión visible actualizada a `2.20.1`.
 - Sin migraciones nuevas de Supabase.
 
-Validación recomendada:
+## v2.21 — Persistent Achievements + Supabase Sync
+
+Base validada: `v2.20.1 — Achievements UX Polish + Empty States`.
+
+Esta versión convierte los logros en un sistema persistente conectado a Supabase:
+
+- Nueva migración `0015_v221_persistent_achievements.sql`.
+- Nueva tabla `achievement_unlocks` con RLS por usuario.
+- Guarda `achievement_id`, `unlocked_at`, `source_progress` y `metadata`.
+- `/achievements` conserva medallas desbloqueadas aunque después cambie el cálculo derivado.
+- Las cards muestran fecha de desbloqueo cuando el logro ya está sincronizado.
+- `/analytics` lee el resultado persistente y muestra estado de sync de medallas.
+- Se mantiene el cálculo local/derivado como fallback y como fuente para detectar nuevos desbloqueos.
+- Versión visible en Settings actualizada a `2.21.0`.
+
+### Migraciones requeridas
+
+Ejecutar en Supabase en este orden acumulado:
+
+1. `0001_v25_full_schema.sql`
+2. `0002_v259_data_stability.sql`
+3. `0003_v210_calendar_end_time.sql`
+4. `0004_v2121_calendar_event_reminders.sql`
+5. `0005_v213_wallet_extra_period_filters.sql`
+6. `0006_v2135_calendar_recurrence.sql`
+7. `0007_v2136_calendar_done_today_sync.sql`
+8. `0008_v2137_calendar_event_completions.sql`
+9. `0009_v214_calendar_event_icon_key.sql`
+10. `0010_v215_recurring_overrides_activity_types.sql`
+11. `0011_v216_background_push_notifications.sql`
+12. `0012_v2161_reminder_upsert_fix.sql`
+13. `0013_v217_budget_planned_expenses.sql`
+14. `0014_v218_welcome_onboarding.sql`
+15. `0015_v221_persistent_achievements.sql`
+
+### QA sugerido
 
 ```bash
 npm install
@@ -300,3 +312,12 @@ npm run validate:assets
 npm run typecheck
 npm run build
 ```
+
+Pruebas manuales clave:
+
+- Entrar a `/achievements` con usuario nuevo.
+- Completar una tarea en Hoy y verificar que se desbloquee `Primer check`.
+- Refrescar la app y confirmar que la medalla siga guardada.
+- Revisar que `/analytics` muestre el avance persistente.
+- Confirmar en Supabase que se cree una fila en `achievement_unlocks`.
+

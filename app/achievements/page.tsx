@@ -30,6 +30,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useTasks } from "@/hooks/use-tasks";
 import { useWallet } from "@/hooks/use-wallet";
 import { buildAchievements, type Achievement, type AchievementGroup, type AchievementTier } from "@/lib/achievements";
+import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +82,7 @@ export default function AchievementsPage() {
   const { completionMap, syncStatus: completionSyncStatus } = useCalendarCompletions();
   const { wallet, syncing: walletSyncing } = useWallet();
 
-  const result = useMemo(() => buildAchievements({
+  const calculatedResult = useMemo(() => buildAchievements({
     blocks,
     events,
     completionMap,
@@ -89,6 +90,7 @@ export default function AchievementsPage() {
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
     todayKey,
   }), [blocks, completionMap, events, profile.hasCompletedOnboarding, todayKey, wallet]);
+  const { result, persistedUnlocks, syncStatus, lastError, isPersistent } = usePersistentAchievements(calculatedResult);
 
   const visibleAchievements = result.achievements.filter((achievement) => {
     if (filter === "unlocked") return achievement.unlocked;
@@ -141,6 +143,7 @@ export default function AchievementsPage() {
           </div>
         </section>
 
+        <PersistenceStatusCard syncStatus={syncStatus} lastError={lastError} isPersistent={isPersistent} persistedCount={persistedUnlocks.length} />
         {!hasAnyActivity ? <StarterEmptyState /> : null}
         {hasAnyActivity && result.nextAchievement ? <NextAchievementCard achievement={result.nextAchievement} /> : null}
         {hasAnyActivity && !result.nextAchievement ? <AllDoneCard /> : null}
@@ -179,6 +182,41 @@ export default function AchievementsPage() {
       </section>
     </AppShell>
   );
+}
+
+function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedCount }: { syncStatus: string; lastError: string | null; isPersistent: boolean; persistedCount: number }) {
+  const copy = !isPersistent
+    ? { title: "Modo local", body: "Los logros se calculan en este dispositivo. Al iniciar sesión con Supabase se guardarán con fecha de desbloqueo." }
+    : syncStatus === "saving"
+      ? { title: "Guardando medallas", body: "Estamos sincronizando tus nuevos logros con Supabase." }
+      : syncStatus === "loading"
+        ? { title: "Cargando historial", body: "Buscando tus medallas guardadas en tu cuenta." }
+        : syncStatus === "error"
+          ? { title: "Sincronización pendiente", body: lastError || "No se pudo sincronizar el historial de logros." }
+          : { title: "Historial sincronizado", body: persistedCount ? `${persistedCount} medallas guardadas con fecha de desbloqueo.` : "Cuando ganés una medalla, quedará guardada en tu cuenta." };
+
+  return (
+    <section className={cn("mt-5 rounded-[24px] border p-4", syncStatus === "error" ? "border-orange-200 bg-orange-50" : "border-monkey-green/15 bg-white")}>
+      <div className="flex items-start gap-3">
+        <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-[18px]", syncStatus === "error" ? "bg-white text-orange-700" : "bg-green-50 text-monkey-greenDark")}>
+          <BadgeCheck className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-black">{copy.title}</h2>
+          <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{copy.body}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function formatUnlockedAt(value?: string | null) {
+  if (!value) return null;
+  try {
+    return new Intl.DateTimeFormat("es-CR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+  } catch {
+    return null;
+  }
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
@@ -299,11 +337,13 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
             {unlocked ? <BadgeCheck className="h-4 w-4 shrink-0 text-monkey-green" /> : null}
           </div>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{achievement.description}</p>
+          {unlocked && achievement.unlockedAt ? <p className="mt-2 rounded-[16px] bg-green-50 px-3 py-2 text-[11px] font-black leading-snug text-monkey-greenDark">Desbloqueado el {formatUnlockedAt(achievement.unlockedAt)}</p> : null}
           {!unlocked ? <p className="mt-2 rounded-[16px] bg-white px-3 py-2 text-[11px] font-bold leading-snug text-monkey-muted">{achievement.helper}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{groupLabels[achievement.group]}</span>
             <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black", tierClass(achievement.tier))}>{tierLabels[achievement.tier]}</span>
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-monkey-muted shadow-sm">{achievement.progress}%</span>
+            {achievement.persisted ? <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-black text-monkey-greenDark">Guardada</span> : null}
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
             <div className={cn("h-full rounded-full", unlocked ? "bg-monkey-green" : "bg-gray-300")} style={{ width: `${achievement.progress}%` }} />
@@ -367,7 +407,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-            En esta etapa no se crean tablas nuevas: las medallas se calculan con tus tareas, calendario, completions, onboarding y Wallet. Más adelante se pueden persistir en Supabase para guardar fecha exacta de desbloqueo.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.21, cuando una medalla se desbloquea se guarda en Supabase con fecha para conservar historial.
           </p>
         </div>
       </div>

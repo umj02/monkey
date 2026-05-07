@@ -18,6 +18,7 @@ import type {
 } from "@/types";
 import { getWalletTransactionMeta, normalizeWallet } from "@/lib/services/wallet-service";
 import { walletSeed } from "@/lib/mock-data";
+import type { Achievement, PersistentAchievementUnlock } from "@/lib/achievements";
 
 type TableRow<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
@@ -88,6 +89,11 @@ type WalletGoalRow = Pick<
   | "target_date"
   | "icon"
 >;
+type AchievementUnlockRow = Pick<
+  TableRow<"achievement_unlocks">,
+  "achievement_id" | "unlocked_at" | "source_progress"
+>;
+
 type WalletPlannedExpenseRow = Pick<
   TableRow<"wallet_planned_expenses">,
   | "id"
@@ -1211,3 +1217,59 @@ export async function upsertWalletGoal(goal: WalletGoal): Promise<WalletGoal | n
     icon: row.icon || "wallet-savings",
   };
 }
+
+export async function fetchAchievementUnlocks(): Promise<PersistentAchievementUnlock[] | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const { data, error } = await supabase
+    .from("achievement_unlocks")
+    .select("achievement_id, unlocked_at, source_progress")
+    .eq("user_id", userId)
+    .order("unlocked_at", { ascending: false });
+
+  if (error) return null;
+  const rows: AchievementUnlockRow[] = data ?? [];
+  return rows.map((row) => ({
+    achievementId: row.achievement_id,
+    unlockedAt: row.unlocked_at,
+    sourceProgress: Number(row.source_progress || 100),
+  }));
+}
+
+export async function upsertAchievementUnlocks(achievements: Achievement[]): Promise<PersistentAchievementUnlock[] | null> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId) return null;
+
+  const unlocked = achievements.filter((achievement) => achievement.unlocked);
+  if (!unlocked.length) return [];
+
+  const payload: Database["public"]["Tables"]["achievement_unlocks"]["Insert"][] = unlocked.map((achievement) => ({
+    user_id: userId,
+    achievement_id: achievement.id,
+    unlocked_at: achievement.unlockedAt || new Date().toISOString(),
+    source_progress: Math.max(achievement.progress, 100),
+    metadata: {
+      title: achievement.title,
+      group: achievement.group,
+      tier: achievement.tier,
+    },
+  }));
+
+  const { data, error } = await supabase
+    .from("achievement_unlocks")
+    .upsert(payload, { onConflict: "user_id,achievement_id", ignoreDuplicates: false })
+    .select("achievement_id, unlocked_at, source_progress")
+    .order("unlocked_at", { ascending: false });
+
+  if (error) return null;
+  const rows: AchievementUnlockRow[] = data ?? [];
+  return rows.map((row) => ({
+    achievementId: row.achievement_id,
+    unlockedAt: row.unlocked_at,
+    sourceProgress: Number(row.source_progress || 100),
+  }));
+}
+

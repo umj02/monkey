@@ -27,6 +27,7 @@ import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
 import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useWallet } from "@/hooks/use-wallet";
 import { useProfile } from "@/hooks/use-profile";
+import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { buildAchievements } from "@/lib/achievements";
 import { activityTypePillClass, inferActivityTypeFromEvent, inferActivityTypeFromIcon } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
@@ -255,7 +256,7 @@ export default function AnalyticsPage() {
   const hasWalletData = walletTransactionsInRange.length > 0 || wallet.budgetLimit > 0 || wallet.goals.length > 0;
   const hasReportData = hasActivityData || hasWalletData;
   const topActivity = activityStats[0] ?? null;
-  const achievementResult = useMemo(() => buildAchievements({
+  const calculatedAchievementResult = useMemo(() => buildAchievements({
     blocks,
     events,
     completionMap,
@@ -263,6 +264,7 @@ export default function AnalyticsPage() {
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
     todayKey,
   }), [blocks, completionMap, events, profile.hasCompletedOnboarding, todayKey, wallet]);
+  const { result: achievementResult, syncStatus: achievementSyncStatus } = usePersistentAchievements(calculatedAchievementResult);
 
   return (
     <AppShell>
@@ -478,6 +480,7 @@ export default function AnalyticsPage() {
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
             <div className="h-full rounded-full bg-monkey-purple" style={{ width: `${achievementResult.completion}%` }} />
           </div>
+          <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Calculado localmente" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Sync pendiente" : "Historial conectado a Supabase"}</p>
           {achievementResult.nextAchievement ? (
             <p className="mt-2 text-[11px] font-bold text-monkey-muted">
               Próximo: <span className="font-black text-monkey-purple">{achievementResult.nextAchievement.title}</span> · {achievementResult.nextAchievement.helper}

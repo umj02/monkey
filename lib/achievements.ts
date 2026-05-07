@@ -14,7 +14,15 @@ export type Achievement = {
   progress: number;
   target: number;
   unlocked: boolean;
+  unlockedAt?: string | null;
+  persisted?: boolean;
   helper: string;
+};
+
+export type PersistentAchievementUnlock = {
+  achievementId: string;
+  unlockedAt: string;
+  sourceProgress: number;
 };
 
 export type AchievementStats = {
@@ -72,7 +80,7 @@ function calculateCurrentStreak(doneDates: Set<string>, todayKey: string) {
   return count;
 }
 
-function buildAchievement(params: Omit<Achievement, "unlocked" | "progress"> & { value: number }) {
+function buildAchievement(params: Omit<Achievement, "unlocked" | "progress" | "unlockedAt" | "persisted"> & { value: number }) {
   const progress = percent(params.value, params.target);
   return {
     id: params.id,
@@ -152,4 +160,33 @@ export function buildAchievements(input: {
   const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
   const nextAchievement = achievements.find((achievement) => !achievement.unlocked) ?? null;
   return { achievements, stats, unlockedCount, totalCount: achievements.length, completion: percent(unlockedCount, achievements.length), nextAchievement };
+}
+
+export function mergePersistentAchievementUnlocks(result: AchievementResult, persisted: PersistentAchievementUnlock[]): AchievementResult {
+  if (!persisted.length) return result;
+
+  const persistedById = new Map(persisted.map((unlock) => [unlock.achievementId, unlock]));
+  const achievements = result.achievements.map((achievement) => {
+    const unlock = persistedById.get(achievement.id);
+    if (!unlock) return achievement;
+
+    return {
+      ...achievement,
+      unlocked: true,
+      progress: Math.max(achievement.progress, unlock.sourceProgress, 100),
+      unlockedAt: unlock.unlockedAt,
+      persisted: true,
+    } satisfies Achievement;
+  });
+
+  const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
+  const nextAchievement = achievements.find((achievement) => !achievement.unlocked) ?? null;
+
+  return {
+    ...result,
+    achievements,
+    unlockedCount,
+    completion: percent(unlockedCount, achievements.length),
+    nextAchievement,
+  };
 }
