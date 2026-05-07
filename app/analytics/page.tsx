@@ -26,6 +26,8 @@ import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
 import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useWallet } from "@/hooks/use-wallet";
+import { useProfile } from "@/hooks/use-profile";
+import { buildAchievements } from "@/lib/achievements";
 import { activityTypePillClass, inferActivityTypeFromEvent, inferActivityTypeFromIcon } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
@@ -139,6 +141,7 @@ export default function AnalyticsPage() {
   const [mode, setMode] = useState<RangeMode>("week");
   const today = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => toDateKey(today), [today]);
+  const { profile } = useProfile();
   const { blocks, syncing: tasksSyncing } = useTasks();
   const { events, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError } = useCalendarCompletions();
@@ -252,6 +255,14 @@ export default function AnalyticsPage() {
   const hasWalletData = walletTransactionsInRange.length > 0 || wallet.budgetLimit > 0 || wallet.goals.length > 0;
   const hasReportData = hasActivityData || hasWalletData;
   const topActivity = activityStats[0] ?? null;
+  const achievementResult = useMemo(() => buildAchievements({
+    blocks,
+    events,
+    completionMap,
+    wallet,
+    hasCompletedOnboarding: profile.hasCompletedOnboarding,
+    todayKey,
+  }), [blocks, completionMap, events, profile.hasCompletedOnboarding, todayKey, wallet]);
 
   return (
     <AppShell>
@@ -451,15 +462,29 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-[28px] border border-dashed border-monkey-purple/30 bg-purple-50 p-4">
+        <section className="mt-6 rounded-[28px] border border-monkey-purple/20 bg-purple-50 p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-purple shadow-card"><Trophy className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Logros y medallas</h2>
-              <p className="text-xs font-bold text-monkey-muted">Base lista para desbloquear premios por racha, ahorro y rutinas.</p>
+              <p className="text-xs font-bold text-monkey-muted">
+                {achievementResult.unlockedCount}/{achievementResult.totalCount} medallas desbloqueadas · {achievementResult.completion}% del tablero.
+              </p>
             </div>
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-monkey-purple">próximo</span>
+            <Link href="/achievements" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-purple shadow-card transition active:scale-95">
+              Ver
+            </Link>
           </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full bg-monkey-purple" style={{ width: `${achievementResult.completion}%` }} />
+          </div>
+          {achievementResult.nextAchievement ? (
+            <p className="mt-2 text-[11px] font-bold text-monkey-muted">
+              Próximo: <span className="font-black text-monkey-purple">{achievementResult.nextAchievement.title}</span> · {achievementResult.nextAchievement.helper}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] font-bold text-monkey-muted">¡Tablero base completo!</p>
+          )}
         </section>
       </section>
     </AppShell>

@@ -229,3 +229,47 @@ Probar en `/analytics`:
 - Usuario con eventos de calendario completados: debe sumarlos al reporte.
 - Usuario con Wallet/Budget: debe mostrar resumen financiero y balance.
 - Cambiar Semana/Mes sin perder layout ni romper scroll móvil.
+
+
+## v2.20 — Achievements + Badges Foundation
+
+Base validada: `v2.19.2 — Analytics UX Polish + Empty States`.
+
+Esta versión activa la base real de logros y medallas sin agregar migraciones nuevas. Los logros se calculan de forma derivada usando datos existentes de Hoy, Calendario, completions, Wallet y onboarding.
+
+### Incluye
+
+- Nueva ruta `/achievements` protegida por `AppShell`.
+- Tablero de medallas con progreso general.
+- Filtros: Todos, Ganados y Próximos.
+- Logros por tareas/checks de Hoy.
+- Logros por racha y constancia.
+- Logros por Calendario.
+- Logros por Wallet, presupuesto, metas y ahorro.
+- Logro especial de guía/onboarding completado.
+- Card de próximo logro con progreso.
+- Resumen por grupo: Hoy, Calendario, Wallet y Crecimiento.
+- Integración en `/analytics` con conteo real de medallas y link al tablero.
+- Accesos desde Perfil y Configuración.
+- Versión visible en Settings actualizada a `2.20.0`.
+
+### Decisión técnica
+
+No se agregó tabla nueva en Supabase. En esta primera etapa los logros se calculan desde datos existentes para validar UX y reglas. Si la experiencia se aprueba, una versión posterior puede persistir desbloqueos y fechas exactas en Supabase.
+
+### QA recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Validar manualmente:
+
+- `/achievements` carga sin sesión solamente después de login/onboarding.
+- Medallas ganadas y bloqueadas se muestran correctamente.
+- Filtros no rompen layout mobile.
+- `/analytics` muestra conteo real de logros.
+- Perfil y Settings enlazan correctamente a Logros.
