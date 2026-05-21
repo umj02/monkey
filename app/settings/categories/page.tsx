@@ -1,192 +1,249 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowLeft, BadgePlus, Check, Eye, EyeOff, GripVertical, ImageIcon, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowLeft, CheckCircle2, Edit3, Eye, EyeOff, Plus, RotateCcw, Search, SlidersHorizontal, Tags, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AssetThumb } from "@/components/asset-thumb";
+import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
-import { activityAssetGallery, getWalletAssetsByType, walletAssets } from "@/lib/asset-library";
-import { type CategoryScope, categoryLabelFromKey } from "@/lib/category-definitions";
+import { ACTIVITY_TYPES } from "@/lib/activity-types";
+import { getWalletAssetsByType } from "@/lib/asset-library";
+import { buildBaseCategoryItems, categoryTabs, defaultIconByScope, mergeCategoryPreferences, slugifyCategory, type EditableCategory } from "@/lib/category-catalog";
+import { deleteCategoryPreference, upsertCategoryPreference, type CategoryPreference, type CategoryPreferenceScope } from "@/lib/services/category-preferences-service";
+import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { cn } from "@/lib/utils";
-import { useCategoryPreferences, type EditableCategory } from "@/hooks/use-category-preferences";
 
-type Tab = { key: CategoryScope; label: string; helper: string };
-
-const tabs: Tab[] = [
-  { key: "activity", label: "Actividades", helper: "Monitos para Hoy, tareas y calendario." },
-  { key: "wallet_expense", label: "Wallet", helper: "Categorías analizables para gastos variables." },
-  { key: "wallet_icon", label: "Iconos", helper: "Iconos para movimientos, pagos y servicios." },
-];
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "categoria";
+function scopeToItems(scope: CategoryPreferenceScope, preferences: CategoryPreference[]) {
+  return mergeCategoryPreferences(buildBaseCategoryItems(scope), preferences, scope);
 }
 
-function iconOptionsForScope(scope: CategoryScope) {
-  if (scope === "activity") return activityAssetGallery;
-  if (scope === "wallet_expense") return getWalletAssetsByType("expense");
-  return walletAssets.filter((asset) => asset.group === "expense" || asset.group === "goal");
-}
-
-function statusText(status: string) {
-  if (status === "loading") return "Cargando…";
-  if (status === "saving") return "Guardando…";
-  if (status === "error") return "Error de sync";
-  if (status === "synced") return "Sincronizado";
-  return "Listo";
+function iconOptionsForScope(scope: CategoryPreferenceScope) {
+  if (scope === "activity") return ACTIVITY_TYPES.map((type) => ({ key: type.iconKey, label: type.label }));
+  const assets = getWalletAssetsByType("expense");
+  if (scope === "wallet_icon") return assets.filter((asset) => asset.group === "movement").map((asset) => ({ key: asset.key, label: asset.label }));
+  return assets.filter((asset) => asset.group === "expense" || asset.group === "movement").map((asset) => ({ key: asset.key, label: asset.label }));
 }
 
 export default function CategorySettingsPage() {
-  const [activeTab, setActiveTab] = useState<CategoryScope>("activity");
-  const { items, status, save, removeCustom } = useCategoryPreferences(activeTab);
+  const [activeScope, setActiveScope] = useState<CategoryPreferenceScope>("activity");
+  const { preferences, setPreferences, loading } = useCategoryPreferences();
   const [editing, setEditing] = useState<EditableCategory | null>(null);
-  const [creating, setCreating] = useState(false);
-  const tab = tabs.find((item) => item.key === activeTab) ?? tabs[0];
-  const enabledCount = items.filter((item) => item.isEnabled).length;
+  const [draftLabel, setDraftLabel] = useState("");
+  const [draftIcon, setDraftIcon] = useState("");
+  const [draftEnabled, setDraftEnabled] = useState(true);
+  const [search, setSearch] = useState("");
+  const [iconSearch, setIconSearch] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
 
-  function openCreate() {
-    const options = iconOptionsForScope(activeTab);
-    setEditing({
-      key: `custom:${Date.now().toString(36)}`,
-      categoryKey: `custom:${Date.now().toString(36)}`,
-      label: "Nueva categoría",
-      iconKey: options[0]?.key ?? (activeTab === "activity" ? "monito-otro" : "wallet-gasto-hormiga"),
-      scope: activeTab,
+  const baseItems = useMemo(() => buildBaseCategoryItems(activeScope), [activeScope]);
+  const items = useMemo(() => scopeToItems(activeScope, preferences), [activeScope, preferences]);
+  const currentTab = categoryTabs.find((tab) => tab.scope === activeScope) ?? categoryTabs[0];
+  const enabledCount = items.filter((item) => item.isEnabled).length;
+  const customCount = items.filter((item) => item.isCustom).length;
+  const hiddenCount = items.length - enabledCount;
+
+  const filteredItems = useMemo(() => {
+    const normalized = search.trim().toLowerCase();
+    if (!normalized) return items;
+    return items.filter((item) => item.label.toLowerCase().includes(normalized) || item.key.toLowerCase().includes(normalized) || item.baseLabel.toLowerCase().includes(normalized));
+  }, [items, search]);
+
+  const iconOptions = useMemo(() => iconOptionsForScope(activeScope), [activeScope]);
+  const filteredIconOptions = useMemo(() => {
+    const normalized = iconSearch.trim().toLowerCase();
+    if (!normalized) return iconOptions;
+    return iconOptions.filter((option) => option.label.toLowerCase().includes(normalized) || option.key.toLowerCase().includes(normalized));
+  }, [iconOptions, iconSearch]);
+
+  function showToast(type: "success" | "error" | "info", message: string) {
+    setToast({ type, message });
+  }
+
+  function changeScope(scope: CategoryPreferenceScope) {
+    setActiveScope(scope);
+    setSearch("");
+    setIconSearch("");
+  }
+
+  function openEditor(item?: EditableCategory) {
+    const next = item ?? {
+      scope: activeScope,
+      key: `custom-${Date.now().toString(36)}`,
+      label: "",
+      baseLabel: "Nueva categoría",
+      iconKey: defaultIconByScope[activeScope],
+      imagePath: null,
       isEnabled: true,
       sortOrder: items.length + 1,
       isCustom: true,
-    });
-    setCreating(true);
+    };
+    setEditing(next);
+    setDraftLabel(next.label);
+    setDraftIcon(next.iconKey ?? defaultIconByScope[activeScope]);
+    setDraftEnabled(next.isEnabled);
+    setIconSearch("");
   }
 
-  async function handleSave(item: EditableCategory) {
-    const normalizedKey = item.isCustom && creating ? `custom:${slugify(item.label)}` : item.categoryKey;
-    await save({ ...item, key: normalizedKey, categoryKey: normalizedKey });
+  async function saveEditing() {
+    if (!editing) return;
+    const label = draftLabel.trim();
+    if (label.length < 2) {
+      showToast("error", "El nombre debe tener al menos 2 letras.");
+      return;
+    }
+
+    const nextKey = editing.isCustom && editing.key.startsWith("custom-") ? `custom-${slugifyCategory(label)}` : editing.key;
+    const duplicated = items.some((item) => item.scope === editing.scope && item.key === nextKey && item.key !== editing.key);
+    if (duplicated) {
+      showToast("error", "Ya existe una categoría con esa key. Cambiá un poco el nombre.");
+      return;
+    }
+
+    const payload: CategoryPreference = {
+      ...editing,
+      key: nextKey,
+      label,
+      iconKey: draftIcon,
+      isEnabled: draftEnabled,
+      sortOrder: editing.sortOrder,
+    };
+    const saved = await upsertCategoryPreference(payload);
+    const itemToStore = saved ?? payload;
+    setPreferences((current) => [...current.filter((item) => !(item.scope === editing.scope && item.key === editing.key) && !(item.scope === itemToStore.scope && item.key === itemToStore.key)), itemToStore]);
+    showToast(saved ? "success" : "info", saved ? "Categoría guardada y sincronizada." : "Guardado en esta sesión. Con Supabase activo se sincroniza automáticamente.");
     setEditing(null);
-    setCreating(false);
   }
+
+  async function resetOrDeleteEditing() {
+    if (!editing) return;
+    const ok = await deleteCategoryPreference(editing.scope, editing.key);
+    setPreferences((current) => current.filter((item) => !(item.scope === editing.scope && item.key === editing.key)));
+    showToast(ok ? "success" : "info", editing.isCustom ? "Categoría eliminada." : "Categoría restaurada al catálogo base.");
+    setEditing(null);
+  }
+
+  const toastClass = toast?.type === "error" ? "bg-pink-50 text-monkey-pink" : toast?.type === "info" ? "bg-yellow-50 text-orange-700" : "bg-green-50 text-monkey-greenDark";
 
   return (
     <AppShell>
       <section className="page-pad pt-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <Link href="/settings" className="inline-flex items-center gap-2 text-xs font-black text-monkey-muted"><ArrowLeft className="h-4 w-4" /> Configuración</Link>
-            <h1 className="mt-3 text-2xl font-black tracking-tight">Personalizar categorías</h1>
-            <p className="mt-1 text-sm font-semibold leading-relaxed text-monkey-muted">Editá nombres, orden, visibilidad e imagen sin cargar los formularios principales.</p>
-          </div>
-          <button type="button" onClick={openCreate} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-monkey-green text-white shadow-card active:scale-95" aria-label="Crear categoría"><Plus className="h-5 w-5" /></button>
-        </div>
+        <Link href="/settings" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-monkey-muted shadow-card">
+          <ArrowLeft className="h-4 w-4" /> Configuración
+        </Link>
 
-        <div className="mt-5 rounded-[28px] bg-white p-2 shadow-card">
-          <div className="grid grid-cols-3 gap-2">
-            {tabs.map((item) => (
-              <button key={item.key} type="button" onClick={() => setActiveTab(item.key)} className={cn("h-11 rounded-full text-xs font-black transition", activeTab === item.key ? "bg-monkey-green text-white shadow-card" : "bg-gray-50 text-monkey-muted")}>{item.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <section className="mt-4 rounded-[28px] bg-gradient-to-br from-green-50 to-white p-4 shadow-card">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">{tab.label}</p>
-              <h2 className="mt-1 text-lg font-black">{enabledCount} visibles</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{tab.helper}</p>
+        <div className="mt-5 rounded-[30px] bg-gradient-to-br from-green-50 via-white to-yellow-50 p-5 shadow-card">
+          <div className="flex items-start gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white shadow-card"><Tags className="h-5 w-5 text-monkey-green" /></div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">v2.26.1 polish</p>
+              <h1 className="mt-1 text-2xl font-black leading-tight">Personalizar categorías</h1>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Editá nombres, monitos e iconos desde un módulo separado, sin cargar los formularios principales.</p>
             </div>
-            <span className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-sm">{statusText(status)}</span>
-          </div>
-        </section>
-
-        <div className="mt-4 space-y-3 pb-24">
-          {items.map((item, index) => (
-            <article key={item.categoryKey} className={cn("rounded-[24px] bg-white p-3 shadow-card", !item.isEnabled && "opacity-60")}> 
-              <button type="button" onClick={() => { setEditing(item); setCreating(false); }} className="grid w-full grid-cols-[40px_1fr_auto] items-center gap-3 text-left">
-                <AssetThumb icon={item.iconKey} alt={item.label} size={40} className="rounded-[15px] bg-gray-50" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black">{item.label}</p>
-                  <p className="mt-0.5 truncate text-[11px] font-bold text-monkey-muted">{item.isCustom ? "Personalizada" : "Base"} · {item.categoryKey}</p>
-                </div>
-                <div className="flex items-center gap-2 text-monkey-muted">
-                  {item.isEnabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  <GripVertical className="h-4 w-4" />
-                  <span className="text-[11px] font-black">{index + 1}</span>
-                </div>
-              </button>
-            </article>
-          ))}
-        </div>
-
-        {editing ? (
-          <EditCategorySheet
-            item={editing}
-            creating={creating}
-            options={iconOptionsForScope(activeTab)}
-            onClose={() => { setEditing(null); setCreating(false); }}
-            onSave={handleSave}
-            onDelete={async (item) => {
-              const ok = await removeCustom(item);
-              if (ok) { setEditing(null); setCreating(false); }
-            }}
-          />
-        ) : null}
-      </section>
-    </AppShell>
-  );
-}
-
-function EditCategorySheet({ item, creating, options, onClose, onSave, onDelete }: { item: EditableCategory; creating: boolean; options: ReturnType<typeof iconOptionsForScope>; onClose: () => void; onSave: (item: EditableCategory) => Promise<void>; onDelete: (item: EditableCategory) => Promise<void>; }) {
-  const [draft, setDraft] = useState(item);
-  const selectedAsset = useMemo(() => options.find((option) => option.key === draft.iconKey), [draft.iconKey, options]);
-
-  return (
-    <FormSheet open title={creating ? "Nueva categoría" : "Editar categoría"} subtitle="La key estable se usa para analítica; el nombre visible puede cambiar." submitLabel="Guardar categoría" onClose={onClose} onSubmit={() => onSave(draft)}>
-      <label className="block">
-        <span className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Nombre visible</span>
-        <input value={draft.label} onChange={(event) => setDraft((value) => ({ ...value, label: event.target.value || "Categoría" }))} className="mt-2 h-14 w-full rounded-[20px] border border-gray-200 px-4 text-base font-bold outline-none focus:border-monkey-green" />
-      </label>
-
-      <div className="rounded-[24px] bg-gray-50 p-3">
-        <div className="flex items-center gap-3">
-          <AssetThumb icon={draft.iconKey} alt={draft.label} size={54} className="rounded-[20px] bg-white shadow-sm" />
-          <div>
-            <p className="text-sm font-black">Imagen actual</p>
-            <p className="text-xs font-bold text-monkey-muted">{selectedAsset?.label ?? draft.iconKey}</p>
           </div>
         </div>
-      </div>
 
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><ImageIcon className="h-4 w-4" /> Elegir imagen</div>
-        <div className="grid grid-cols-3 gap-2">
-          {options.slice(0, 36).map((asset) => (
-            <button key={asset.key} type="button" onClick={() => setDraft((value) => ({ ...value, iconKey: asset.key }))} className={cn("rounded-[20px] border p-2 text-center transition active:scale-95", draft.iconKey === asset.key ? "border-monkey-green bg-green-50" : "border-gray-100 bg-white")}>
-              <AssetThumb icon={asset.key} alt={asset.label} size={42} className="mx-auto rounded-[14px]" />
-              <span className="mt-1 block truncate text-[10px] font-black text-monkey-muted">{asset.label}</span>
+        <div className="mt-5 grid grid-cols-3 gap-2 rounded-[22px] bg-gray-100 p-1">
+          {categoryTabs.map((tab) => (
+            <button key={tab.scope} type="button" onClick={() => changeScope(tab.scope)} className={cn("h-11 rounded-[18px] text-[11px] font-black transition", activeScope === tab.scope ? "bg-white text-monkey-greenDark shadow-card" : "text-monkey-muted")}>
+              {tab.label}
             </button>
           ))}
         </div>
-      </div>
 
-      <button type="button" onClick={() => setDraft((value) => ({ ...value, isEnabled: !value.isEnabled }))} className="flex h-13 w-full items-center justify-between rounded-[20px] bg-gray-50 px-4 text-sm font-black">
-        <span>{draft.isEnabled ? "Visible en selectores" : "Oculta en selectores"}</span>
-        {draft.isEnabled ? <Eye className="h-5 w-5 text-monkey-green" /> : <EyeOff className="h-5 w-5 text-monkey-muted" />}
-      </button>
+        <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-black">{currentTab.label}</h2>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{currentTab.helper}</p>
+            </div>
+            <button type="button" onClick={() => openEditor()} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-monkey-green px-3 text-xs font-black text-white shadow-card transition active:scale-95">
+              <Plus className="h-4 w-4" /> Crear
+            </button>
+          </div>
 
-      <label className="block">
-        <span className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Orden</span>
-        <input type="number" value={draft.sortOrder} onChange={(event) => setDraft((value) => ({ ...value, sortOrder: Number(event.target.value) || 0 }))} className="mt-2 h-13 w-full rounded-[20px] border border-gray-200 px-4 text-base font-bold outline-none focus:border-monkey-green" />
-      </label>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-black">
+            <span className="rounded-[16px] bg-green-50 p-2 text-monkey-greenDark">Visibles<br />{enabledCount}</span>
+            <span className="rounded-[16px] bg-purple-50 p-2 text-monkey-purple">Custom<br />{customCount}</span>
+            <span className="rounded-[16px] bg-gray-50 p-2 text-monkey-muted">Ocultas<br />{hiddenCount}</span>
+          </div>
 
-      {draft.isCustom && !creating ? <button type="button" onClick={() => onDelete(draft)} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-pink-50 text-sm font-black text-monkey-pink"><Trash2 className="h-4 w-4" /> Eliminar categoría</button> : null}
+          {toast ? <p className={cn("mt-3 rounded-[18px] px-3 py-2 text-xs font-black", toastClass)}>{toast.message}</p> : null}
+          {loading ? <p className="mt-5 text-center text-sm font-bold text-monkey-muted">Cargando categorías…</p> : null}
 
-      <div className="rounded-[20px] bg-green-50 p-3 text-xs font-bold leading-relaxed text-monkey-greenDark"><Check className="mr-1 inline h-4 w-4" /> Los formularios siguen limpios. Esta pantalla prepara la personalización sin afectar la captura rápida.</div>
-      <div className="rounded-[20px] bg-yellow-50 p-3 text-xs font-bold leading-relaxed text-orange-800"><BadgePlus className="mr-1 inline h-4 w-4" /> Para subir imágenes propias desde el teléfono, conviene una siguiente versión con Supabase Storage.</div>
-    </FormSheet>
+          <label className="mt-4 flex items-center gap-2 rounded-[18px] bg-gray-50 px-3 py-2">
+            <Search className="h-4 w-4 shrink-0 text-monkey-muted" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre o key" className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400" />
+          </label>
+
+          <div className="mt-4 space-y-3">
+            {filteredItems.map((item) => (
+              <article key={`${item.scope}-${item.key}`} className={cn("flex items-center gap-3 rounded-[22px] border p-3 transition", item.isEnabled ? "border-gray-100 bg-gray-50" : "border-gray-100 bg-white opacity-70")}>
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[18px] bg-white shadow-sm"><AssetThumb icon={item.iconKey ?? undefined} size={34} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2"><h3 className="truncate text-sm font-black">{item.label}</h3>{item.isCustom ? <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-black text-monkey-purple">Custom</span> : null}</div>
+                  <p className="mt-1 truncate text-[11px] font-bold text-monkey-muted">key: {item.key}</p>
+                </div>
+                <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full", item.isEnabled ? "bg-green-50 text-monkey-greenDark" : "bg-gray-100 text-monkey-muted")}>{item.isEnabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</span>
+                <button type="button" onClick={() => openEditor(item)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-monkey-muted shadow-sm active:scale-95" aria-label={`Editar ${item.label}`}><Edit3 className="h-4 w-4" /></button>
+              </article>
+            ))}
+            {!loading && filteredItems.length === 0 ? <p className="rounded-[20px] bg-gray-50 px-4 py-5 text-center text-sm font-bold text-monkey-muted">No hay categorías con ese filtro.</p> : null}
+          </div>
+        </section>
+
+        <section className="mt-5 rounded-[26px] bg-white/80 p-4 shadow-card">
+          <div className="flex gap-3"><SlidersHorizontal className="mt-0.5 h-5 w-5 shrink-0 text-monkey-green" /><p className="text-xs font-bold leading-relaxed text-monkey-muted">La analítica usa keys estables. Podés cambiar el nombre visible o el icono sin romper reportes históricos.</p></div>
+        </section>
+      </section>
+
+      <FormSheet open={Boolean(editing)} title={editing?.isCustom ? "Nueva categoría" : "Editar categoría"} subtitle="Pensado para móvil: nombre, icono y visibilidad." submitLabel="Guardar categoría" onClose={() => setEditing(null)} onSubmit={saveEditing}>
+        <div className="rounded-[22px] bg-gray-50 p-3">
+          <div className="flex items-center gap-3">
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white shadow-sm"><AssetThumb icon={draftIcon} size={46} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-black">{draftLabel.trim() || editing?.baseLabel || "Nueva categoría"}</p>
+              <p className="mt-1 truncate text-[11px] font-bold text-monkey-muted">{editing?.isCustom ? "Key custom" : `Base: ${editing?.baseLabel}`}</p>
+            </div>
+          </div>
+        </div>
+
+        <Field label="Nombre visible" value={draftLabel} onChange={(event) => setDraftLabel(event.target.value)} placeholder="Ej. Entreno, Cole, Terapia" />
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Visible</span>
+          <button type="button" onClick={() => setDraftEnabled((value) => !value)} className={cn("flex h-12 w-full items-center justify-between rounded-[18px] px-4 text-sm font-black", draftEnabled ? "bg-green-50 text-monkey-greenDark" : "bg-gray-100 text-monkey-muted")}>
+            {draftEnabled ? "Activa en selectores" : "Oculta de selectores"}
+            {draftEnabled ? <CheckCircle2 className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+        </label>
+
+        <div>
+          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Imagen / icono</span>
+          <label className="mb-2 flex items-center gap-2 rounded-[16px] bg-gray-50 px-3 py-2">
+            <Search className="h-4 w-4 shrink-0 text-monkey-muted" />
+            <input value={iconSearch} onChange={(event) => setIconSearch(event.target.value)} placeholder="Buscar icono" className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400" />
+          </label>
+          <div className="grid max-h-[290px] grid-cols-3 gap-2 overflow-y-auto pr-1">
+            {filteredIconOptions.map((option) => (
+              <button key={option.key} type="button" onClick={() => setDraftIcon(option.key)} className={cn("min-w-0 rounded-[20px] border p-2 text-center transition active:scale-95", draftIcon === option.key ? "border-monkey-green bg-green-50 text-monkey-greenDark" : "border-gray-100 bg-gray-50 text-monkey-muted")}>
+                <AssetThumb icon={option.key} size={42} className="mx-auto" />
+                <span className="mt-1 block truncate text-[10px] font-black">{option.label}</span>
+              </button>
+            ))}
+          </div>
+          {filteredIconOptions.length === 0 ? <p className="mt-2 rounded-[16px] bg-yellow-50 px-3 py-2 text-xs font-bold text-orange-700">No encontré iconos con ese filtro.</p> : null}
+        </div>
+
+        {editing ? (
+          <button type="button" onClick={resetOrDeleteEditing} className={cn("flex h-12 w-full items-center justify-center gap-2 rounded-[18px] text-sm font-black transition active:scale-95", editing.isCustom ? "bg-pink-50 text-monkey-pink" : "bg-gray-100 text-monkey-muted")}>
+            {editing.isCustom ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
+            {editing.isCustom ? "Eliminar categoría custom" : "Restaurar categoría base"}
+          </button>
+        ) : null}
+
+        <p className="flex gap-2 rounded-[18px] bg-green-50 px-3 py-3 text-xs font-bold leading-relaxed text-monkey-muted"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-monkey-green" />Los cambios se aplican a los selectores sin cambiar la key histórica usada por la analítica.</p>
+      </FormSheet>
+    </AppShell>
   );
 }

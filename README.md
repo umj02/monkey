@@ -409,7 +409,7 @@ Pruebas manuales:
 - No requiere migración nueva de Supabase.
 
 
-## v2.25.0 — Guardian Share UX Polish + Mobile QA
+## v2.26.1 — Guardian Share UX Polish + Mobile QA
 - Pule `/guardian-share` con mejor copy, privacidad granular y QA móvil.
 - Agrega controles para ocultar/mostrar Calendario, Logros, Mejor día, Racha y Wallet antes de generar el link.
 - Agrega expiración local del snapshot compartido: 7, 14 o 30 días.
@@ -441,42 +441,10 @@ QA recomendado:
 5. Revocar link y confirmar pantalla de link desactivado.
 6. Correr `npm run validate:assets`, `npm run typecheck`, `npm run build`.
 
+
 ## v2.26 — Activity & Wallet Asset Centralization + Custom Categories Foundation
-
-Base: v2.25.0 validada.
-
-### Cambios principales
-- Centraliza actividades en `public/assets/monitos/`.
-- Centraliza iconos de Wallet en `public/assets/icons/`.
-- Elimina referencias nuevas a `public/assets/activities/*` y `public/assets/wallet/*`.
-- Agrega categorías canónicas para actividad y Wallet alineadas con analítica.
-- Mantiene aliases legacy para registros existentes (`futbol → deporte`, `beberagua → beber`, `musica → escuchar-musica`, etc.).
-- Agrega `/settings/categories` para personalizar categorías desde una vista móvil dedicada.
-- Permite editar nombre visible, icono, visibilidad, orden y crear categorías personalizadas.
-- Agrega migración `0017_v226_user_category_preferences.sql` para persistir preferencias por usuario.
-
-### Supabase
-Ejecutar:
-
-```sql
-supabase/migrations/0017_v226_user_category_preferences.sql
-```
-
-Validar:
-
-```sql
-select tablename, rowsecurity
-from pg_tables
-where schemaname = 'public'
-and tablename = 'user_category_preferences';
-```
-
-Debe devolver `rowsecurity = true`.
-
-### QA recomendado
-```bash
-npm install
-npm run validate:assets
-npm run typecheck
-npm run build
-```
+- Centraliza monitos en `public/assets/monitos/` e iconos en `public/assets/icons/`.
+- Alinea categorías de actividades y Wallet con keys estables para analítica.
+- Agrega migración `0017_v226_user_category_preferences.sql` para preferencias/categorías por usuario.
+- Agrega `/settings/categories` para editar nombres visibles, iconos, visibilidad y crear categorías custom.
+- Mantiene aliases legacy para datos antiguos de actividades e iconos.

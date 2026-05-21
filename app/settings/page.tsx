@@ -32,11 +32,11 @@ export default function SettingsPage() {
             <h2 className="mb-2 text-sm font-black">General</h2>
             <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}>
               <button className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Idioma</span><span className="text-monkey-muted">Español ›</span></button>
+              <Link href="/settings/categories" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Tags className="h-4 w-4 text-monkey-green" /> Categorías e iconos</span><span className="text-monkey-muted">Editar ›</span></Link>
               <Link href="/analytics" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-monkey-purple" /> Analítica</span><span className="text-monkey-muted">Ver avances ›</span></Link>
               <Link href="/achievements" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Award className="h-4 w-4 text-monkey-yellow" /> Logros</span><span className="text-monkey-muted">Medallas ›</span></Link>
               <Link href="/weekly-summary" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-monkey-green" /> Resumen semanal</span><span className="text-monkey-muted">Reporte ›</span></Link>
               <Link href="/guardian-share" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-monkey-green" /> Vista encargado</span><span className="text-monkey-muted">Compartir ›</span></Link>
-              <Link href="/settings/categories" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Tags className="h-4 w-4 text-monkey-purple" /> Categorías e iconos</span><span className="text-monkey-muted">Editar ›</span></Link>
               <Link href="/welcome?review=1" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Ver guía de uso</span><span className="text-monkey-muted">Aprender ›</span></Link>
               <div className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Sonidos</span><Toggle on={settings.sounds} onClick={() => setSettings((value) => ({ ...value, sounds: !value.sounds }))} /></div>
               <div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Sincronización</span><Toggle on={settings.sync} onClick={() => setSettings((value) => ({ ...value, sync: !value.sync }))} /></div>
@@ -44,7 +44,7 @@ export default function SettingsPage() {
           </section>
           <section>
             <h2 className="mb-2 text-sm font-black">Acerca de</h2>
-            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.26.0</span></div></div>
+            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.26.1</span></div></div>
           </section>
         </div>
       </section>
