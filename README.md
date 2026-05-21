@@ -393,7 +393,7 @@ Pruebas manuales:
 6. Desbloquear varios logros en una acción y confirmar que se agrupan en una sola notificación.
 
 
-## v2.24.0 — Reward Moment UX Polish + Mobile QA
+## v2.22.1 — Reward Moment UX Polish + Mobile QA
 - Integra assets dedicados de trofeo y medallas oro/plata/bronce.
 - Usa ilustraciones del mono para reward moments según tier.
 - Ajusta el momento de recompensa para móvil con overlay, CTA más claros y cierre manual.
@@ -407,3 +407,19 @@ Pruebas manuales:
 - Permite controlar alias visible y si se incluye o no el resumen Wallet.
 - Integra acceso desde Perfil, Configuración, Analítica y Resumen semanal.
 - No requiere migración nueva de Supabase.
+
+
+## v2.24.1 — Guardian Share UX Polish + Mobile QA
+- Pule `/guardian-share` con mejor copy, privacidad granular y QA móvil.
+- Agrega controles para ocultar/mostrar Calendario, Logros, Mejor día, Racha y Wallet antes de generar el link.
+- Agrega expiración local del snapshot compartido: 7, 14 o 30 días.
+- Maneja links inválidos y vencidos con pantallas públicas claras.
+- Mejora el link largo con estado de expiración, regeneración y copia más clara.
+- Mantiene la estrategia sin migración nueva; el link sigue siendo un snapshot local de solo lectura.
+
+QA recomendado:
+1. Crear link con Wallet oculto y verificar que la vista pública no lo muestre.
+2. Ocultar Calendario/Logros/Mejor día/Racha y confirmar que aparezcan como privados/ocultos.
+3. Copiar un link generado y abrirlo en ventana privada.
+4. Probar un `?share=abc` inválido y confirmar pantalla de error.
+5. Ejecutar `npm run validate:assets`, `npm run typecheck` y `npm run build`.

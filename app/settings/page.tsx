@@ -43,7 +43,7 @@ export default function SettingsPage() {
           </section>
           <section>
             <h2 className="mb-2 text-sm font-black">Acerca de</h2>
-            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.24.0</span></div></div>
+            <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}><div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Versión</span><span className="text-monkey-muted">2.24.1</span></div></div>
           </section>
         </div>
       </section>

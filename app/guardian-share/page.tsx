@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   BarChart3,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   Copy,
   Eye,
   EyeOff,
   Flame,
   LockKeyhole,
   PiggyBank,
+  RefreshCw,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Trophy,
   WalletCards,
@@ -54,9 +58,20 @@ type GuardianAchievement = {
   tier: "bronze" | "silver" | "gold" | "special";
 };
 
+type GuardianShareVersion = "2.24.0" | "2.24.1";
+
+type GuardianVisibleSections = {
+  calendar: boolean;
+  achievements: boolean;
+  bestDay: boolean;
+  streak: boolean;
+  wallet: boolean;
+};
+
 type GuardianSharePayload = {
-  version: "2.24.0";
+  version: GuardianShareVersion;
   createdAt: string;
+  expiresAt?: string;
   childName: string;
   guardianLabel: string;
   weekLabel: string;
@@ -72,6 +87,7 @@ type GuardianSharePayload = {
   dayReports: GuardianDayReport[];
   message: string;
   focus: string;
+  visibleSections?: GuardianVisibleSections;
   wallet?: {
     currency: WalletCurrency;
     transactions: number;
@@ -145,21 +161,58 @@ function decodeSharePayload(raw: string): GuardianSharePayload | null {
     const padded = raw.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((raw.length + 3) % 4);
     const json = decodeURIComponent(escape(window.atob(padded)));
     const parsed = JSON.parse(json) as GuardianSharePayload;
-    if (!parsed || parsed.version !== "2.24.0") return null;
+    if (!parsed || !["2.24.0", "2.24.1"].includes(parsed.version)) return null;
     return parsed;
   } catch {
     return null;
   }
 }
 
+
+function defaultVisibleSections(payload?: GuardianSharePayload): GuardianVisibleSections {
+  return payload?.visibleSections ?? {
+    calendar: true,
+    achievements: true,
+    bestDay: true,
+    streak: true,
+    wallet: Boolean(payload?.wallet),
+  };
+}
+
+function isShareExpired(payload: GuardianSharePayload) {
+  if (!payload.expiresAt) return false;
+  return new Date(payload.expiresAt).getTime() < Date.now();
+}
+
+function maskDayReports(dayReports: GuardianDayReport[], visibleSections: GuardianVisibleSections) {
+  return dayReports.map((day) => ({
+    ...day,
+    calendarTotal: visibleSections.calendar ? day.calendarTotal : 0,
+    calendarDone: visibleSections.calendar ? day.calendarDone : 0,
+    walletCount: visibleSections.wallet ? day.walletCount : 0,
+    achievementCount: visibleSections.achievements ? day.achievementCount : 0,
+    score: day.tasksDone + (visibleSections.calendar ? day.calendarDone : 0) + (visibleSections.wallet ? day.walletCount : 0) + (visibleSections.achievements ? day.achievementCount : 0),
+  }));
+}
+
+function shareExpirationLabel(payload: GuardianSharePayload) {
+  if (!payload.expiresAt) return "Sin expiración";
+  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(new Date(payload.expiresAt));
+}
+
 export default function GuardianSharePage() {
   const [sharedPayload, setSharedPayload] = useState<GuardianSharePayload | null>(null);
+  const [invalidShare, setInvalidShare] = useState(false);
   const [shareChecked, setShareChecked] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get("share");
-    if (raw) setSharedPayload(decodeSharePayload(raw));
+    if (raw) {
+      const decoded = decodeSharePayload(raw);
+      if (decoded) setSharedPayload(decoded);
+      else setInvalidShare(true);
+    }
     setShareChecked(true);
   }, []);
 
@@ -174,7 +227,11 @@ export default function GuardianSharePage() {
     );
   }
 
-  if (sharedPayload) return <GuardianPublicView payload={sharedPayload} />;
+  if (invalidShare) return <GuardianInvalidShareView />;
+  if (sharedPayload) {
+    if (isShareExpired(sharedPayload)) return <GuardianExpiredShareView payload={sharedPayload} />;
+    return <GuardianPublicView payload={sharedPayload} />;
+  }
   return <GuardianShareBuilder />;
 }
 
@@ -191,6 +248,11 @@ function GuardianShareBuilder() {
   const [guardianLabel, setGuardianLabel] = useState("Encargado/a");
   const [childAlias, setChildAlias] = useState(profile.name || "Monkey user");
   const [includeWallet, setIncludeWallet] = useState(false);
+  const [includeCalendar, setIncludeCalendar] = useState(true);
+  const [includeAchievements, setIncludeAchievements] = useState(true);
+  const [includeBestDay, setIncludeBestDay] = useState(true);
+  const [includeStreak, setIncludeStreak] = useState(true);
+  const [expiresInDays, setExpiresInDays] = useState<7 | 14 | 30>(14);
   const [generatedLink, setGeneratedLink] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -259,32 +321,44 @@ function GuardianShareBuilder() {
   }), [walletTransactionsThisWeek]);
 
   const syncing = tasksSyncing || calendarSyncing || completionSyncStatus === "loading" || walletSyncing || achievementSyncStatus === "loading";
+  const visibleSections = useMemo<GuardianVisibleSections>(() => ({
+    calendar: includeCalendar,
+    achievements: includeAchievements,
+    bestDay: includeBestDay,
+    streak: includeStreak,
+    wallet: includeWallet,
+  }), [includeAchievements, includeBestDay, includeCalendar, includeStreak, includeWallet]);
   const message = motivationalMessage(totals.completion, achievementResult.stats.streak, achievementsThisWeek.length);
   const focus = focusMessage(totals.completion, totals.taskDone, totals.calendarDone);
 
-  const payload = useMemo<GuardianSharePayload>(() => ({
-    version: "2.24.0",
+  const payload = useMemo<GuardianSharePayload>(() => {
+    const expiresAt = addDays(new Date(), expiresInDays).toISOString();
+    const maskedDayReports = maskDayReports(dayReports, visibleSections);
+    return {
+    version: "2.24.1",
     createdAt: new Date().toISOString(),
+    expiresAt,
     childName: childAlias.trim() || "Monkey user",
     guardianLabel: guardianLabel.trim() || "Encargado/a",
     weekLabel: `${formatDay(weekDays[0])} - ${formatDay(weekDays[6])}`,
     completion: totals.completion,
     taskDone: totals.taskDone,
     taskTotal: totals.taskTotal,
-    calendarDone: totals.calendarDone,
-    calendarTotal: totals.calendarTotal,
-    streak: achievementResult.stats.streak,
-    bestDayLabel: totals.bestDay?.score ? totals.bestDay.shortLabel : "Pendiente",
-    bestDayScore: totals.bestDay?.score ?? 0,
-    achievementsThisWeek: achievementsThisWeek.slice(0, 6).map((achievement) => ({
+    calendarDone: includeCalendar ? totals.calendarDone : 0,
+    calendarTotal: includeCalendar ? totals.calendarTotal : 0,
+    streak: includeStreak ? achievementResult.stats.streak : 0,
+    bestDayLabel: includeBestDay && totals.bestDay?.score ? totals.bestDay.shortLabel : "Oculto",
+    bestDayScore: includeBestDay ? (totals.bestDay?.score ?? 0) : 0,
+    achievementsThisWeek: includeAchievements ? achievementsThisWeek.slice(0, 6).map((achievement) => ({
       id: achievement.id,
       title: achievement.title,
       description: achievement.description,
       tier: achievement.tier,
-    })),
-    dayReports,
+    })) : [],
+    dayReports: maskedDayReports,
     message,
     focus,
+    visibleSections,
     wallet: includeWallet ? {
       currency: wallet.currency,
       transactions: walletTransactionsThisWeek.length,
@@ -293,7 +367,12 @@ function GuardianShareBuilder() {
       saving: walletSummary.saving,
       extra: walletSummary.extra,
     } : undefined,
-  }), [achievementResult.stats.streak, achievementsThisWeek, childAlias, dayReports, focus, guardianLabel, includeWallet, message, totals.bestDay?.score, totals.bestDay?.shortLabel, totals.calendarDone, totals.calendarTotal, totals.completion, totals.taskDone, totals.taskTotal, wallet.currency, walletSummary.expense, walletSummary.extra, walletSummary.income, walletSummary.saving, walletTransactionsThisWeek.length, weekDays]);
+    };
+  }, [achievementResult.stats.streak, achievementsThisWeek, childAlias, dayReports, expiresInDays, focus, guardianLabel, includeAchievements, includeBestDay, includeCalendar, includeStreak, includeWallet, message, totals.bestDay?.score, totals.bestDay?.shortLabel, totals.calendarDone, totals.calendarTotal, totals.completion, totals.taskDone, totals.taskTotal, visibleSections, wallet.currency, walletSummary.expense, walletSummary.extra, walletSummary.income, walletSummary.saving, walletTransactionsThisWeek.length, weekDays]);
+
+  useEffect(() => {
+    setGeneratedLink("");
+  }, [payload]);
 
   function notify(messageText: string, type: "success" | "error" = "success") {
     setToast({ message: messageText, type });
@@ -304,7 +383,7 @@ function GuardianShareBuilder() {
     const encoded = encodeSharePayload(payload);
     const link = `${window.location.origin}/guardian-share?share=${encoded}`;
     setGeneratedLink(link);
-    notify("Link de progreso generado");
+    notify(generatedLink ? "Link actualizado" : "Link de progreso generado");
   }
 
   async function copyLink() {
@@ -340,7 +419,7 @@ function GuardianShareBuilder() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white/80">Reporte seguro de 7 días</p>
               <h2 className="mt-2 text-[40px] font-black leading-none">{totals.completion}%</h2>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista de solo lectura para un padre, madre o encargado.</p>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista compacta de solo lectura para acompañar el progreso sin exponer login ni edición.</p>
             </div>
             <div className="hidden w-24 shrink-0 sm:block"><MonkeyAvatar size={88} variant="face" /></div>
           </div>
@@ -363,21 +442,38 @@ function GuardianShareBuilder() {
               <span className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Para</span>
               <input value={guardianLabel} onChange={(event) => setGuardianLabel(event.target.value)} className="mt-2 h-12 w-full rounded-[18px] border border-gray-100 bg-gray-50 px-4 text-sm font-bold outline-none focus:border-monkey-green" placeholder="Mamá, Papá, Encargado/a" />
             </label>
-            <button type="button" onClick={() => setIncludeWallet((value) => !value)} className="flex min-h-14 items-center justify-between rounded-[20px] bg-gray-50 px-4 text-left text-sm font-bold transition active:scale-[.98]">
-              <span className="flex items-center gap-3">
-                {includeWallet ? <Eye className="h-4 w-4 text-monkey-green" /> : <EyeOff className="h-4 w-4 text-monkey-muted" />}
-                Incluir resumen Wallet
-              </span>
-              <span className="text-xs font-black text-monkey-muted">{includeWallet ? "Incluido" : "Oculto"}</span>
-            </button>
+            <div className="rounded-[24px] border border-gray-100 bg-gray-50 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Privacidad del reporte</p>
+                  <p className="text-xs font-bold leading-relaxed text-monkey-muted">Elegí qué verá el encargado en el link.</p>
+                </div>
+                <SlidersHorizontal className="h-5 w-5 shrink-0 text-monkey-greenDark" />
+              </div>
+              <div className="grid gap-2">
+                <PrivacyToggle label="Calendario" checked={includeCalendar} onClick={() => setIncludeCalendar((value) => !value)} />
+                <PrivacyToggle label="Logros y medallas" checked={includeAchievements} onClick={() => setIncludeAchievements((value) => !value)} />
+                <PrivacyToggle label="Mejor día" checked={includeBestDay} onClick={() => setIncludeBestDay((value) => !value)} />
+                <PrivacyToggle label="Racha" checked={includeStreak} onClick={() => setIncludeStreak((value) => !value)} />
+                <PrivacyToggle label="Wallet" checked={includeWallet} onClick={() => setIncludeWallet((value) => !value)} />
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-gray-100 bg-gray-50 p-3">
+              <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Expiración</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {[7, 14, 30].map((days) => (
+                  <button key={days} type="button" onClick={() => setExpiresInDays(days as 7 | 14 | 30)} className={cn("h-10 rounded-full text-xs font-black transition active:scale-95", expiresInDays === days ? "bg-monkey-green text-white shadow-card" : "bg-white text-monkey-greenDark")}>{days} días</button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="mt-5 grid grid-cols-2 gap-3">
           <MetricCard icon={<CheckCircle2 className="h-5 w-5" />} label="Checks" value={`${totals.taskDone}/${totals.taskTotal}`} hint="Tareas actuales" tone="green" />
-          <MetricCard icon={<CalendarDays className="h-5 w-5" />} label="Calendario" value={`${totals.calendarDone}/${totals.calendarTotal}`} hint="Actividades" tone="blue" />
-          <MetricCard icon={<Trophy className="h-5 w-5" />} label="Medallas" value={String(achievementsThisWeek.length)} hint="Esta semana" tone="purple" />
-          <MetricCard icon={<Flame className="h-5 w-5" />} label="Racha" value={`${achievementResult.stats.streak}`} hint="Días activos" tone="orange" />
+          <MetricCard icon={<CalendarDays className="h-5 w-5" />} label="Calendario" value={includeCalendar ? `${totals.calendarDone}/${totals.calendarTotal}` : "Oculto"} hint="Actividades" tone="blue" />
+          <MetricCard icon={<Trophy className="h-5 w-5" />} label="Medallas" value={includeAchievements ? String(achievementsThisWeek.length) : "Oculto"} hint="Esta semana" tone="purple" />
+          <MetricCard icon={<Flame className="h-5 w-5" />} label="Racha" value={includeStreak ? `${achievementResult.stats.streak}` : "Oculta"} hint="Días activos" tone="orange" />
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
@@ -390,12 +486,17 @@ function GuardianShareBuilder() {
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><Copy className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Link compartible</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link contiene una foto del progreso actual. No permite editar la cuenta ni entrar a Monkey Checks.</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link contiene una foto del progreso actual, respeta las opciones de privacidad y vence automáticamente según la expiración elegida.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={generateLink} className="h-11 rounded-full bg-monkey-green px-4 text-xs font-black text-white shadow-card transition active:scale-95">Generar</button>
+                <button type="button" onClick={generateLink} className="h-11 rounded-full bg-monkey-green px-4 text-xs font-black text-white shadow-card transition active:scale-95">{generatedLink ? "Regenerar" : "Generar"}</button>
                 <button type="button" onClick={copyLink} className="h-11 rounded-full bg-white px-4 text-xs font-black text-monkey-greenDark shadow-card transition active:scale-95">Copiar</button>
               </div>
-              {generatedLink ? <textarea readOnly value={generatedLink} className="mt-3 h-24 w-full resize-none rounded-[18px] border border-green-100 bg-white p-3 text-[11px] font-bold leading-relaxed text-monkey-muted outline-none" /> : null}
+              {generatedLink ? (
+                <div className="mt-3 rounded-[20px] border border-green-100 bg-white p-3">
+                  <div className="mb-2 flex items-center gap-2 text-[11px] font-black text-monkey-greenDark"><Clock3 className="h-3.5 w-3.5" /> Vence el {shareExpirationLabel(payload)}</div>
+                  <textarea readOnly value={generatedLink} className="h-24 w-full resize-none rounded-[16px] bg-gray-50 p-3 text-[11px] font-bold leading-relaxed text-monkey-muted outline-none" />
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -405,6 +506,7 @@ function GuardianShareBuilder() {
 }
 
 function GuardianPublicView({ payload }: { payload: GuardianSharePayload }) {
+  const visibleSections = defaultVisibleSections(payload);
   return (
     <main className="app-screen overflow-y-auto bg-monkey-bg pb-[calc(32px+var(--safe-bottom))]">
       <section className="page-pad pt-7 pb-8">
@@ -429,16 +531,16 @@ function GuardianPublicView({ payload }: { payload: GuardianSharePayload }) {
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/25"><div className="h-full rounded-full bg-white" style={{ width: `${payload.completion}%` }} /></div>
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
             <span className="rounded-full bg-white/20 px-3 py-1.5">Solo lectura</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">Racha {payload.streak} días</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">{payload.achievementsThisWeek.length} medallas</span>
+            {visibleSections.streak ? <span className="rounded-full bg-white/20 px-3 py-1.5">Racha {payload.streak} días</span> : null}
+            {visibleSections.achievements ? <span className="rounded-full bg-white/20 px-3 py-1.5">{payload.achievementsThisWeek.length} medallas</span> : null}
           </div>
         </section>
 
         <section className="mt-5 grid grid-cols-2 gap-3">
           <MetricCard icon={<CheckCircle2 className="h-5 w-5" />} label="Checks" value={`${payload.taskDone}/${payload.taskTotal}`} hint="Tareas actuales" tone="green" />
-          <MetricCard icon={<CalendarDays className="h-5 w-5" />} label="Calendario" value={`${payload.calendarDone}/${payload.calendarTotal}`} hint="Actividades" tone="blue" />
-          <MetricCard icon={<Trophy className="h-5 w-5" />} label="Logros" value={String(payload.achievementsThisWeek.length)} hint="Ganados" tone="purple" />
-          <MetricCard icon={<Flame className="h-5 w-5" />} label="Mejor día" value={payload.bestDayLabel} hint={payload.bestDayScore ? `${payload.bestDayScore} avances` : "Pendiente"} tone="orange" />
+          {visibleSections.calendar ? <MetricCard icon={<CalendarDays className="h-5 w-5" />} label="Calendario" value={`${payload.calendarDone}/${payload.calendarTotal}`} hint="Actividades" tone="blue" /> : <MetricCard icon={<EyeOff className="h-5 w-5" />} label="Calendario" value="Oculto" hint="Privado" tone="blue" />}
+          {visibleSections.achievements ? <MetricCard icon={<Trophy className="h-5 w-5" />} label="Logros" value={String(payload.achievementsThisWeek.length)} hint="Ganados" tone="purple" /> : <MetricCard icon={<EyeOff className="h-5 w-5" />} label="Logros" value="Oculto" hint="Privado" tone="purple" />}
+          {visibleSections.bestDay ? <MetricCard icon={<Flame className="h-5 w-5" />} label="Mejor día" value={payload.bestDayLabel} hint={payload.bestDayScore ? `${payload.bestDayScore} avances` : "Pendiente"} tone="orange" /> : <MetricCard icon={<EyeOff className="h-5 w-5" />} label="Mejor día" value="Oculto" hint="Privado" tone="orange" />}
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card"><GuardianReportPreview payload={payload} /></section>
@@ -460,13 +562,14 @@ function GuardianPublicView({ payload }: { payload: GuardianSharePayload }) {
           </div>
         </section>
 
-        <p className="mt-5 text-center text-[11px] font-bold leading-relaxed text-monkey-muted">Reporte generado el {new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(payload.createdAt))}. Esta vista no permite editar información ni iniciar sesión.</p>
+        <p className="mt-5 text-center text-[11px] font-bold leading-relaxed text-monkey-muted">Reporte generado el {new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(payload.createdAt))}. Esta vista no permite editar información ni iniciar sesión. Vence el {shareExpirationLabel(payload)}.</p>
       </section>
     </main>
   );
 }
 
 function GuardianReportPreview({ payload }: { payload: GuardianSharePayload }) {
+  const visibleSections = defaultVisibleSections(payload);
   return (
     <div className="space-y-5">
       <div>
@@ -478,7 +581,9 @@ function GuardianReportPreview({ payload }: { payload: GuardianSharePayload }) {
       </div>
       <div>
         <SectionTitle title="Medallas de la semana" subtitle="Logros visibles para acompañar el avance" icon={<img src={getRewardTrophyIcon()} alt="Trofeo" className="h-8 w-8 object-contain" />} />
-        {payload.achievementsThisWeek.length ? (
+        {!visibleSections.achievements ? (
+          <HiddenSectionCard title="Medallas ocultas" description="Este reporte mantiene los logros privados por configuración." />
+        ) : payload.achievementsThisWeek.length ? (
           <div className="grid gap-3">
             {payload.achievementsThisWeek.map((achievement) => <AchievementSharedRow key={achievement.id} achievement={achievement} />)}
           </div>
@@ -509,6 +614,55 @@ function WalletSharedSummary({ wallet }: { wallet: NonNullable<GuardianSharePayl
         </div>
       ))}
     </div>
+  );
+}
+
+
+function PrivacyToggle({ label, checked, onClick }: { label: string; checked: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex min-h-11 items-center justify-between rounded-[18px] bg-white px-3 text-left text-xs font-black transition active:scale-[.98]">
+      <span className="flex items-center gap-2">
+        {checked ? <Eye className="h-4 w-4 text-monkey-green" /> : <EyeOff className="h-4 w-4 text-monkey-muted" />}
+        {label}
+      </span>
+      <span className={cn("rounded-full px-2.5 py-1 text-[10px]", checked ? "bg-green-50 text-monkey-greenDark" : "bg-gray-100 text-monkey-muted")}>{checked ? "Visible" : "Oculto"}</span>
+    </button>
+  );
+}
+
+function HiddenSectionCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50 p-4 text-center">
+      <EyeOff className="mx-auto h-5 w-5 text-monkey-muted" />
+      <h3 className="mt-2 text-sm font-black">{title}</h3>
+      <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">{description}</p>
+    </div>
+  );
+}
+
+function GuardianInvalidShareView() {
+  return (
+    <main className="app-screen grid place-items-center bg-monkey-bg px-6 text-center">
+      <section className="w-full max-w-sm rounded-[34px] bg-white p-6 shadow-soft">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-orange-50 text-orange-700"><AlertTriangle className="h-7 w-7" /></div>
+        <h1 className="mt-4 text-xl font-black">Link no válido</h1>
+        <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Este reporte no se pudo leer. Puede estar incompleto o haber sido copiado de forma incorrecta.</p>
+        <Link href="/login" className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-monkey-green px-5 text-xs font-black text-white shadow-card">Ir a Monkey Checks</Link>
+      </section>
+    </main>
+  );
+}
+
+function GuardianExpiredShareView({ payload }: { payload: GuardianSharePayload }) {
+  return (
+    <main className="app-screen grid place-items-center bg-monkey-bg px-6 text-center">
+      <section className="w-full max-w-sm rounded-[34px] bg-white p-6 shadow-soft">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-orange-50 text-orange-700"><Clock3 className="h-7 w-7" /></div>
+        <h1 className="mt-4 text-xl font-black">Reporte vencido</h1>
+        <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">El reporte de {payload.childName} venció el {shareExpirationLabel(payload)}. Pedí un link nuevo para ver el progreso actualizado.</p>
+        <Link href="/login" className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-monkey-green px-5 text-xs font-black text-white shadow-card">Ir a Monkey Checks</Link>
+      </section>
+    </main>
   );
 }
 
