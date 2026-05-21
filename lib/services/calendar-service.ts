@@ -18,6 +18,12 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     recurrenceUntil: input.recurrenceUntil ?? null,
     recurrenceGroupId: input.recurrenceGroupId ?? null,
     done: Boolean(input.done),
+    source: input.source ?? "normal",
+    challengeId: input.challengeId ?? null,
+    challengeTaskId: input.challengeTaskId ?? null,
+    isLocked: Boolean(input.isLocked),
+    verificationStatus: input.verificationStatus ?? null,
+    rewardBananas: input.rewardBananas ?? null,
   };
 }
 

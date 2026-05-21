@@ -22,6 +22,7 @@ import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useReminders } from "@/hooks/use-reminders";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
+import { isChallengeCalendarEvent } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
@@ -363,6 +364,10 @@ export default function TodayPage() {
   }
 
   function requestCalendarEventEditor(event: CalendarEvent) {
+    if (isChallengeCalendarEvent(event)) {
+      showToast("Las tareas de reto están bloqueadas para cuidar la medición.", "error");
+      return;
+    }
     if (isRecurringEvent(event)) {
       setPendingRecurringEvent(event);
       return;
@@ -443,6 +448,10 @@ export default function TodayPage() {
         next.delete(occurrenceKey);
         return next;
       });
+    }
+
+    if (isChallengeCalendarEvent(event) && nextDone) {
+      showToast("Reto cumplido por hoy. Revisá tus bananas en Retos 🍌");
     }
 
     if (isRecurringEvent(event)) {

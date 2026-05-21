@@ -34,6 +34,7 @@ import { ACTIVITY_TYPES, activityTypePillClass, inferActivityTypeFromEvent } fro
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
+import { isChallengeCalendarEvent } from "@/lib/challenges";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -519,6 +520,10 @@ export default function CalendarPage() {
   }
 
   function requestEdit(event: CalendarEvent) {
+    if (isChallengeCalendarEvent(event)) {
+      notify("Esta actividad pertenece a un reto. Podés completarla en Hoy, pero no borrarla ni editarla desde Calendario.", "error");
+      return;
+    }
     if (isRecurringEvent(event)) {
       setPendingRecurringAction({ action: "edit", event });
       setSheetMode("recurringScope");

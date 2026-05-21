@@ -510,3 +510,74 @@ npm run validate:assets
 npm run typecheck
 npm run build
 ```
+
+## v2.28 — Personal Challenges + Banana Rewards Foundation
+
+Base: v2.27.2 — Analytics Category Alignment + Stable Keys.
+
+### Objetivo
+
+Agregar una primera base de retos personales sin cambiar la dinámica normal de Monkey Checks. Las tareas normales siguen siendo editables y borrables; las tareas creadas por reto quedan marcadas como especiales y bloqueadas para mantener una medición más limpia.
+
+### Cambios principales
+
+- Nueva ruta `/challenges` para retos personales y bananas.
+- Nuevos retos sugeridos: agua, caminar, ordenar espacio y respirar/pausar.
+- Al aceptar un reto, se crean actividades especiales automáticamente en Calendario y Hoy.
+- Las actividades de reto quedan con metadata:
+  - `source: personal_challenge`
+  - `challengeId`
+  - `challengeTaskId`
+  - `isLocked`
+  - `verificationStatus`
+  - `rewardBananas`
+- Las actividades de reto no se editan ni eliminan desde Calendar/Hoy; se completan con check como el resto.
+- Nuevo Wallet de logros basado en bananas, separado del Wallet financiero.
+- Nueva tabla `banana_ledger` para historial auditable de bananas.
+- Analytics muestra un bloque de retos/bananas y conecta con `/challenges`.
+- Settings agrega acceso a **Retos y bananas**.
+
+### Migración nueva
+
+```txt
+supabase/migrations/0021_v228_personal_challenges_banana_rewards.sql
+```
+
+Agrega columnas seguras a `calendar_events` y crea:
+
+```txt
+personal_challenges
+challenge_tasks
+banana_ledger
+```
+
+### QA recomendado
+
+```bash
+cd ~/Documents/"Web Projects"/monkey
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Probar:
+
+1. Ejecutar migración `0021_v228_personal_challenges_banana_rewards.sql`.
+2. Entrar a `/challenges`.
+3. Crear un reto de 1 día con 1–3 horarios.
+4. Validar que aparecen actividades en `/today` y `/calendar`.
+5. Intentar editar una actividad de reto desde Hoy/Calendario: debe bloquear edición.
+6. Marcar checks del reto desde Hoy.
+7. Volver a `/challenges` y cobrar bananas cuando el reto esté completo.
+8. Verificar que Analytics muestra el bloque de retos/bananas.
+
+### Alcance no incluido todavía
+
+- Retos padre/hijo.
+- Validación por encargado.
+- Canje real de premios.
+- Evidencias con fotos.
+- Notificaciones push específicas de retos.
+
+Estos quedan preparados para una versión futura sobre esta base.

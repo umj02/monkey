@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowUpRight,
+  Banana,
   BarChart3,
   CalendarDays,
   CheckCircle2,
@@ -36,6 +37,7 @@ import { activityTypePillClass } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
+import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta, resolveWalletCategoryMeta } from "@/lib/category-catalog";
 import type { CalendarEvent, WalletTransaction, WalletTransactionType } from "@/types";
 
@@ -155,6 +157,7 @@ export default function AnalyticsPage() {
   const { overrides } = useCalendarOverrides();
   const { wallet, syncing: walletSyncing, syncStatus: walletSyncStatus, lastError: walletError } = useWallet();
   const { activityItems, walletExpenseItems } = useCategoryPreferences();
+  const { summary: challengeSummary, syncing: challengeSyncing } = useChallenges();
 
   const range = useMemo(() => {
     const start = mode === "week" ? startOfWeek(today) : startOfMonth(today);
@@ -500,6 +503,20 @@ export default function AnalyticsPage() {
         </section>
 
 
+
+        <section className="mt-6 rounded-[28px] border border-yellow-200 bg-yellow-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-orange-700 shadow-card"><Banana className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-black">Retos y bananas</h2>
+              <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} logrados · {challengeSummary.bananasEarned} bananas ganadas.</p>
+            </div>
+            <Link href="/challenges" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-orange-700 shadow-card transition active:scale-95">
+              Ver
+            </Link>
+          </div>
+          <p className="mt-3 text-[11px] font-black text-orange-700">{challengeSyncing ? "Actualizando retos…" : "Analítica separada: retos especiales no cambian tus tareas normales."}</p>
+        </section>
 
         <section className="mt-6 rounded-[28px] border border-monkey-green/20 bg-green-50 p-4">
           <div className="flex items-center gap-3">

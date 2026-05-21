@@ -46,7 +46,7 @@ type NoteRow = Pick<
 type CalendarEventRow = Pick<
   TableRow<"calendar_events">,
   "id" | "event_date" | "start_time" | "end_time" | "title" | "icon_key" | "activity_type_key" | "color" | "recurrence_type" | "recurrence_days" | "recurrence_until" | "recurrence_group_id" | "done"
->;
+> & { source?: string | null; challenge_id?: string | null; challenge_task_id?: string | null; is_locked?: boolean | null; verification_status?: string | null; reward_bananas?: number | null };
 type CalendarOccurrenceOverrideRow = Pick<
   TableRow<"calendar_event_occurrence_overrides">,
   "id" | "calendar_event_id" | "occurrence_date" | "title" | "start_time" | "end_time" | "color" | "icon_key" | "activity_type_key" | "reminder_at" | "is_cancelled"
@@ -519,7 +519,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
 
   const { data, error } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
+    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas")
     .eq("user_id", userId)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -542,6 +542,12 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
       recurrenceUntil: event.recurrence_until ?? null,
       recurrenceGroupId: event.recurrence_group_id ?? null,
       done: Boolean(event.done),
+      source: (event.source || "normal") as CalendarEvent["source"],
+      challengeId: event.challenge_id ?? null,
+      challengeTaskId: event.challenge_task_id ?? null,
+      isLocked: Boolean(event.is_locked),
+      verificationStatus: (event.verification_status || null) as CalendarEvent["verificationStatus"],
+      rewardBananas: event.reward_bananas ?? null,
     }),
   );
 }
@@ -567,6 +573,12 @@ export async function upsertCalendarEvent(
     recurrence_until: event.recurrenceUntil ?? null,
     recurrence_group_id: event.recurrenceGroupId ?? null,
     done: Boolean(event.done),
+    source: event.source ?? "normal",
+    challenge_id: event.challengeId ?? null,
+    challenge_task_id: event.challengeTaskId ?? null,
+    is_locked: Boolean(event.isLocked),
+    verification_status: event.verificationStatus ?? null,
+    reward_bananas: event.rewardBananas ?? null,
   };
 
   if (isUuid(event.id)) {
@@ -574,7 +586,7 @@ export async function upsertCalendarEvent(
     const { data, error } = await supabase
       .from("calendar_events")
       .upsert(payload, { onConflict: "id" })
-      .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
+      .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas")
       .single();
     if (error) return null;
     return {
@@ -591,12 +603,18 @@ export async function upsertCalendarEvent(
       recurrenceUntil: data.recurrence_until ?? null,
       recurrenceGroupId: data.recurrence_group_id ?? null,
       done: Boolean(data.done),
+      source: (data.source || "normal") as CalendarEvent["source"],
+      challengeId: data.challenge_id ?? null,
+      challengeTaskId: data.challenge_task_id ?? null,
+      isLocked: Boolean(data.is_locked),
+      verificationStatus: (data.verification_status || null) as CalendarEvent["verificationStatus"],
+      rewardBananas: data.reward_bananas ?? null,
     };
   }
 
   const { data: existing } = await supabase
     .from("calendar_events")
-    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
+    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas")
     .eq("user_id", userId)
     .eq("event_date", event.date)
     .eq("start_time", normalizeTime(event.time))
@@ -609,7 +627,7 @@ export async function upsertCalendarEvent(
       .from("calendar_events")
       .update(payload)
       .eq("id", existing.id)
-      .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
+      .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas")
       .single();
     if (error) return null;
     return {
@@ -626,13 +644,19 @@ export async function upsertCalendarEvent(
       recurrenceUntil: data.recurrence_until ?? null,
       recurrenceGroupId: data.recurrence_group_id ?? null,
       done: Boolean(data.done),
+      source: (data.source || "normal") as CalendarEvent["source"],
+      challengeId: data.challenge_id ?? null,
+      challengeTaskId: data.challenge_task_id ?? null,
+      isLocked: Boolean(data.is_locked),
+      verificationStatus: (data.verification_status || null) as CalendarEvent["verificationStatus"],
+      rewardBananas: data.reward_bananas ?? null,
     };
   }
 
   const { data, error } = await supabase
     .from("calendar_events")
     .insert(payload)
-    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done")
+    .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas")
     .single();
 
   if (error) return null;
@@ -650,6 +674,12 @@ export async function upsertCalendarEvent(
     recurrenceUntil: data.recurrence_until ?? null,
     recurrenceGroupId: data.recurrence_group_id ?? null,
     done: Boolean(data.done),
+    source: (data.source || "normal") as CalendarEvent["source"],
+    challengeId: data.challenge_id ?? null,
+    challengeTaskId: data.challenge_task_id ?? null,
+    isLocked: Boolean(data.is_locked),
+    verificationStatus: (data.verification_status || null) as CalendarEvent["verificationStatus"],
+    rewardBananas: data.reward_bananas ?? null,
   };
 }
 

@@ -75,6 +75,12 @@ export type CalendarEvent = {
   parentEventId?: string | null;
   occurrenceDate?: string | null;
   isOccurrenceOverride?: boolean;
+  source?: "normal" | "personal_challenge" | "guardian_challenge";
+  challengeId?: string | null;
+  challengeTaskId?: string | null;
+  isLocked?: boolean;
+  verificationStatus?: ChallengeVerificationStatus | null;
+  rewardBananas?: number | null;
 };
 
 export type CalendarOccurrenceOverride = {
@@ -236,4 +242,64 @@ export type WalletDbPlannedExpense = WalletPlannedExpense & {
   userId: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+
+export type ChallengeOrigin = "personal" | "guardian";
+export type ChallengeFrequency = "daily" | "weekly" | "monthly";
+export type ChallengeStatus = "active" | "completed" | "cancelled" | "expired";
+export type ChallengeTaskStatus = "pending" | "checked" | "verified" | "rejected" | "missed";
+export type ChallengeVerificationStatus = "none" | "self_checked" | "guardian_pending" | "guardian_verified" | "guardian_rejected";
+
+export type ChallengeTask = {
+  id: string;
+  challengeId: string;
+  calendarEventId?: string | null;
+  title: string;
+  iconKey: string;
+  activityTypeKey: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  status: ChallengeTaskStatus;
+  rewardBananas: number;
+  checkedAt?: string | null;
+  verifiedAt?: string | null;
+};
+
+export type Challenge = {
+  id: string;
+  origin: ChallengeOrigin;
+  title: string;
+  description: string;
+  iconKey: string;
+  imagePath?: string | null;
+  activityTypeKey: string;
+  frequency: ChallengeFrequency;
+  status: ChallengeStatus;
+  startDate: string;
+  endDate: string;
+  rewardBananas: number;
+  requiresGuardianVerification: boolean;
+  claimedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tasks: ChallengeTask[];
+};
+
+export type BananaLedgerEntry = {
+  id: string;
+  userId?: string | null;
+  sourceType: "challenge" | "achievement" | "manual_adjustment";
+  sourceId: string;
+  amount: number;
+  reason: string;
+  createdAt: string;
+};
+
+export type ChallengeSummary = {
+  active: number;
+  completed: number;
+  pendingTasks: number;
+  bananasEarned: number;
+  bananasAvailable: number;
 };
