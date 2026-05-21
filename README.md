@@ -409,7 +409,7 @@ Pruebas manuales:
 - No requiere migración nueva de Supabase.
 
 
-## v2.24.1 — Guardian Share UX Polish + Mobile QA
+## v2.25.0 — Guardian Share UX Polish + Mobile QA
 - Pule `/guardian-share` con mejor copy, privacidad granular y QA móvil.
 - Agrega controles para ocultar/mostrar Calendario, Logros, Mejor día, Racha y Wallet antes de generar el link.
 - Agrega expiración local del snapshot compartido: 7, 14 o 30 días.
@@ -423,3 +423,20 @@ QA recomendado:
 3. Copiar un link generado y abrirlo en ventana privada.
 4. Probar un `?share=abc` inválido y confirmar pantalla de error.
 5. Ejecutar `npm run validate:assets`, `npm run typecheck` y `npm run build`.
+
+
+## v2.25 — Secure Guardian Share Tokens + Supabase Sync
+
+- Agrega migración `0016_v225_guardian_share_tokens.sql`.
+- Los links de encargado ahora usan token corto `?token=...` en lugar de cargar todo el snapshot en la URL.
+- El snapshot se guarda en Supabase en `guardian_share_tokens`.
+- Incluye expiración, revocación manual, estado de link revocado/vencido y función pública segura `get_guardian_share_by_token`.
+- Mantiene compatibilidad de lectura con links legacy `?share=...` de v2.24.x.
+
+QA recomendado:
+1. Ejecutar la migración 0016 en Supabase.
+2. Generar link desde `/guardian-share`.
+3. Confirmar que el link usa `?token=`.
+4. Abrir en ventana privada y validar vista pública.
+5. Revocar link y confirmar pantalla de link desactivado.
+6. Correr `npm run validate:assets`, `npm run typecheck`, `npm run build`.

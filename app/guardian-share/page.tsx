@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Ban,
   ArrowLeft,
   BarChart3,
   CalendarDays,
@@ -13,6 +14,8 @@ import {
   Eye,
   EyeOff,
   Flame,
+  KeyRound,
+  Loader2,
   LockKeyhole,
   PiggyBank,
   RefreshCw,
@@ -35,6 +38,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { buildAchievements } from "@/lib/achievements";
 import { applyCalendarOverridesForDate, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
+import { createGuardianShareToken, fetchGuardianShareByToken, revokeGuardianShareToken, type SecureGuardianShareRecord } from "@/lib/services/guardian-share-service";
 import { cn } from "@/lib/utils";
 import type { WalletCurrency, WalletTransactionType } from "@/types";
 
@@ -58,7 +62,7 @@ type GuardianAchievement = {
   tier: "bronze" | "silver" | "gold" | "special";
 };
 
-type GuardianShareVersion = "2.24.0" | "2.24.1";
+type GuardianShareVersion = "2.24.0" | "2.24.1" | "2.25.0";
 
 type GuardianVisibleSections = {
   calendar: boolean;
@@ -96,6 +100,10 @@ type GuardianSharePayload = {
     saving: number;
     extra: number;
   };
+};
+
+type ActiveSecureGuardianShare = SecureGuardianShareRecord & {
+  url: string;
 };
 
 const walletTypeLabels: Record<WalletTransactionType, string> = {
@@ -161,7 +169,7 @@ function decodeSharePayload(raw: string): GuardianSharePayload | null {
     const padded = raw.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((raw.length + 3) % 4);
     const json = decodeURIComponent(escape(window.atob(padded)));
     const parsed = JSON.parse(json) as GuardianSharePayload;
-    if (!parsed || !["2.24.0", "2.24.1"].includes(parsed.version)) return null;
+    if (!parsed || !["2.24.0", "2.24.1", "2.25.0"].includes(parsed.version)) return null;
     return parsed;
   } catch {
     return null;
@@ -203,17 +211,41 @@ function shareExpirationLabel(payload: GuardianSharePayload) {
 export default function GuardianSharePage() {
   const [sharedPayload, setSharedPayload] = useState<GuardianSharePayload | null>(null);
   const [invalidShare, setInvalidShare] = useState(false);
+  const [revokedShare, setRevokedShare] = useState(false);
   const [shareChecked, setShareChecked] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get("share");
-    if (raw) {
-      const decoded = decodeSharePayload(raw);
-      if (decoded) setSharedPayload(decoded);
-      else setInvalidShare(true);
+    let active = true;
+
+    async function readShare() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      const legacyRaw = params.get("share");
+
+      if (token) {
+        const result = await fetchGuardianShareByToken<GuardianSharePayload>(token);
+        if (!active) return;
+        if (!result?.payload) {
+          setInvalidShare(true);
+        } else if (result.status === "revoked") {
+          setRevokedShare(true);
+        } else {
+          setSharedPayload({ ...result.payload, expiresAt: result.expiresAt || result.payload.expiresAt });
+        }
+        setShareChecked(true);
+        return;
+      }
+
+      if (legacyRaw) {
+        const decoded = decodeSharePayload(legacyRaw);
+        if (decoded) setSharedPayload(decoded);
+        else setInvalidShare(true);
+      }
+      setShareChecked(true);
     }
-    setShareChecked(true);
+
+    readShare();
+    return () => { active = false; };
   }, []);
 
   if (!shareChecked) {
@@ -228,6 +260,7 @@ export default function GuardianSharePage() {
   }
 
   if (invalidShare) return <GuardianInvalidShareView />;
+  if (revokedShare) return <GuardianRevokedShareView />;
   if (sharedPayload) {
     if (isShareExpired(sharedPayload)) return <GuardianExpiredShareView payload={sharedPayload} />;
     return <GuardianPublicView payload={sharedPayload} />;
@@ -254,6 +287,8 @@ function GuardianShareBuilder() {
   const [includeStreak, setIncludeStreak] = useState(true);
   const [expiresInDays, setExpiresInDays] = useState<7 | 14 | 30>(14);
   const [generatedLink, setGeneratedLink] = useState("");
+  const [shareSaving, setShareSaving] = useState(false);
+  const [activeShare, setActiveShare] = useState<ActiveSecureGuardianShare | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
   useEffect(() => {
@@ -335,7 +370,7 @@ function GuardianShareBuilder() {
     const expiresAt = addDays(new Date(), expiresInDays).toISOString();
     const maskedDayReports = maskDayReports(dayReports, visibleSections);
     return {
-    version: "2.24.1",
+    version: "2.25.0",
     createdAt: new Date().toISOString(),
     expiresAt,
     childName: childAlias.trim() || "Monkey user",
@@ -372,6 +407,7 @@ function GuardianShareBuilder() {
 
   useEffect(() => {
     setGeneratedLink("");
+    setActiveShare(null);
   }, [payload]);
 
   function notify(messageText: string, type: "success" | "error" = "success") {
@@ -379,22 +415,55 @@ function GuardianShareBuilder() {
     window.setTimeout(() => setToast(null), 2400);
   }
 
-  function generateLink() {
-    const encoded = encodeSharePayload(payload);
-    const link = `${window.location.origin}/guardian-share?share=${encoded}`;
+  async function generateLink() {
+    setShareSaving(true);
+    const secureRecord = await createGuardianShareToken(payload as unknown as Record<string, unknown>, {
+      childAlias: payload.childName,
+      guardianLabel: payload.guardianLabel,
+      expiresAt: payload.expiresAt || addDays(new Date(), expiresInDays).toISOString(),
+      includeCalendar,
+      includeAchievements,
+      includeBestDay,
+      includeStreak,
+      includeWallet,
+    });
+    setShareSaving(false);
+
+    if (!secureRecord) {
+      notify("No se pudo guardar el link seguro en Supabase. Validá sesión y migración v2.25.", "error");
+      return "";
+    }
+
+    const link = `${window.location.origin}/guardian-share?token=${secureRecord.token}`;
     setGeneratedLink(link);
-    notify(generatedLink ? "Link actualizado" : "Link de progreso generado");
+    setActiveShare({ ...secureRecord, url: link });
+    notify(generatedLink ? "Token seguro actualizado" : "Token seguro generado");
+    return link;
   }
 
   async function copyLink() {
-    const link = generatedLink || `${window.location.origin}/guardian-share?share=${encodeSharePayload(payload)}`;
-    setGeneratedLink(link);
+    const link = generatedLink || await generateLink();
+    if (!link) return;
     try {
       await navigator.clipboard.writeText(link);
-      notify("Link copiado");
+      notify("Link seguro copiado");
     } catch {
       notify("No se pudo copiar. Seleccioná el link manualmente.", "error");
     }
+  }
+
+  async function revokeActiveLink() {
+    if (!activeShare?.id) return;
+    setShareSaving(true);
+    const ok = await revokeGuardianShareToken(activeShare.id);
+    setShareSaving(false);
+    if (!ok) {
+      notify("No se pudo desactivar el link.", "error");
+      return;
+    }
+    setGeneratedLink("");
+    setActiveShare(null);
+    notify("Link desactivado");
   }
 
   return (
@@ -419,7 +488,7 @@ function GuardianShareBuilder() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white/80">Reporte seguro de 7 días</p>
               <h2 className="mt-2 text-[40px] font-black leading-none">{totals.completion}%</h2>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista compacta de solo lectura para acompañar el progreso sin exponer login ni edición.</p>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista compacta de solo lectura con token seguro en Supabase, sin exponer login ni edición.</p>
             </div>
             <div className="hidden w-24 shrink-0 sm:block"><MonkeyAvatar size={88} variant="face" /></div>
           </div>
@@ -427,7 +496,7 @@ function GuardianShareBuilder() {
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
             <span className="rounded-full bg-white/20 px-3 py-1.5">{syncing ? "Actualizando…" : "Sincronizado"}</span>
             <span className="rounded-full bg-white/20 px-3 py-1.5">Solo lectura</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">Sin datos de login</span>
+            <span className="rounded-full bg-white/20 px-3 py-1.5">Token Supabase</span>
           </div>
         </section>
 
@@ -486,15 +555,21 @@ function GuardianShareBuilder() {
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><Copy className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Link compartible</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link contiene una foto del progreso actual, respeta las opciones de privacidad y vence automáticamente según la expiración elegida.</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link usa un token corto guardado en Supabase. El resumen no viaja completo en la URL y podés desactivarlo cuando querás.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={generateLink} className="h-11 rounded-full bg-monkey-green px-4 text-xs font-black text-white shadow-card transition active:scale-95">{generatedLink ? "Regenerar" : "Generar"}</button>
-                <button type="button" onClick={copyLink} className="h-11 rounded-full bg-white px-4 text-xs font-black text-monkey-greenDark shadow-card transition active:scale-95">Copiar</button>
+                <button type="button" onClick={generateLink} disabled={shareSaving} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-monkey-green px-4 text-xs font-black text-white shadow-card transition active:scale-95 disabled:opacity-60">{shareSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}{generatedLink ? "Regenerar" : "Generar"}</button>
+                <button type="button" onClick={copyLink} disabled={shareSaving} className="h-11 rounded-full bg-white px-4 text-xs font-black text-monkey-greenDark shadow-card transition active:scale-95 disabled:opacity-60">Copiar</button>
               </div>
               {generatedLink ? (
                 <div className="mt-3 rounded-[20px] border border-green-100 bg-white p-3">
                   <div className="mb-2 flex items-center gap-2 text-[11px] font-black text-monkey-greenDark"><Clock3 className="h-3.5 w-3.5" /> Vence el {shareExpirationLabel(payload)}</div>
                   <textarea readOnly value={generatedLink} className="h-24 w-full resize-none rounded-[16px] bg-gray-50 p-3 text-[11px] font-bold leading-relaxed text-monkey-muted outline-none" />
+                  {activeShare ? (
+                    <button type="button" onClick={revokeActiveLink} disabled={shareSaving} className="mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-orange-50 px-4 text-xs font-black text-orange-700 transition active:scale-95 disabled:opacity-60">
+                      <Ban className="h-4 w-4" />
+                      Desactivar este link
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -562,7 +637,7 @@ function GuardianPublicView({ payload }: { payload: GuardianSharePayload }) {
           </div>
         </section>
 
-        <p className="mt-5 text-center text-[11px] font-bold leading-relaxed text-monkey-muted">Reporte generado el {new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(payload.createdAt))}. Esta vista no permite editar información ni iniciar sesión. Vence el {shareExpirationLabel(payload)}.</p>
+        <p className="mt-5 text-center text-[11px] font-bold leading-relaxed text-monkey-muted">Reporte generado el {new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(payload.createdAt))}. Esta vista no permite editar información ni iniciar sesión. Link seguro activo hasta el {shareExpirationLabel(payload)}.</p>
       </section>
     </main>
   );
@@ -660,6 +735,20 @@ function GuardianExpiredShareView({ payload }: { payload: GuardianSharePayload }
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-orange-50 text-orange-700"><Clock3 className="h-7 w-7" /></div>
         <h1 className="mt-4 text-xl font-black">Reporte vencido</h1>
         <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">El reporte de {payload.childName} venció el {shareExpirationLabel(payload)}. Pedí un link nuevo para ver el progreso actualizado.</p>
+        <Link href="/login" className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-monkey-green px-5 text-xs font-black text-white shadow-card">Ir a Monkey Checks</Link>
+      </section>
+    </main>
+  );
+}
+
+
+function GuardianRevokedShareView() {
+  return (
+    <main className="app-screen grid place-items-center bg-monkey-bg px-6 text-center">
+      <section className="w-full max-w-sm rounded-[34px] bg-white p-6 shadow-soft">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-orange-50 text-orange-700"><Ban className="h-7 w-7" /></div>
+        <h1 className="mt-4 text-xl font-black">Link desactivado</h1>
+        <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Este reporte fue revocado por el usuario. Pedí un link nuevo para ver el progreso actualizado.</p>
         <Link href="/login" className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-monkey-green px-5 text-xs font-black text-white shadow-card">Ir a Monkey Checks</Link>
       </section>
     </main>

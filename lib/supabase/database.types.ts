@@ -83,6 +83,12 @@ export type Database = {
         Insert: { id?: string; user_id: string; achievement_id: string; unlocked_at?: string; source_progress?: number; metadata?: Json; created_at?: string | null; updated_at?: string | null };
         Update: { id?: string; user_id?: string; achievement_id?: string; unlocked_at?: string; source_progress?: number; metadata?: Json; created_at?: string | null; updated_at?: string | null };
       };
+
+      guardian_share_tokens: {
+        Row: { id: string; user_id: string; token: string; child_alias: string; guardian_label: string; include_calendar: boolean; include_achievements: boolean; include_best_day: boolean; include_streak: boolean; include_wallet: boolean; snapshot: Json; expires_at: string; revoked_at: string | null; last_viewed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; token: string; child_alias: string; guardian_label: string; include_calendar?: boolean; include_achievements?: boolean; include_best_day?: boolean; include_streak?: boolean; include_wallet?: boolean; snapshot: Json; expires_at: string; revoked_at?: string | null; last_viewed_at?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; token?: string; child_alias?: string; guardian_label?: string; include_calendar?: boolean; include_achievements?: boolean; include_best_day?: boolean; include_streak?: boolean; include_wallet?: boolean; snapshot?: Json; expires_at?: string; revoked_at?: string | null; last_viewed_at?: string | null; created_at?: string; updated_at?: string };
+      };
       wallet_categories: {
         Row: { id: string; user_id: string | null; name: string; type: "income" | "expense" | "saving" | "extra"; color: string; icon: string | null; sort_order: number | null; created_at: string | null; updated_at: string | null };
         Insert: { id?: string; user_id?: string | null; name: string; type: "income" | "expense" | "saving" | "extra"; color?: string; icon?: string | null; sort_order?: number | null; created_at?: string | null; updated_at?: string | null };
@@ -90,7 +96,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_guardian_share_by_token: {
+        Args: { p_token: string };
+        Returns: { status: string; snapshot: Json; expires_at: string; revoked_at: string | null; created_at: string }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
