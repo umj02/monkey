@@ -119,3 +119,29 @@ export function calculateChallengeProgress(challenge: Challenge, doneTaskIds: Se
     completed: total > 0 && done >= total,
   };
 }
+
+
+export function hydrateChallengeTaskStatuses(challenge: Challenge, doneTaskIds: Set<string>): Challenge {
+  const now = new Date().toISOString();
+  const tasks = challenge.tasks.map((task) => {
+    const done = doneTaskIds.has(task.calendarEventId ?? task.id);
+    if (done && task.status !== "checked" && task.status !== "verified") {
+      return { ...task, status: "checked" as const, checkedAt: task.checkedAt ?? now };
+    }
+    if (!done && task.status === "checked") {
+      return { ...task, status: "pending" as const, checkedAt: null };
+    }
+    return task;
+  });
+  const allDone = tasks.length > 0 && tasks.every((task) => task.status === "checked" || task.status === "verified");
+  return {
+    ...challenge,
+    tasks,
+    status: allDone && challenge.claimedAt ? "completed" : challenge.status,
+    updatedAt: now,
+  };
+}
+
+export function nextPendingChallengeTask(challenge: Challenge, doneTaskIds: Set<string>) {
+  return challenge.tasks.find((task) => !doneTaskIds.has(task.calendarEventId ?? task.id)) ?? null;
+}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Banana, CalendarDays, CheckCircle2, Clock3, Flame, LockKeyhole, Plus, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Banana, CalendarDays, CheckCircle2, Clock3, Flame, LockKeyhole, Plus, RefreshCw, Sparkles, Trophy } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AssetThumb } from "@/components/asset-thumb";
 import { Field } from "@/components/field";
@@ -10,7 +10,7 @@ import { FormSheet } from "@/components/form-sheet";
 import { Toast, type ToastState } from "@/components/toast";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useChallenges } from "@/hooks/use-challenges";
-import { buildChallengeDates, calculateChallengeProgress, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
+import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
 import { createChallengeDraft } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, Challenge } from "@/types";
@@ -34,7 +34,7 @@ function challengeDoneIds(challenge: Challenge, events: CalendarEvent[]) {
 
 export default function ChallengesPage() {
   const { events, createEvent } = useCalendarEvents();
-  const { challenges, bananaLedger, summary, syncing, saveChallenge, claimBananas } = useChallenges();
+  const { challenges, bananaLedger, summary, syncing, saveChallenge, updateChallenge, claimBananas, refreshChallenges } = useChallenges();
   const [toast, setToast] = useState<ToastState>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [templateId, setTemplateId] = useState(PERSONAL_CHALLENGE_TEMPLATES[0]?.id ?? "agua-3");
@@ -47,6 +47,7 @@ export default function ChallengesPage() {
   const totalBananas = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
   const activeChallenges = challenges.filter((challenge) => challenge.status === "active");
   const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
+  const activeChallengeTitles = useMemo(() => new Set(activeChallenges.map((challenge) => challenge.title)), [activeChallenges]);
 
   const suggestedTimes = useMemo(() => {
     const base = selectedTemplate?.defaultTimes ?? ["09:00"];
@@ -59,6 +60,10 @@ export default function ChallengesPage() {
   }
 
   function openTemplate(template: typeof PERSONAL_CHALLENGE_TEMPLATES[number]) {
+    if (activeChallengeTitles.has(template.title)) {
+      notify("Ya tenés ese reto activo. Terminálo o cobrá las bananas antes de repetirlo.", "error");
+      return;
+    }
     setTemplateId(template.id);
     setDays(String(template.defaultDays));
     setTimeA(template.defaultTimes[0] ?? "09:00");
@@ -70,10 +75,18 @@ export default function ChallengesPage() {
   async function createPersonalChallenge() {
     const template = selectedTemplate;
     if (!template) return;
+    if (activeChallengeTitles.has(template.title)) {
+      notify("Ese reto ya está activo. Evitamos duplicarlo para que la medición quede limpia.", "error");
+      return;
+    }
     const cleanDays = Math.min(31, Math.max(1, Number(days) || template.defaultDays));
     const startDate = todayDateKey();
     const dates = buildChallengeDates(startDate, cleanDays);
-    const times = suggestedTimes.length ? suggestedTimes : template.defaultTimes;
+    const times = Array.from(new Set((suggestedTimes.length ? suggestedTimes : template.defaultTimes).map(normalizeTime))).slice(0, 3);
+    if (!times.length) {
+      notify("Agregá al menos una hora válida para programar el reto.", "error");
+      return;
+    }
     const rewardBananas = Math.max(template.rewardBananas, Math.round(dates.length * times.length));
     const perTaskBananas = Math.max(1, Math.floor(rewardBananas / Math.max(1, dates.length * times.length)));
 
@@ -132,12 +145,15 @@ export default function ChallengesPage() {
   }
 
   async function handleClaim(challenge: Challenge) {
-    const progress = calculateChallengeProgress(challenge, challengeDoneIds(challenge, events));
+    const doneIds = challengeDoneIds(challenge, events);
+    const progress = calculateChallengeProgress(challenge, doneIds);
     if (!progress.completed) {
-      notify("Todavía faltan checks para cobrar las bananas.", "error");
+      notify(`Todavía faltan ${Math.max(0, progress.total - progress.done)} checks para cobrar las bananas.`, "error");
       return;
     }
-    const entry = await claimBananas(challenge);
+    const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
+    await updateChallenge(syncedChallenge);
+    const entry = await claimBananas(syncedChallenge);
     notify(entry ? `Ganaste ${entry.amount} bananas 🍌` : "Las bananas ya estaban cobradas", entry ? "success" : "error");
   }
 
@@ -147,7 +163,10 @@ export default function ChallengesPage() {
       <section className="page-pad pb-32 pt-8">
         <div className="flex items-center justify-between gap-3">
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
-          <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28 foundation</span>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1 QA</span>
+          </div>
         </div>
 
         <div className="mt-5 rounded-[32px] bg-gradient-to-br from-yellow-100 via-white to-green-100 p-5 shadow-card">
@@ -164,6 +183,9 @@ export default function ChallengesPage() {
             <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.active}</p><p className="text-[11px] font-bold text-monkey-muted">activos</p></div>
             <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[11px] font-bold text-monkey-muted">logrados</p></div>
           </div>
+          <div className="mt-3 rounded-[20px] bg-white/70 p-3 text-xs font-black text-orange-800">
+            {syncing ? "Actualizando retos…" : `${summary.pendingTasks} checks programados en retos activos · ${summary.bananasAvailable} bananas disponibles por completar`}
+          </div>
         </div>
 
         <section className="mt-6">
@@ -172,16 +194,19 @@ export default function ChallengesPage() {
             <button type="button" onClick={() => setSheetOpen(true)} className="flex items-center gap-1 rounded-full bg-monkey-green px-3 py-2 text-xs font-black text-white"><Plus className="h-4 w-4" /> Crear</button>
           </div>
           <div className="grid gap-3">
-            {PERSONAL_CHALLENGE_TEMPLATES.map((template) => (
-              <button key={template.id} type="button" onClick={() => openTemplate(template)} className="flex items-center gap-3 rounded-[24px] bg-white p-4 text-left shadow-card transition active:scale-[.99]">
-                <AssetThumb icon={template.iconKey} className="h-14 w-14 rounded-[20px] bg-green-50" />
-                <span className="min-w-0 flex-1">
-                  <strong className="block truncate text-sm font-black text-monkey-ink">{template.title}</strong>
-                  <span className="mt-1 block text-xs font-semibold leading-5 text-monkey-muted">{template.helper}</span>
-                </span>
-                <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">+{template.rewardBananas} 🍌</span>
-              </button>
-            ))}
+            {PERSONAL_CHALLENGE_TEMPLATES.map((template) => {
+              const alreadyActive = activeChallengeTitles.has(template.title);
+              return (
+                <button key={template.id} type="button" onClick={() => openTemplate(template)} className={cn("flex items-center gap-3 rounded-[24px] bg-white p-4 text-left shadow-card transition active:scale-[.99]", alreadyActive && "opacity-70")}> 
+                  <AssetThumb icon={template.iconKey} className="h-14 w-14 rounded-[20px] bg-green-50" />
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm font-black text-monkey-ink">{template.title}</strong>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-monkey-muted">{alreadyActive ? "Ya está activo. Terminálo antes de repetir." : template.helper}</span>
+                  </span>
+                  <span className={cn("rounded-full px-3 py-1 text-xs font-black", alreadyActive ? "bg-gray-100 text-monkey-muted" : "bg-yellow-50 text-orange-700")}>{alreadyActive ? "Activo" : `+${template.rewardBananas} 🍌`}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -190,7 +215,9 @@ export default function ChallengesPage() {
           {activeChallenges.length ? (
             <div className="grid gap-3">
               {activeChallenges.map((challenge) => {
-                const progress = calculateChallengeProgress(challenge, challengeDoneIds(challenge, events));
+                const doneIds = challengeDoneIds(challenge, events);
+                const progress = calculateChallengeProgress(challenge, doneIds);
+                const nextTask = nextPendingChallengeTask(challenge, doneIds);
                 return (
                   <article key={challenge.id} className="rounded-[28px] bg-white p-4 shadow-card">
                     <div className="flex items-start gap-3">
@@ -205,6 +232,13 @@ export default function ChallengesPage() {
                         </div>
                         <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-monkey-green" style={{ width: `${progress.percent}%` }} /></div>
                         <div className="mt-2 flex items-center justify-between text-xs font-black text-monkey-muted"><span>{progress.done}/{progress.total} checks</span><span>{progress.percent}%</span></div>
+                        {nextTask ? (
+                          <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold text-monkey-muted">
+                            Próximo check: <span className="font-black text-monkey-ink">{formatDate(nextTask.scheduledDate)} · {nextTask.scheduledTime}</span>
+                          </div>
+                        ) : (
+                          <div className="mt-3 rounded-[18px] bg-green-50 p-3 text-xs font-black text-monkey-greenDark">Listo para cobrar bananas.</div>
+                        )}
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
                           <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Tareas bloqueadas</span>
                           <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700"><CalendarDays className="mr-1 inline h-3 w-3" />Hoy/Calendario</span>
@@ -253,7 +287,7 @@ export default function ChallengesPage() {
         <Field label="Días de reto" value={days} onChange={(event) => setDays(event.target.value)} placeholder="7" />
         <div>
           <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Clock3 className="h-4 w-4" /> Horarios</span>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Field label="Hora 1" value={timeA} onChange={(event) => setTimeA(event.target.value)} placeholder="09:00" />
             <Field label="Hora 2" value={timeB} onChange={(event) => setTimeB(event.target.value)} placeholder="13:00" />
             <Field label="Hora 3" value={timeC} onChange={(event) => setTimeC(event.target.value)} placeholder="17:00" />

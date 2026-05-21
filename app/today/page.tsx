@@ -450,17 +450,18 @@ export default function TodayPage() {
       });
     }
 
-    if (isChallengeCalendarEvent(event) && nextDone) {
-      showToast("Reto cumplido por hoy. Revisá tus bananas en Retos 🍌");
-    }
+    const isChallenge = isChallengeCalendarEvent(event);
+    const toastMessage = isChallenge
+      ? (nextDone ? "Reto cumplido por hoy. Cuando completés todos los checks podrás cobrar bananas 🍌" : "Check de reto marcado como pendiente")
+      : (nextDone ? "Actividad completada" : "Actividad pendiente");
 
     if (isRecurringEvent(event)) {
       void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), nextDone);
     } else {
       const { id: _id, ...input } = event;
-      void updateEvent(event.id, { ...input, done: nextDone });
+      void updateEvent(event.id, { ...input, done: nextDone, verificationStatus: isChallenge ? (nextDone ? "self_checked" : "none") : input.verificationStatus });
     }
-    showToast(nextDone ? "Actividad completada" : "Actividad pendiente");
+    showToast(toastMessage);
   }
 
   function undoLastCompletion() {
@@ -470,7 +471,7 @@ export default function TodayPage() {
       void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), false);
     } else {
       const { id: _id, ...input } = event;
-      void updateEvent(event.id, { ...input, done: false });
+      void updateEvent(event.id, { ...input, done: false, verificationStatus: isChallengeCalendarEvent(event) ? "none" : input.verificationStatus });
     }
     setCompletingCalendarKeys((current) => {
       const next = new Set(current);
@@ -521,7 +522,7 @@ export default function TodayPage() {
               key={item.id}
               event={item.event}
               done={getCalendarEventDone(item.event, todayDateKey, completionMap)}
-              sourceLabel={isRecurringEvent(item.event) ? "Recurrente" : "Calendario"}
+              sourceLabel={isChallengeCalendarEvent(item.event) ? "Reto" : isRecurringEvent(item.event) ? "Recurrente" : "Calendario"}
               contextLabel={containingLongEvent(calendarTodayEvents, item.event) ? `Dentro de ${stripEmoji(containingLongEvent(calendarTodayEvents, item.event)!.title)}` : null}
               hasReminder={reminderEventIds.has(calendarOccurrenceBaseId(item.event))}
               isCompleting={completingCalendarKeys.has(todayOccurrenceKey(item.event, todayDateKey))}

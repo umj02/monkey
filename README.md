@@ -511,6 +511,18 @@ npm run typecheck
 npm run build
 ```
 
+
+## v2.28.1 — Challenges UX Polish + Completion QA
+
+Base: v2.28 estable.
+
+- Pule la pantalla `/challenges` para móvil con estados de sincronización, próximos checks y progreso más claro.
+- Evita crear el mismo reto activo dos veces desde las sugerencias.
+- Mejora el flujo de cobro: antes de liberar bananas, sincroniza el estado de tareas del reto con los checks reales de Calendario/Hoy.
+- Hoy muestra las actividades de reto como `Reto`, mantiene bloqueo de edición y usa mensajes específicos al completar o desmarcar.
+- Las bananas siguen separadas del Wallet financiero mediante `banana_ledger`.
+- No requiere migración nueva; usa la estructura de v2.28.
+
 ## v2.28 — Personal Challenges + Banana Rewards Foundation
 
 Base: v2.27.2 — Analytics Category Alignment + Stable Keys.
