@@ -32,9 +32,11 @@ import { useProfile } from "@/hooks/use-profile";
 import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { buildAchievements } from "@/lib/achievements";
 import { getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
-import { activityTypePillClass, inferActivityTypeFromEvent, inferActivityTypeFromIcon } from "@/lib/activity-types";
+import { activityTypePillClass } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
+import { useCategoryPreferences } from "@/hooks/use-category-preferences";
+import { resolveActivityCategoryMeta, resolveWalletCategoryMeta } from "@/lib/category-catalog";
 import type { CalendarEvent, WalletTransaction, WalletTransactionType } from "@/types";
 
 type RangeMode = "week" | "month";
@@ -49,6 +51,7 @@ type ActivityMetric = {
   key: string;
   label: string;
   iconKey: string;
+  imagePath?: string | null;
   color: CalendarEvent["color"];
   total: number;
   done: number;
@@ -151,6 +154,7 @@ export default function AnalyticsPage() {
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError } = useCalendarCompletions();
   const { overrides } = useCalendarOverrides();
   const { wallet, syncing: walletSyncing, syncStatus: walletSyncStatus, lastError: walletError } = useWallet();
+  const { activityItems, walletExpenseItems } = useCategoryPreferences();
 
   const range = useMemo(() => {
     const start = mode === "week" ? startOfWeek(today) : startOfMonth(today);
@@ -211,25 +215,25 @@ export default function AnalyticsPage() {
 
   const activityStats = useMemo<ActivityMetric[]>(() => {
     const byKey = new Map<string, ActivityMetric>();
-    function addMetric(key: string, label: string, iconKey: string, color: CalendarEvent["color"], done: boolean) {
-      const current = byKey.get(key) ?? { key, label, iconKey, color, total: 0, done: 0 };
+    function addMetric(key: string, label: string, iconKey: string, color: CalendarEvent["color"], done: boolean, imagePath?: string | null) {
+      const current = byKey.get(key) ?? { key, label, iconKey, imagePath: imagePath ?? null, color, total: 0, done: 0 };
       current.total += 1;
       if (done) current.done += 1;
       byKey.set(key, current);
     }
 
     taskBlocksInRange.forEach((block) => {
-      const type = inferActivityTypeFromIcon(block.icon);
-      block.tasks.forEach((task) => addMetric(type.key, type.label, type.iconKey, type.color, task.done));
+      const type = resolveActivityCategoryMeta({ iconKey: block.icon, title: block.title }, activityItems);
+      block.tasks.forEach((task) => addMetric(type.key, type.label, type.iconKey, type.color, task.done, type.imagePath));
     });
 
     calendarOccurrences.forEach(({ event, dateKey }) => {
-      const type = inferActivityTypeFromEvent(event);
-      addMetric(type.key, type.label, type.iconKey, type.color, getCalendarEventDone(event, dateKey, completionMap));
+      const type = resolveActivityCategoryMeta({ key: event.activityTypeKey, iconKey: event.iconKey, title: event.title }, activityItems);
+      addMetric(type.key, type.label, type.iconKey, type.color, getCalendarEventDone(event, dateKey, completionMap), type.imagePath);
     });
 
     return Array.from(byKey.values()).sort((a, b) => b.total - a.total || b.done - a.done).slice(0, 6);
-  }, [calendarOccurrences, completionMap, taskBlocksInRange]);
+  }, [activityItems, calendarOccurrences, completionMap, taskBlocksInRange]);
 
   const routineStats = useMemo(() => {
     return activityStats.filter((item) => item.total >= 2).slice(0, 3);
@@ -245,6 +249,20 @@ export default function AnalyticsPage() {
     const net = income + extras - expenses - savings;
     return { income, extras, expenses, savings, budgetUse, topGoal, net };
   }, [wallet.budgetLimit, wallet.goals, walletTransactionsInRange]);
+
+  const walletCategoryStats = useMemo(() => {
+    const byKey = new Map<string, { key: string; label: string; iconKey: string; imagePath?: string | null; amount: number }>();
+    walletTransactionsInRange
+      .filter((tx) => tx.type === "expense" && (tx.expenseKind || "variable") === "variable")
+      .forEach((tx) => {
+        const meta = resolveWalletCategoryMeta({ key: tx.categoryKey, label: tx.category, iconKey: tx.icon }, walletExpenseItems);
+        const current = byKey.get(meta.key) ?? { key: meta.key, label: meta.label, iconKey: meta.iconKey, imagePath: meta.imagePath ?? null, amount: 0 };
+        current.amount += tx.amount;
+        byKey.set(meta.key, current);
+      });
+    return Array.from(byKey.values()).sort((a, b) => b.amount - a.amount).slice(0, 4);
+  }, [walletExpenseItems, walletTransactionsInRange]);
+
 
   const bestDay = useMemo(() => {
     return [...dayMetrics]
@@ -378,7 +396,7 @@ export default function AnalyticsPage() {
                 <article key={item.key} className="rounded-[22px] border border-gray-100 bg-gray-50 p-3">
                   <div className="flex items-center gap-3">
                     <span className={cn("grid h-12 w-12 place-items-center rounded-[18px]", activityTypePillClass(item.color))}>
-                      <AssetThumb icon={item.iconKey} alt={item.label} size={34} />
+                      <AssetThumb icon={item.iconKey} src={item.imagePath} alt={item.label} size={34} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -406,7 +424,7 @@ export default function AnalyticsPage() {
               {routineStats.map((item) => (
                 <div key={item.key} className="flex items-center justify-between rounded-[20px] bg-green-50 px-3 py-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <AssetThumb icon={item.iconKey} alt={item.label} size={38} />
+                    <AssetThumb icon={item.iconKey} src={item.imagePath} alt={item.label} size={38} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black">{item.label}</p>
                       <p className="text-[11px] font-bold text-monkey-muted">{item.total} veces · {item.done} checks</p>
@@ -443,6 +461,20 @@ export default function AnalyticsPage() {
                 </div>
                 {!wallet.budgetLimit ? <p className="mt-2 text-[11px] font-bold text-monkey-muted">Definí un presupuesto para ver este indicador con más detalle.</p> : null}
               </div>
+
+              {walletCategoryStats.length ? (
+                <div className="mt-4 grid gap-2">
+                  {walletCategoryStats.map((item) => (
+                    <div key={item.key} className="flex items-center justify-between rounded-[18px] bg-gray-50 px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <AssetThumb icon={item.iconKey} src={item.imagePath} alt={item.label} size={30} />
+                        <span className="truncate text-xs font-black text-monkey-ink">{item.label}</span>
+                      </div>
+                      <strong className="text-xs font-black text-monkey-muted">{money(item.amount, wallet.currency)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               {walletSummary.topGoal ? (
                 <div className="mt-3 flex items-center gap-3 rounded-[22px] bg-purple-50 p-3">
                   <PiggyBank className="h-5 w-5 shrink-0 text-purple-700" />

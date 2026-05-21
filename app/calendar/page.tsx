@@ -30,8 +30,10 @@ import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarTimeline } from "@/components/calendar/calendar-timeline";
 import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
-import { ACTIVITY_TYPES, activityTypePillClass, getActivityTypeByKey, inferActivityTypeFromEvent } from "@/lib/activity-types";
+import { ACTIVITY_TYPES, activityTypePillClass, inferActivityTypeFromEvent } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { useCategoryPreferences } from "@/hooks/use-category-preferences";
+import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -402,6 +404,7 @@ export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { overrides, saveOverride } = useCalendarOverrides();
   const { completionMap } = useCalendarCompletions();
+  const { activityItems } = useCategoryPreferences();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -592,7 +595,7 @@ export default function CalendarPage() {
       return;
     }
 
-    const meta = getActivityTypeByKey(activityTypeKey);
+    const meta = resolveActivityCategoryMeta({ key: activityTypeKey }, activityItems);
     const payload = {
       title: cleanTitle,
       time,

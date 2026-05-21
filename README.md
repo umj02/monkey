@@ -457,7 +457,7 @@ QA recomendado:
 - No reemplaza el catálogo base: el usuario puede volver a usar un icono/monito del catálogo cuando quiera.
 - Requiere ejecutar `supabase/migrations/0018_v227_custom_category_assets_storage.sql`.
 
-## v2.27.1 — Category Preferences API Key Mapping Hotfix
+## v2.27.2 — Category Preferences API Key Mapping Hotfix
 
 Hotfix sobre v2.27 para corregir el error runtime `400 Bad Request` en `/rest/v1/user_category_preferences` cuando el frontend consultaba `key` pero la tabla real usa `category_key`.
 
@@ -490,3 +490,23 @@ order by ordinal_position;
 ```
 
 Debe existir `category_key`. Después de la migración ya no debería aparecer el error de GET 400 por `key` inexistente.
+
+
+## v2.27.2 — Analytics Category Alignment + Stable Keys
+
+Alinea categorías personalizadas con Analytics sin romper datos existentes.
+
+- Analytics resuelve actividades usando `user_category_preferences`.
+- Calendario y Hoy guardan `activityTypeKey` estable, respetando label/icono/imagen personalizados.
+- Wallet prepara `category_key` estable en transacciones y gastos planificados.
+- Analytics agrupa Wallet por key estable y muestra el label personalizado.
+- Agrega migración `0020_v2272_analytics_category_alignment_stable_keys.sql`.
+
+Validación recomendada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```

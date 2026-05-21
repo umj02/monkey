@@ -1,4 +1,4 @@
-import { ACTIVITY_TYPES } from "@/lib/activity-types";
+import { ACTIVITY_TYPES, getActivityTypeByKey, normalizeActivityTypeKey, type ActivityColor, type ActivityType } from "@/lib/activity-types";
 import { getWalletAssetsByType } from "@/lib/asset-library";
 import { VARIABLE_EXPENSE_CATEGORIES } from "@/lib/services/wallet-service";
 import type { CategoryPreference, CategoryPreferenceScope } from "@/lib/services/category-preferences-service";
@@ -99,4 +99,85 @@ export function buildCategorySnapshot(preferences: CategoryPreference[]) {
   const walletExpense = mergeCategoryPreferences(buildBaseCategoryItems("wallet_expense"), preferences, "wallet_expense");
   const walletIcon = mergeCategoryPreferences(buildBaseCategoryItems("wallet_icon"), preferences, "wallet_icon");
   return { activity, walletExpense, walletIcon };
+}
+
+
+export type ResolvedActivityCategoryMeta = ActivityType & {
+  imagePath?: string | null;
+  isCustom?: boolean;
+};
+
+function categoryToActivityMeta(item: EditableCategory): ResolvedActivityCategoryMeta {
+  const base = getActivityTypeByKey(item.key) ?? getActivityTypeByKey(item.iconKey) ?? getActivityTypeByKey("otro");
+  return {
+    ...base,
+    key: item.key,
+    label: item.label,
+    iconKey: item.iconKey ?? base.iconKey,
+    imagePath: item.imagePath ?? null,
+    isCustom: item.isCustom,
+  };
+}
+
+export function resolveActivityCategoryMeta(
+  input: { key?: string | null; iconKey?: string | null; title?: string | null },
+  activityItems: EditableCategory[] = buildBaseCategoryItems("activity"),
+): ResolvedActivityCategoryMeta {
+  const byKey = new Map(activityItems.map((item) => [normalizeActivityTypeKey(item.key), item]));
+  const byIcon = new Map(activityItems.map((item) => [item.iconKey, item]));
+
+  const normalizedKey = normalizeActivityTypeKey(input.key);
+  const byDirectKey = input.key ? byKey.get(normalizedKey) : null;
+  if (byDirectKey) return categoryToActivityMeta(byDirectKey);
+
+  const byDirectIcon = input.iconKey ? byIcon.get(input.iconKey) : null;
+  if (byDirectIcon) return categoryToActivityMeta(byDirectIcon);
+
+  if (input.title) {
+    const title = input.title.toLowerCase();
+    const byTitle = activityItems.find((item) => title.includes(item.label.toLowerCase()) || title.includes(item.key.replace(/-/g, " ")));
+    if (byTitle) return categoryToActivityMeta(byTitle);
+  }
+
+  const fallback = activityItems.find((item) => item.key === "otro") ?? activityItems[0];
+  return fallback ? categoryToActivityMeta(fallback) : getActivityTypeByKey("otro");
+}
+
+export type ResolvedWalletCategoryMeta = {
+  key: string;
+  label: string;
+  iconKey: string;
+  imagePath?: string | null;
+  isCustom?: boolean;
+};
+
+export function resolveWalletCategoryMeta(
+  input: { key?: string | null; label?: string | null; iconKey?: string | null },
+  walletExpenseItems: EditableCategory[] = buildBaseCategoryItems("wallet_expense"),
+): ResolvedWalletCategoryMeta {
+  const byKey = new Map(walletExpenseItems.map((item) => [item.key, item]));
+  const byLabel = new Map(walletExpenseItems.map((item) => [item.label.toLowerCase(), item]));
+  const normalizedLabelKey = input.label ? slugifyCategory(input.label) : null;
+  const match = (input.key ? byKey.get(input.key) : null)
+    ?? (normalizedLabelKey ? byKey.get(normalizedLabelKey) : null)
+    ?? (input.label ? byLabel.get(input.label.toLowerCase()) : null);
+
+  if (match) {
+    return {
+      key: match.key,
+      label: match.label,
+      iconKey: match.iconKey ?? defaultIconByScope.wallet_expense,
+      imagePath: match.imagePath ?? null,
+      isCustom: match.isCustom,
+    };
+  }
+
+  const label = input.label || "Otro";
+  return {
+    key: input.key || slugifyCategory(label),
+    label,
+    iconKey: input.iconKey || walletCategoryIconMap[label] || defaultIconByScope.wallet_expense,
+    imagePath: null,
+    isCustom: false,
+  };
 }

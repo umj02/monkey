@@ -136,13 +136,14 @@ export default function WalletPage() {
     const base = type === "expense" && enabledExpenseCategories.length > 0 ? enabledExpenseCategories : categoriesForType(type);
     return base.includes(category) ? base : [category, ...base];
   }, [category, enabledExpenseCategories, type]);
+  const selectedExpenseCategory = useMemo(() => walletExpenseItems.find((item) => item.label === category || item.key === category) ?? null, [category, walletExpenseItems]);
   const activeWalletAssets = getWalletAssetsByType(type);
 
   function openMovement(nextType: WalletTransactionType = "expense", transaction?: WalletTransaction) {
     setType(transaction?.type || nextType);
     setTitle(transaction?.title || "");
     setAmount(transaction ? String(transaction.amount) : "");
-    setCategory(transaction?.category || defaultCategory(transaction?.type || nextType));
+    setCategory(transaction?.category || walletExpenseItems.find((item) => item.key === transaction?.categoryKey)?.label || defaultCategory(transaction?.type || nextType));
     setIcon(transaction?.icon || defaultIcon(transaction?.type || nextType));
     setDate(transaction?.date || today());
     setNote(transaction?.note || "");
@@ -160,7 +161,7 @@ export default function WalletPage() {
     if (title.trim().length < 3) return setToast({ message: "Agregá un nombre de al menos 3 letras.", type: "error" });
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return setToast({ message: "Ingresá un monto válido mayor a 0.", type: "error" });
     if (editingTransactionId) deleteTransaction(editingTransactionId);
-    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, date, period: wallet.period, currency: wallet.currency, icon, expenseKind: type === "expense" ? "variable" : undefined, note: note.trim() || null });
+    addTransaction({ type, title: title.trim(), amount: parsedAmount, category, categoryKey: type === "expense" ? (selectedExpenseCategory?.key ?? null) : null, date, period: wallet.period, currency: wallet.currency, icon, expenseKind: type === "expense" ? "variable" : undefined, note: note.trim() || null });
     setHistoryPage(0); setMovementOpen(false); setEditingTransactionId(null); setToast({ message: editingTransactionId ? "Movimiento actualizado." : `${transactionLabels[type]} agregado.`, type: "success" });
   }
   function openPlanned(expense?: WalletPlannedExpense) {
@@ -170,7 +171,7 @@ export default function WalletPage() {
     const parsedAmount = Number(planAmount);
     if (planName.trim().length < 3) return setToast({ message: "Agregá un nombre para el gasto planificado.", type: "error" });
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return setToast({ message: "Ingresá un monto válido mayor a 0.", type: "error" });
-    const payload: WalletPlannedExpense = { id: planId || "", name: planName.trim(), category: planCategory, amount: parsedAmount, currency: wallet.currency, dueDate: planDueDate, frequency: planFrequency, status: "pending", paidAt: null, icon: planIcon, notes: planNotes.trim() || null, enabled: true };
+    const payload: WalletPlannedExpense = { id: planId || "", name: planName.trim(), category: planCategory, categoryKey: walletExpenseItems.find((item) => item.label === planCategory || item.key === planCategory)?.key ?? null, amount: parsedAmount, currency: wallet.currency, dueDate: planDueDate, frequency: planFrequency, status: "pending", paidAt: null, icon: planIcon, notes: planNotes.trim() || null, enabled: true };
     if (planId) savePlannedExpense(payload); else addPlannedExpense(payload);
     setPlannedOpen(false); setToast({ message: planId ? "Gasto planificado actualizado." : "Gasto planificado creado.", type: "success" });
   }

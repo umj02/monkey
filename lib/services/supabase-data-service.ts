@@ -74,7 +74,7 @@ type WalletTransactionRow = Pick<
   | "expense_kind"
   | "planned_expense_id"
   | "note"
->;
+> & { category_key?: string | null };
 type WalletBudgetRow = Pick<
   TableRow<"wallet_budgets">,
   "id" | "period" | "limit_amount" | "currency"
@@ -108,7 +108,7 @@ type WalletPlannedExpenseRow = Pick<
   | "icon"
   | "notes"
   | "enabled"
->;
+> & { category_key?: string | null };
 
 function mapWalletTransactionRow(tx: WalletTransactionRow): WalletTransaction {
   const type = tx.type as WalletTransaction["type"];
@@ -121,6 +121,7 @@ function mapWalletTransactionRow(tx: WalletTransactionRow): WalletTransaction {
     amount: Number(tx.amount),
     currency: tx.currency as WalletTransaction["currency"],
     category,
+    categoryKey: tx.category_key || null,
     date: tx.transaction_date,
     period: tx.period as WalletPeriod,
     color: meta.color,
@@ -996,7 +997,7 @@ export async function fetchWallet(): Promise<WalletData | null> {
       supabase
         .from("wallet_transactions")
         .select(
-          "id,type,title,amount,currency,category,transaction_date,period,icon,expense_kind,planned_expense_id,note",
+          "id,type,title,amount,currency,category,category_key,transaction_date,period,icon,expense_kind,planned_expense_id,note",
         )
         .eq("user_id", userId)
         .order("transaction_date", { ascending: false }),
@@ -1013,7 +1014,7 @@ export async function fetchWallet(): Promise<WalletData | null> {
         .order("created_at", { ascending: false }),
       supabase
         .from("wallet_planned_expenses")
-        .select("id,name,category,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
+        .select("id,name,category,category_key,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
         .eq("user_id", userId)
         .eq("enabled", true)
         .order("due_date", { ascending: true }),
@@ -1043,6 +1044,7 @@ export async function fetchWallet(): Promise<WalletData | null> {
     id: expense.id,
     name: expense.name,
     category: expense.category,
+    categoryKey: expense.category_key || null,
     amount: Number(expense.amount),
     currency: expense.currency as WalletPlannedExpense["currency"],
     dueDate: expense.due_date,
@@ -1094,7 +1096,7 @@ export async function upsertWalletTransaction(
   const userId = await getUserId();
   if (!supabase || !userId) return null;
 
-  const payload: Database["public"]["Tables"]["wallet_transactions"]["Insert"] =
+  const payload: any =
     {
       user_id: userId,
       type: tx.type,
@@ -1102,6 +1104,7 @@ export async function upsertWalletTransaction(
       amount: tx.amount,
       currency: tx.currency,
       category: tx.category,
+      category_key: tx.categoryKey || null,
       transaction_date: tx.date,
       period: tx.period,
       icon: tx.icon,
@@ -1115,7 +1118,7 @@ export async function upsertWalletTransaction(
   const { data, error } = await supabase
     .from("wallet_transactions")
     .upsert(payload, { onConflict: "id" })
-    .select("id,type,title,amount,currency,category,transaction_date,period,icon,expense_kind,planned_expense_id,note")
+    .select("id,type,title,amount,currency,category,category_key,transaction_date,period,icon,expense_kind,planned_expense_id,note")
     .single();
 
   return error || !data ? null : mapWalletTransactionRow(data as WalletTransactionRow);
@@ -1134,10 +1137,11 @@ export async function upsertWalletPlannedExpense(expense: WalletPlannedExpense):
   const userId = await getUserId();
   if (!supabase || !userId) return null;
 
-  const payload: Database["public"]["Tables"]["wallet_planned_expenses"]["Insert"] = {
+  const payload: any = {
     user_id: userId,
     name: expense.name,
     category: expense.category,
+    category_key: expense.categoryKey || null,
     amount: expense.amount,
     currency: expense.currency || "CRC",
     due_date: expense.dueDate,
@@ -1154,7 +1158,7 @@ export async function upsertWalletPlannedExpense(expense: WalletPlannedExpense):
   const { data, error } = await supabase
     .from("wallet_planned_expenses")
     .upsert(payload, { onConflict: "id" })
-    .select("id,name,category,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
+    .select("id,name,category,category_key,amount,currency,due_date,frequency,status,paid_at,icon,notes,enabled")
     .single();
 
   if (error || !data) return null;
@@ -1163,6 +1167,7 @@ export async function upsertWalletPlannedExpense(expense: WalletPlannedExpense):
     id: row.id,
     name: row.name,
     category: row.category,
+    categoryKey: row.category_key || null,
     amount: Number(row.amount),
     currency: row.currency as WalletPlannedExpense["currency"],
     dueDate: row.due_date,

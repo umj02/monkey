@@ -160,6 +160,7 @@ export type WalletTransaction = {
   amount: number;
   currency: WalletCurrency;
   category: string;
+  categoryKey?: string | null;
   date: string;
   period: WalletPeriod;
   color: WalletColor;
@@ -173,6 +174,7 @@ export type WalletPlannedExpense = {
   id: string;
   name: string;
   category: string;
+  categoryKey?: string | null;
   amount: number;
   currency: WalletCurrency;
   dueDate: string;

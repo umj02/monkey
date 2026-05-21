@@ -137,10 +137,11 @@ function buildCategories(transactions: WalletTransaction[], period: WalletPeriod
   const expenses = transactions.filter((tx) => tx.type === "expense" && (tx.expenseKind || "variable") === "variable" && isTransactionInPeriod(tx, period));
   const total = expenses.reduce((sum, tx) => sum + tx.amount, 0);
   const grouped = expenses.reduce<Record<string, WalletCategory>>((acc, tx) => {
-    const key = tx.category || "Otro";
-    const meta = getWalletTransactionMeta(key, "expense");
-    if (!acc[key]) acc[key] = { id: key.toLowerCase().replace(/\s+/g, "-"), name: key, amount: 0, percent: 0, color: meta.color, icon: tx.icon || meta.icon };
-    acc[key].amount += tx.amount;
+    const stableKey = tx.categoryKey || tx.category || "otro";
+    const label = tx.category || "Otro";
+    const meta = getWalletTransactionMeta(label, "expense");
+    if (!acc[stableKey]) acc[stableKey] = { id: stableKey, name: label, amount: 0, percent: 0, color: meta.color, icon: tx.icon || meta.icon };
+    acc[stableKey].amount += tx.amount;
     return acc;
   }, {});
 

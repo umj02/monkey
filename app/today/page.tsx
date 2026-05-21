@@ -14,12 +14,14 @@ import { Toast, ToastState } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { ActivityTypePicker } from "@/components/activity-type-picker";
 import { AssetThumb } from "@/components/asset-thumb";
-import { getActivityTypeByKey, inferActivityTypeFromEvent } from "@/lib/activity-types";
+import { inferActivityTypeFromEvent } from "@/lib/activity-types";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useCalendarCompletions } from "@/hooks/use-calendar-completions";
 import { useCalendarOverrides } from "@/hooks/use-calendar-overrides";
 import { useReminders } from "@/hooks/use-reminders";
+import { useCategoryPreferences } from "@/hooks/use-category-preferences";
+import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { cn } from "@/lib/utils";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
@@ -211,6 +213,7 @@ export default function TodayPage() {
   const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const { overrides, saveOverride } = useCalendarOverrides();
+  const { activityItems } = useCategoryPreferences();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -289,7 +292,7 @@ export default function TodayPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    const meta = getActivityTypeByKey(activityTypeKey);
+    const meta = resolveActivityCategoryMeta({ key: activityTypeKey }, activityItems);
     const payload: Omit<CalendarEvent, "id"> = {
       title: cleanTitle,
       date: editingCalendarEvent?.date ?? todayDateKey,
