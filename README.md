@@ -409,7 +409,7 @@ Pruebas manuales:
 - No requiere migración nueva de Supabase.
 
 
-## v2.26.1 — Guardian Share UX Polish + Mobile QA
+## v2.27.0 — Guardian Share UX Polish + Mobile QA
 - Pule `/guardian-share` con mejor copy, privacidad granular y QA móvil.
 - Agrega controles para ocultar/mostrar Calendario, Logros, Mejor día, Racha y Wallet antes de generar el link.
 - Agrega expiración local del snapshot compartido: 7, 14 o 30 días.
@@ -448,3 +448,11 @@ QA recomendado:
 - Agrega migración `0017_v226_user_category_preferences.sql` para preferencias/categorías por usuario.
 - Agrega `/settings/categories` para editar nombres visibles, iconos, visibilidad y crear categorías custom.
 - Mantiene aliases legacy para datos antiguos de actividades e iconos.
+
+
+## v2.27 — Custom Image Upload + Supabase Storage
+- Permite subir imágenes propias para categorías desde `/settings/categories`.
+- Usa el bucket público `custom-category-assets` con límite de 2 MB y mime types PNG/JPG/WEBP/GIF.
+- La imagen subida se guarda en `user_category_preferences.image_path` y la key histórica se mantiene estable para analítica.
+- No reemplaza el catálogo base: el usuario puede volver a usar un icono/monito del catálogo cuando quiera.
+- Requiere ejecutar `supabase/migrations/0018_v227_custom_category_assets_storage.sql`.

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ChangeEvent, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, CheckCircle2, Edit3, Eye, EyeOff, Plus, RotateCcw, Search, SlidersHorizontal, Tags, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Edit3, Eye, EyeOff, ImagePlus, Plus, RotateCcw, Search, SlidersHorizontal, Tags, Trash2, UploadCloud } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AssetThumb } from "@/components/asset-thumb";
 import { Field } from "@/components/field";
@@ -11,6 +11,7 @@ import { ACTIVITY_TYPES } from "@/lib/activity-types";
 import { getWalletAssetsByType } from "@/lib/asset-library";
 import { buildBaseCategoryItems, categoryTabs, defaultIconByScope, mergeCategoryPreferences, slugifyCategory, type EditableCategory } from "@/lib/category-catalog";
 import { deleteCategoryPreference, upsertCategoryPreference, type CategoryPreference, type CategoryPreferenceScope } from "@/lib/services/category-preferences-service";
+import { uploadCategoryImage } from "@/lib/services/custom-category-asset-service";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,8 @@ export default function CategorySettingsPage() {
   const [draftLabel, setDraftLabel] = useState("");
   const [draftIcon, setDraftIcon] = useState("");
   const [draftEnabled, setDraftEnabled] = useState(true);
+  const [draftImagePath, setDraftImagePath] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [search, setSearch] = useState("");
   const [iconSearch, setIconSearch] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
@@ -81,6 +84,7 @@ export default function CategorySettingsPage() {
     setEditing(next);
     setDraftLabel(next.label);
     setDraftIcon(next.iconKey ?? defaultIconByScope[activeScope]);
+    setDraftImagePath(next.imagePath ?? null);
     setDraftEnabled(next.isEnabled);
     setIconSearch("");
   }
@@ -105,6 +109,7 @@ export default function CategorySettingsPage() {
       key: nextKey,
       label,
       iconKey: draftIcon,
+      imagePath: draftImagePath,
       isEnabled: draftEnabled,
       sortOrder: editing.sortOrder,
     };
@@ -113,6 +118,28 @@ export default function CategorySettingsPage() {
     setPreferences((current) => [...current.filter((item) => !(item.scope === editing.scope && item.key === editing.key) && !(item.scope === itemToStore.scope && item.key === itemToStore.key)), itemToStore]);
     showToast(saved ? "success" : "info", saved ? "Categoría guardada y sincronizada." : "Guardado en esta sesión. Con Supabase activo se sincroniza automáticamente.");
     setEditing(null);
+  }
+
+  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !editing) return;
+
+    setUploadingImage(true);
+    const result = await uploadCategoryImage({
+      file,
+      scope: editing.scope,
+      key: editing.key.startsWith("custom-") && draftLabel.trim() ? draftLabel.trim() : editing.key,
+    });
+    setUploadingImage(false);
+
+    if (!result.ok) {
+      showToast("error", result.message);
+      return;
+    }
+
+    setDraftImagePath(result.publicUrl);
+    showToast("success", "Imagen subida. Guardá la categoría para aplicarla.");
   }
 
   async function resetOrDeleteEditing() {
@@ -136,9 +163,9 @@ export default function CategorySettingsPage() {
           <div className="flex items-start gap-3">
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white shadow-card"><Tags className="h-5 w-5 text-monkey-green" /></div>
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">v2.26.1 polish</p>
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">v2.27 upload</p>
               <h1 className="mt-1 text-2xl font-black leading-tight">Personalizar categorías</h1>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Editá nombres, monitos e iconos desde un módulo separado, sin cargar los formularios principales.</p>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Editá nombres, monitos e iconos; también podés subir una imagen propia segura desde el móvil.</p>
             </div>
           </div>
         </div>
@@ -179,7 +206,7 @@ export default function CategorySettingsPage() {
           <div className="mt-4 space-y-3">
             {filteredItems.map((item) => (
               <article key={`${item.scope}-${item.key}`} className={cn("flex items-center gap-3 rounded-[22px] border p-3 transition", item.isEnabled ? "border-gray-100 bg-gray-50" : "border-gray-100 bg-white opacity-70")}>
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[18px] bg-white shadow-sm"><AssetThumb icon={item.iconKey ?? undefined} size={34} /></span>
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[18px] bg-white shadow-sm"><AssetThumb icon={item.iconKey ?? undefined} src={item.imagePath} size={34} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><h3 className="truncate text-sm font-black">{item.label}</h3>{item.isCustom ? <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-black text-monkey-purple">Custom</span> : null}</div>
                   <p className="mt-1 truncate text-[11px] font-bold text-monkey-muted">key: {item.key}</p>
@@ -200,7 +227,7 @@ export default function CategorySettingsPage() {
       <FormSheet open={Boolean(editing)} title={editing?.isCustom ? "Nueva categoría" : "Editar categoría"} subtitle="Pensado para móvil: nombre, icono y visibilidad." submitLabel="Guardar categoría" onClose={() => setEditing(null)} onSubmit={saveEditing}>
         <div className="rounded-[22px] bg-gray-50 p-3">
           <div className="flex items-center gap-3">
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white shadow-sm"><AssetThumb icon={draftIcon} size={46} /></span>
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white shadow-sm"><AssetThumb icon={draftIcon} src={draftImagePath} size={46} /></span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-black">{draftLabel.trim() || editing?.baseLabel || "Nueva categoría"}</p>
               <p className="mt-1 truncate text-[11px] font-bold text-monkey-muted">{editing?.isCustom ? "Key custom" : `Base: ${editing?.baseLabel}`}</p>
@@ -218,15 +245,33 @@ export default function CategorySettingsPage() {
           </button>
         </label>
 
+        <div className="rounded-[22px] border border-green-100 bg-green-50/70 p-3">
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[16px] bg-white text-monkey-green shadow-sm"><ImagePlus className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Imagen propia</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Subí PNG, JPG, WEBP o GIF de máximo 2 MB. Se guarda en Supabase Storage y se aplica al guardar.</p>
+            </div>
+          </div>
+          <label className={cn("mt-3 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[18px] bg-white text-sm font-black text-monkey-greenDark shadow-sm transition active:scale-95", uploadingImage && "pointer-events-none opacity-70")}>
+            <UploadCloud className="h-4 w-4" />
+            {uploadingImage ? "Subiendo imagen…" : draftImagePath ? "Cambiar imagen subida" : "Subir imagen"}
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+          </label>
+          {draftImagePath ? (
+            <button type="button" onClick={() => setDraftImagePath(null)} className="mt-2 h-10 w-full rounded-[16px] bg-white/70 text-xs font-black text-monkey-muted transition active:scale-95">Usar icono del catálogo</button>
+          ) : null}
+        </div>
+
         <div>
-          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Imagen / icono</span>
+          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Catálogo base</span>
           <label className="mb-2 flex items-center gap-2 rounded-[16px] bg-gray-50 px-3 py-2">
             <Search className="h-4 w-4 shrink-0 text-monkey-muted" />
             <input value={iconSearch} onChange={(event) => setIconSearch(event.target.value)} placeholder="Buscar icono" className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400" />
           </label>
           <div className="grid max-h-[290px] grid-cols-3 gap-2 overflow-y-auto pr-1">
             {filteredIconOptions.map((option) => (
-              <button key={option.key} type="button" onClick={() => setDraftIcon(option.key)} className={cn("min-w-0 rounded-[20px] border p-2 text-center transition active:scale-95", draftIcon === option.key ? "border-monkey-green bg-green-50 text-monkey-greenDark" : "border-gray-100 bg-gray-50 text-monkey-muted")}>
+              <button key={option.key} type="button" onClick={() => { setDraftIcon(option.key); setDraftImagePath(null); }} className={cn("min-w-0 rounded-[20px] border p-2 text-center transition active:scale-95", !draftImagePath && draftIcon === option.key ? "border-monkey-green bg-green-50 text-monkey-greenDark" : "border-gray-100 bg-gray-50 text-monkey-muted")}>
                 <AssetThumb icon={option.key} size={42} className="mx-auto" />
                 <span className="mt-1 block truncate text-[10px] font-black">{option.label}</span>
               </button>
@@ -242,7 +287,7 @@ export default function CategorySettingsPage() {
           </button>
         ) : null}
 
-        <p className="flex gap-2 rounded-[18px] bg-green-50 px-3 py-3 text-xs font-bold leading-relaxed text-monkey-muted"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-monkey-green" />Los cambios se aplican a los selectores sin cambiar la key histórica usada por la analítica.</p>
+        <p className="flex gap-2 rounded-[18px] bg-green-50 px-3 py-3 text-xs font-bold leading-relaxed text-monkey-muted"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-monkey-green" />Los cambios se aplican a los selectores sin cambiar la key histórica usada por la analítica. Las imágenes propias quedan en Storage y pueden reemplazarse luego.</p>
       </FormSheet>
     </AppShell>
   );

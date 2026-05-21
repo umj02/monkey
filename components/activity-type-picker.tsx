@@ -32,6 +32,7 @@ export function ActivityTypePicker({ label = "Tipo de actividad", value, onChang
           label: item.label,
           iconKey: item.iconKey ?? base.iconKey,
           custom: item.isCustom,
+          imagePath: item.imagePath ?? null,
         };
       });
   }, [activityItems]);
@@ -80,7 +81,7 @@ export function ActivityTypePicker({ label = "Tipo de actividad", value, onChang
                   aria-pressed={active}
                 >
                   <span className={cn("relative grid place-items-center rounded-[14px] p-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,.65)]", type.toneClass)}>
-                    <AssetThumb icon={type.iconKey} size={compact ? 34 : 40} imageClassName="drop-shadow-sm" />
+                    <AssetThumb icon={type.iconKey} src={type.imagePath} size={compact ? 34 : 40} imageClassName="drop-shadow-sm" />
                     {type.custom ? <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-monkey-purple ring-2 ring-white" /> : null}
                   </span>
                   <span className="block w-full truncate text-center leading-tight">{type.label}</span>
