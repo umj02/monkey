@@ -440,3 +440,43 @@ QA recomendado:
 4. Abrir en ventana privada y validar vista pública.
 5. Revocar link y confirmar pantalla de link desactivado.
 6. Correr `npm run validate:assets`, `npm run typecheck`, `npm run build`.
+
+## v2.26 — Activity & Wallet Asset Centralization + Custom Categories Foundation
+
+Base: v2.25.0 validada.
+
+### Cambios principales
+- Centraliza actividades en `public/assets/monitos/`.
+- Centraliza iconos de Wallet en `public/assets/icons/`.
+- Elimina referencias nuevas a `public/assets/activities/*` y `public/assets/wallet/*`.
+- Agrega categorías canónicas para actividad y Wallet alineadas con analítica.
+- Mantiene aliases legacy para registros existentes (`futbol → deporte`, `beberagua → beber`, `musica → escuchar-musica`, etc.).
+- Agrega `/settings/categories` para personalizar categorías desde una vista móvil dedicada.
+- Permite editar nombre visible, icono, visibilidad, orden y crear categorías personalizadas.
+- Agrega migración `0017_v226_user_category_preferences.sql` para persistir preferencias por usuario.
+
+### Supabase
+Ejecutar:
+
+```sql
+supabase/migrations/0017_v226_user_category_preferences.sql
+```
+
+Validar:
+
+```sql
+select tablename, rowsecurity
+from pg_tables
+where schemaname = 'public'
+and tablename = 'user_category_preferences';
+```
+
+Debe devolver `rowsecurity = true`.
+
+### QA recomendado
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```

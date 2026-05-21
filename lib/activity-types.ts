@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/types";
 import { activityAssetGallery, getAssetByKey, type AppAsset } from "@/lib/asset-library";
+import { ACTIVITY_CATEGORY_DEFINITIONS } from "@/lib/category-definitions";
 
 export type ActivityType = {
   key: string;
@@ -10,111 +11,127 @@ export type ActivityType = {
   toneClass: string;
 };
 
-const baseActivityTypes: ActivityType[] = [
-  { key: "estudiar", label: "Estudiar", iconKey: "monkey-estudiar", color: "blue", group: "estudio", toneClass: "bg-[#E7F8FF]" },
-  { key: "clases", label: "Clases", iconKey: "monkey-estudiar", color: "green", group: "estudio", toneClass: "bg-[#EAFBE7]" },
-  { key: "tarea", label: "Tarea", iconKey: "monkey-estudiar", color: "orange", group: "proyecto", toneClass: "bg-[#FFF1E5]" },
-  { key: "proyecto", label: "Proyecto", iconKey: "monkey-estudiar", color: "purple", group: "proyecto", toneClass: "bg-[#F0E8FF]" },
-  { key: "banarse", label: "Bañarse", iconKey: "monkey-banarse", color: "blue", group: "rutina", toneClass: "bg-[#E7F8FF]" },
-  { key: "beberagua", label: "Beber agua", iconKey: "monkey-beberagua", color: "blue", group: "salud", toneClass: "bg-[#DDF7F7]" },
-  { key: "cepillarse", label: "Cepillarse", iconKey: "monkey-cepillarse", color: "green", group: "rutina", toneClass: "bg-[#EAFBE7]" },
-  { key: "cuidado-personal", label: "Cuidado personal", iconKey: "monkey-cuidado-personal", color: "green", group: "rutina", toneClass: "bg-[#E8F8EF]" },
-  { key: "desayuno", label: "Desayuno", iconKey: "monkey-desayuno", color: "yellow", group: "comida", toneClass: "bg-[#FFF7C2]" },
-  { key: "despertar", label: "Despertar", iconKey: "monkey-despertar", color: "yellow", group: "rutina", toneClass: "bg-[#FFF7D6]" },
-  { key: "comida", label: "Comida", iconKey: "monkey-comida", color: "pink", group: "comida", toneClass: "bg-[#FFE8EE]" },
-  { key: "frutas", label: "Frutas", iconKey: "monkey-frutas", color: "pink", group: "comida", toneClass: "bg-[#FFE1E7]" },
-  { key: "gym", label: "Gym", iconKey: "monkey-gym", color: "yellow", group: "salud", toneClass: "bg-[#FDF6BA]" },
-  { key: "futbol", label: "Fútbol", iconKey: "monkey-futbol", color: "yellow", group: "salud", toneClass: "bg-[#FFF4BA]" },
-  { key: "meditar", label: "Meditar", iconKey: "monkey-meditar", color: "purple", group: "salud", toneClass: "bg-[#EFE6FF]" },
-  { key: "dormir", label: "Dormir", iconKey: "monkey-dormir", color: "purple", group: "descanso", toneClass: "bg-[#E8DEFF]" },
-  { key: "leer", label: "Leer", iconKey: "monkey-leer", color: "blue", group: "estudio", toneClass: "bg-[#E7F8FF]" },
-  { key: "musica", label: "Música", iconKey: "monkey-musica", color: "purple", group: "social", toneClass: "bg-[#F0E8FF]" },
-  { key: "instrumento", label: "Instrumento", iconKey: "monkey-instrumento", color: "orange", group: "social", toneClass: "bg-[#FFE9D7]" },
-  { key: "salida", label: "Salida", iconKey: "monkey-salida", color: "orange", group: "social", toneClass: "bg-[#FFF1E5]" },
-  { key: "otro", label: "Otro", iconKey: "monkey-otro", color: "orange", group: "otro", toneClass: "bg-[#FFF1E5]" },
-];
+const colorToneClass: Record<CalendarEvent["color"], string> = {
+  yellow: "bg-[#FFF7C2]",
+  blue: "bg-[#E7F8FF]",
+  green: "bg-[#EAFBE7]",
+  pink: "bg-[#FFE8EE]",
+  purple: "bg-[#F0E8FF]",
+  orange: "bg-[#FFF1E5]",
+};
 
 const legacyKeyAliases: Record<string, string> = {
   study: "estudiar",
+  leer: "estudiar",
+  lectura: "estudiar",
+  estudio: "estudiar",
   class: "clases",
   task: "tarea",
   project: "proyecto",
+  work: "trabajo",
+  trabajo: "trabajo",
   exercise: "gym",
+  gimnacio: "gym",
   food: "comida",
-  fruit: "frutas",
+  dinner: "comida",
+  fruit: "fruta",
+  frutas: "fruta",
   breakfast: "desayuno",
-  water: "beberagua",
+  water: "beber",
+  beberagua: "beber",
   health: "cuidado-personal",
+  care: "cuidado-personal",
   rest: "dormir",
   sleep: "dormir",
-  meditation: "meditar",
-  meditate: "meditar",
+  meditation: "meditacion",
+  meditate: "meditacion",
+  meditar: "meditacion",
   shower: "banarse",
   brush: "cepillarse",
   wake_up: "despertar",
   cleaning: "cuidado-personal",
-  reading: "leer",
-  music: "musica",
+  music: "escuchar-musica",
+  musica: "escuchar-musica",
   instrument: "instrumento",
-  soccer: "futbol",
-  meeting: "salida",
+  soccer: "deporte",
+  futbol: "deporte",
+  meeting: "reunion",
   out: "salida",
-  cinema: "salida",
+  cinema: "television",
   fastfood: "comida",
   vacation: "salida",
-  care: "cuidado-personal",
   other: "otro",
-  "monkey-otro": "otro",
-  "activity-other": "otro",
-  "calendar-other": "otro",
+  "activity-water": "beber",
+  "activity-fruit": "fruta",
+  "activity-soccer": "deporte",
+  "activity-meditate": "meditacion",
+  "activity-music": "escuchar-musica",
+  "activity-sleep": "dormir",
+  "activity-read": "estudiar",
   "activity-study": "estudiar",
   "activity-gym": "gym",
   "activity-food": "comida",
-  "activity-fruit": "frutas",
   "activity-breakfast": "desayuno",
-  "activity-water": "beberagua",
-  "activity-sleep": "dormir",
-  "activity-meditate": "meditar",
   "activity-shower": "banarse",
   "activity-brush": "cepillarse",
   "activity-wakeup": "despertar",
-  "activity-music": "musica",
   "activity-instrument": "instrumento",
-  "activity-soccer": "futbol",
   "activity-out": "salida",
   "activity-care": "cuidado-personal",
   "calendar-study": "estudiar",
+  "calendar-reading": "estudiar",
   "calendar-class": "clases",
   "calendar-task": "tarea",
   "calendar-project": "proyecto",
-  "calendar-exercise": "gym",
+  "calendar-exercise": "deporte",
   "calendar-food": "comida",
-  "calendar-health": "cuidado-personal",
+  "calendar-health": "tomar-medicamento",
   "calendar-rest": "dormir",
-  "calendar-meditation": "meditar",
+  "calendar-meditation": "meditacion",
   "calendar-cleaning": "cuidado-personal",
-  "calendar-reading": "leer",
+  "calendar-meeting": "reunion",
   "calendar-out": "salida",
-  "calendar-cinema": "salida",
+  "calendar-cinema": "television",
   "calendar-fastfood": "comida",
   "calendar-vacation": "salida",
+  "monkey-beberagua": "beber",
+  "monkey-frutas": "fruta",
+  "monkey-futbol": "deporte",
+  "monkey-meditar": "meditacion",
+  "monkey-musica": "escuchar-musica",
+  "monkey-dormir": "dormir",
+  "monkey-leer": "estudiar",
+  "monkey-gym": "gym",
+  "monkey-estudiar": "estudiar",
+  "monkey-banarse": "banarse",
+  "monkey-cepillarse": "cepillarse",
+  "monkey-desayuno": "desayuno",
+  "monkey-despertar": "despertar",
+  "monkey-comida": "comida",
+  "monkey-instrumento": "instrumento",
+  "monkey-salida": "salida",
+  "monkey-cuidado-personal": "cuidado-personal",
+  "monkey-otro": "otro",
 };
 
-function uniqueTypes(types: ActivityType[]) {
-  const seen = new Set<string>();
-  return types.filter((type) => {
-    if (seen.has(type.key)) return false;
-    seen.add(type.key);
-    return true;
-  });
+function normalizeActivityKey(key?: string | null) {
+  if (!key) return "estudiar";
+  if (key.startsWith("monito-")) return key.replace(/^monito-/, "");
+  return legacyKeyAliases[key] ?? key;
 }
 
-export const ACTIVITY_TYPES = uniqueTypes(baseActivityTypes);
+export const ACTIVITY_TYPES: ActivityType[] = ACTIVITY_CATEGORY_DEFINITIONS.map((definition) => ({
+  key: definition.key,
+  label: definition.label,
+  iconKey: definition.iconKey,
+  color: (definition.color ?? "blue") as CalendarEvent["color"],
+  group: (definition.group ?? "otro") as ActivityType["group"],
+  toneClass: colorToneClass[(definition.color ?? "blue") as CalendarEvent["color"]],
+}));
 
 export function getActivityTypeByKey(key?: string | null) {
-  if (!key) return ACTIVITY_TYPES[0];
-  const normalized = legacyKeyAliases[key] ?? key;
-  return ACTIVITY_TYPES.find((type) => type.key === normalized || type.iconKey === normalized) ?? ACTIVITY_TYPES[0];
+  const normalized = normalizeActivityKey(key);
+  return ACTIVITY_TYPES.find((type) => type.key === normalized || type.iconKey === key || type.iconKey === normalized) ?? ACTIVITY_TYPES[0];
 }
 
 export function inferActivityTypeFromIcon(iconKey?: string | null) {
@@ -136,7 +153,7 @@ export function activityTypeAssets(): AppAsset[] {
     return {
       key: type.key,
       label: type.label,
-      src: asset?.src ?? "/assets/activities/monkeys/despertar.png",
+      src: asset?.src ?? "/assets/monitos/otro.png",
       category: asset?.category ?? "activity",
       group: type.group,
     };
