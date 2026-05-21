@@ -456,3 +456,37 @@ QA recomendado:
 - La imagen subida se guarda en `user_category_preferences.image_path` y la key histórica se mantiene estable para analítica.
 - No reemplaza el catálogo base: el usuario puede volver a usar un icono/monito del catálogo cuando quiera.
 - Requiere ejecutar `supabase/migrations/0018_v227_custom_category_assets_storage.sql`.
+
+## v2.27.1 — Category Preferences API Key Mapping Hotfix
+
+Hotfix sobre v2.27 para corregir el error runtime `400 Bad Request` en `/rest/v1/user_category_preferences` cuando el frontend consultaba `key` pero la tabla real usa `category_key`.
+
+Cambios:
+
+- `lib/services/category-preferences-service.ts` ahora consulta `category_key`.
+- El frontend mantiene `key` como nombre interno estable para no tocar pickers ni analytics.
+- Insert/update usa `category_key` y `onConflict: "user_id,scope,category_key"`.
+- Delete usa `.eq("category_key", key)`.
+- Nueva migración `0019_v2271_category_preferences_category_key_hotfix.sql` para alinear instalaciones que todavía tengan columna `key`.
+- Refresca PostgREST con `notify pgrst, 'reload schema'`.
+
+Validación esperada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+SQL recomendado antes del CLI:
+
+```sql
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_schema = 'public'
+and table_name = 'user_category_preferences'
+order by ordinal_position;
+```
+
+Debe existir `category_key`. Después de la migración ya no debería aparecer el error de GET 400 por `key` inexistente.

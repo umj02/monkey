@@ -163,7 +163,7 @@ export default function CategorySettingsPage() {
           <div className="flex items-start gap-3">
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white shadow-card"><Tags className="h-5 w-5 text-monkey-green" /></div>
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">v2.27 upload</p>
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-monkey-greenDark">v2.27.1 hotfix</p>
               <h1 className="mt-1 text-2xl font-black leading-tight">Personalizar categorías</h1>
               <p className="mt-2 text-sm font-bold leading-relaxed text-monkey-muted">Editá nombres, monitos e iconos; también podés subir una imagen propia segura desde el móvil.</p>
             </div>

@@ -21,7 +21,7 @@ function fromRow(row: any): CategoryPreference {
   return {
     id: row.id,
     scope: row.scope,
-    key: row.key,
+    key: row.category_key ?? row.key,
     label: row.label,
     iconKey: row.icon_key,
     imagePath: row.image_path,
@@ -40,7 +40,7 @@ export async function fetchCategoryPreferences(scope?: CategoryPreferenceScope):
 
   let query = supabase
     .from("user_category_preferences")
-    .select("id, scope, key, label, icon_key, image_path, is_enabled, sort_order, is_custom, created_at, updated_at")
+    .select("id, scope, category_key, label, icon_key, image_path, is_enabled, sort_order, is_custom, created_at, updated_at")
     .eq("user_id", userId)
     .order("scope", { ascending: true })
     .order("sort_order", { ascending: true })
@@ -60,7 +60,7 @@ export async function upsertCategoryPreference(input: CategoryPreference): Promi
   const payload = {
     user_id: userId,
     scope: input.scope,
-    key: input.key,
+    category_key: input.key,
     label: input.label,
     icon_key: input.iconKey ?? null,
     image_path: input.imagePath ?? null,
@@ -71,8 +71,8 @@ export async function upsertCategoryPreference(input: CategoryPreference): Promi
 
   const { data, error } = await supabase
     .from("user_category_preferences")
-    .upsert(payload, { onConflict: "user_id,scope,key" })
-    .select("id, scope, key, label, icon_key, image_path, is_enabled, sort_order, is_custom, created_at, updated_at")
+    .upsert(payload, { onConflict: "user_id,scope,category_key" })
+    .select("id, scope, category_key, label, icon_key, image_path, is_enabled, sort_order, is_custom, created_at, updated_at")
     .single();
 
   if (error || !data) return null;
@@ -83,6 +83,6 @@ export async function deleteCategoryPreference(scope: CategoryPreferenceScope, k
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
   if (!supabase || !userId) return false;
-  const { error } = await supabase.from("user_category_preferences").delete().eq("user_id", userId).eq("scope", scope).eq("key", key);
+  const { error } = await supabase.from("user_category_preferences").delete().eq("user_id", userId).eq("scope", scope).eq("category_key", key);
   return !error;
 }
