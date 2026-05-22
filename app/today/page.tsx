@@ -25,7 +25,7 @@ import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
-import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, compareDateKeys, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
 
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
@@ -52,9 +52,6 @@ function fromDateKey(dateKey: string) {
   return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
-function compareDateKeys(a: string, b: string) {
-  return a.localeCompare(b);
-}
 
 function dateKeyToJsDay(dateKey: string) {
   return fromDateKey(dateKey).getDay();
@@ -454,6 +451,14 @@ export default function TodayPage() {
     }
 
     const isChallenge = isChallengeCalendarEvent(event);
+    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) > 0) {
+      showToast("Este check aún no está disponible. Se activa el día programado.", "error");
+      return;
+    }
+    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) < 0) {
+      showToast("Este check ya venció y cuenta como no cumplido.", "error");
+      return;
+    }
     const toastMessage = isChallenge
       ? (nextDone ? "Reto cumplido por hoy. Cuando completés todos los checks podrás cobrar bananas 🍌" : "Check de reto marcado como pendiente")
       : (nextDone ? "Actividad completada" : "Actividad pendiente");

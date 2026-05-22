@@ -1,5 +1,5 @@
-import type { CalendarEvent, Challenge, ChallengeStatus, ChallengeTaskStatus } from "@/types";
-import { toDateKey } from "@/lib/calendar/calendar-utils";
+import type { CalendarEvent, Challenge, ChallengeStatus, ChallengeTask, ChallengeTaskStatus } from "@/types";
+import { compareDateKeys, toDateKey } from "@/lib/calendar/calendar-utils";
 
 export const BANANA_ICON = "🍌";
 
@@ -109,39 +109,73 @@ export function buildChallengeDates(startDate: string, days: number) {
   return Array.from({ length: Math.max(1, days) }, (_, index) => addDaysToDateKey(startDate, index));
 }
 
+export function isChallengeTaskDone(task: ChallengeTask, doneTaskIds?: Set<string>) {
+  return task.status === "checked" || task.status === "verified" || Boolean(doneTaskIds?.has(task.calendarEventId ?? task.id));
+}
+
+export function isChallengeTaskMissed(task: ChallengeTask, todayKey = todayDateKey()) {
+  if (isChallengeTaskDone(task)) return false;
+  if (task.status === "missed") return true;
+  return compareDateKeys(task.scheduledDate, todayKey) < 0;
+}
+
+export function isChallengeTaskAvailableToday(task: ChallengeTask, todayKey = todayDateKey()) {
+  return compareDateKeys(task.scheduledDate, todayKey) === 0 && !isChallengeTaskDone(task) && task.status !== "missed";
+}
+
+export function isChallengeTaskUpcoming(task: ChallengeTask, todayKey = todayDateKey()) {
+  return compareDateKeys(task.scheduledDate, todayKey) > 0;
+}
+
 export function calculateChallengeProgress(challenge: Challenge, doneTaskIds: Set<string>) {
+  const todayKey = todayDateKey();
   const total = challenge.tasks.length;
-  const done = challenge.tasks.filter((task) => doneTaskIds.has(task.calendarEventId ?? task.id)).length;
+  const done = challenge.tasks.filter((task) => isChallengeTaskDone(task, doneTaskIds)).length;
+  const missed = challenge.tasks.filter((task) => isChallengeTaskMissed(task, todayKey)).length;
+  const upcoming = challenge.tasks.filter((task) => isChallengeTaskUpcoming(task, todayKey)).length;
+  const availableToday = challenge.tasks.filter((task) => isChallengeTaskAvailableToday(task, todayKey)).length;
+  const pending = Math.max(0, total - done - missed);
   return {
     total,
     done,
+    missed,
+    upcoming,
+    pending,
+    availableToday,
     percent: total ? Math.round((done / total) * 100) : 0,
-    completed: total > 0 && done >= total,
+    completed: total > 0 && done >= total && missed === 0,
+    incomplete: missed > 0,
   };
 }
 
 
 export function hydrateChallengeTaskStatuses(challenge: Challenge, doneTaskIds: Set<string>): Challenge {
   const now = new Date().toISOString();
+  const todayKey = todayDateKey();
   const tasks = challenge.tasks.map((task) => {
-    const done = doneTaskIds.has(task.calendarEventId ?? task.id);
+    const done = doneTaskIds.has(task.calendarEventId ?? task.id) || task.status === "checked" || task.status === "verified";
     if (done && task.status !== "checked" && task.status !== "verified") {
       return { ...task, status: "checked" as const, checkedAt: task.checkedAt ?? now };
     }
     if (!done && task.status === "checked") {
       return { ...task, status: "pending" as const, checkedAt: null };
     }
+    if (!done && task.status === "pending" && compareDateKeys(task.scheduledDate, todayKey) < 0) {
+      return { ...task, status: "missed" as const, checkedAt: null };
+    }
     return task;
   });
   const allDone = tasks.length > 0 && tasks.every((task) => task.status === "checked" || task.status === "verified");
+  const hasMissed = tasks.some((task) => task.status === "missed");
   return {
     ...challenge,
     tasks,
-    status: allDone && challenge.claimedAt ? "completed" : challenge.status,
+    status: allDone && challenge.claimedAt ? "completed" : hasMissed && !challenge.claimedAt ? "expired" : challenge.status,
     updatedAt: now,
   };
 }
 
 export function nextPendingChallengeTask(challenge: Challenge, doneTaskIds: Set<string>) {
-  return challenge.tasks.find((task) => !doneTaskIds.has(task.calendarEventId ?? task.id)) ?? null;
+  const todayKey = todayDateKey();
+  return challenge.tasks.find((task) => !isChallengeTaskDone(task, doneTaskIds) && task.status !== "missed" && compareDateKeys(task.scheduledDate, todayKey) >= 0) ?? null;
 }

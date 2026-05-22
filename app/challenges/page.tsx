@@ -10,7 +10,7 @@ import { FormSheet } from "@/components/form-sheet";
 import { Toast, type ToastState } from "@/components/toast";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useChallenges } from "@/hooks/use-challenges";
-import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
+import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, isChallengeTaskAvailableToday, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
 import { createChallengeDraft } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, Challenge } from "@/types";
@@ -64,7 +64,7 @@ export default function ChallengesPage() {
 
   const selectedTemplate = PERSONAL_CHALLENGE_TEMPLATES.find((item) => item.id === templateId) ?? PERSONAL_CHALLENGE_TEMPLATES[0];
   const totalBananas = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
-  const activeChallenges = challenges.filter((challenge) => challenge.status === "active");
+  const activeChallenges = challenges.filter((challenge) => challenge.status === "active" || challenge.status === "expired");
   const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
   const activeChallengeTitles = useMemo(() => new Set(activeChallenges.map((challenge) => challenge.title)), [activeChallenges]);
   const claimableChallenges = useMemo(() => activeChallenges.filter((challenge) => calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).completed && !challenge.claimedAt), [activeChallenges, events]);
@@ -244,8 +244,12 @@ export default function ChallengesPage() {
     try {
       const doneIds = challengeDoneIds(challenge, events);
       const progress = calculateChallengeProgress(challenge, doneIds);
+      if (progress.missed > 0) {
+        notify("Este reto tiene checks vencidos. Ya no libera todas las bananas.", "error");
+        return;
+      }
       if (!progress.completed) {
-        notify(`Todavía faltan ${Math.max(0, progress.total - progress.done)} checks para cobrar las bananas.`, "error");
+        notify(`Todavía faltan ${Math.max(0, progress.total - progress.done - progress.missed)} checks para cobrar las bananas.`, "error");
         return;
       }
       const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
@@ -274,7 +278,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.3 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.4 QA</span>
           </div>
         </div>
 
@@ -293,7 +297,7 @@ export default function ChallengesPage() {
             <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[11px] font-bold text-monkey-muted">logrados</p></div>
           </div>
           <div className="mt-3 rounded-[20px] bg-white/70 p-3 text-xs font-black text-orange-800">
-            {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} checks pendientes · completá un reto para liberar bananas`}
+            {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} pendientes · ${summary.missedTasks} perdidos`}
           </div>
         </div>
 
@@ -341,7 +345,9 @@ export default function ChallengesPage() {
                         </div>
                         <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-monkey-green" style={{ width: `${progress.percent}%` }} /></div>
                         <div className="mt-2 flex items-center justify-between text-xs font-black text-monkey-muted"><span>{progress.done}/{progress.total} checks</span><span>{progress.percent}%</span></div>
-                        {nextTask ? (
+                        {progress.missed > 0 ? (
+                          <div className="mt-3 rounded-[18px] bg-gray-100 p-3 text-xs font-black text-monkey-muted">{progress.missed} check{progress.missed === 1 ? "" : "s"} no se cumplieron. Esas bananas se perdieron.</div>
+                        ) : nextTask ? (
                           <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold text-monkey-muted">
                             Próximo check: <span className="font-black text-monkey-ink">{formatDate(nextTask.scheduledDate)} · {nextTask.scheduledTime}</span>
                           </div>
@@ -351,8 +357,17 @@ export default function ChallengesPage() {
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
                           <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Tareas bloqueadas</span>
                           <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700"><CalendarDays className="mr-1 inline h-3 w-3" />Hoy/Calendario</span>
+                          {progress.missed > 0 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-monkey-muted">No cumplido</span> : null}
                         </div>
-                        <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className={cn("mt-4 h-11 w-full rounded-pill text-sm font-black transition active:scale-95 disabled:opacity-70", progress.completed ? "bg-monkey-green text-white" : "bg-gray-100 text-monkey-muted")}>{claimingId === challenge.id ? "Guardando bananas…" : progress.completed ? "Cobrar bananas" : "Completa el reto para cobrar"}</button>
+                        {progress.completed ? (
+                          <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Guardando bananas…" : "Cobrar bananas"}</button>
+                        ) : progress.missed > 0 ? (
+                          <Link href="/calendar" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-gray-100 text-sm font-black text-monkey-muted transition active:scale-95">Ver resumen del reto</Link>
+                        ) : challenge.tasks.some((task) => isChallengeTaskAvailableToday(task)) ? (
+                          <Link href="/today" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-blue-600 text-sm font-black text-white transition active:scale-95">Ver tareas de hoy</Link>
+                        ) : (
+                          <Link href="/calendar" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-blue-50 text-sm font-black text-blue-700 transition active:scale-95">Ver próximo check</Link>
+                        )}
                       </div>
                     </div>
                   </article>

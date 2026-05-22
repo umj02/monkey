@@ -18,6 +18,20 @@ function eventEndMinutes(event: CalendarEvent) {
   return timeToMinutes(event.time) + 60;
 }
 
+function todayDateKey() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isMissedChallengeEvent(event: CalendarEvent, done: boolean) {
+  if (done) return false;
+  if (event.source !== "personal_challenge" && event.source !== "guardian_challenge" && !event.challengeId) return false;
+  return event.date < todayDateKey();
+}
+
 function findContainingLongEvent(events: CalendarEvent[], child: CalendarEvent, isLongEvent: (event: CalendarEvent) => boolean) {
   const childStart = timeToMinutes(child.time);
   return [...events]
@@ -47,6 +61,7 @@ function EventPill({
   compact?: boolean;
   done?: boolean;
 }) {
+  const missed = isMissedChallengeEvent(event, done);
   return (
     <button
       type="button"
@@ -55,13 +70,14 @@ function EventPill({
         "flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] text-left font-black transition active:scale-[.98]",
         compact ? "min-h-[44px] px-3 py-2 text-xs" : "min-h-[52px] px-3 py-3 text-sm sm:gap-3 sm:px-4",
         meta.pillClass,
-        done && "opacity-60 grayscale",
+        (done || missed) && "opacity-60 grayscale",
+        missed && "bg-gray-100 text-monkey-muted",
       )}
     >
       <AssetThumb icon={meta.iconKey} size={compact ? 26 : 30} className="shrink-0 rounded-[10px] bg-white/40" />
-      <span className={cn("min-w-0 flex-1 truncate", done && "line-through")}>{title}</span>
+      <span className={cn("min-w-0 flex-1 truncate", (done || missed) && "line-through")}>{title}</span>
       <span className="max-w-[86px] shrink-0 truncate rounded-full bg-white/55 px-2 py-1 text-[10px] font-black opacity-80 sm:max-w-[128px]">
-        {done ? "Listo" : label}
+        {missed ? "No se cumplió" : done ? "Listo" : label}
       </span>
     </button>
   );

@@ -12,6 +12,8 @@ import {
   upsertChallengeRemote,
   syncChallengeTaskCompletionRemote,
 } from "@/lib/services/challenge-service";
+import { compareDateKeys } from "@/lib/calendar/calendar-utils";
+import { isChallengeTaskDone, isChallengeTaskMissed, todayDateKey } from "@/lib/challenges";
 import type { BananaLedgerEntry, Challenge, ChallengeSummary } from "@/types";
 
 export function useChallenges() {
@@ -61,11 +63,19 @@ export function useChallenges() {
 
   async function syncChallengeTaskFromCalendarEvent(input: { challengeId?: string | null; challengeTaskId?: string | null; calendarEventId?: string | null; done: boolean }) {
     if (!input.challengeId || !input.challengeTaskId) return false;
+    const todayKey = todayDateKey();
+    const challenge = challenges.find((item) => item.id === input.challengeId);
+    const task = challenge?.tasks.find((item) => item.id === input.challengeTaskId);
+    if (input.done && task && compareDateKeys(task.scheduledDate, todayKey) > 0) return false;
     const checkedAt = input.done ? new Date().toISOString() : null;
-    setChallenges((list) => list.map((challenge) => {
-      if (challenge.id !== input.challengeId) return challenge;
-      const tasks = challenge.tasks.map((task) => task.id === input.challengeTaskId ? { ...task, status: input.done ? "checked" as const : "pending" as const, checkedAt } : task);
-      return { ...challenge, tasks, updatedAt: new Date().toISOString() };
+    setChallenges((list) => list.map((item) => {
+      if (item.id !== input.challengeId) return item;
+      const tasks = item.tasks.map((currentTask) => {
+        if (currentTask.id !== input.challengeTaskId) return currentTask;
+        const nextStatus = input.done ? "checked" as const : (compareDateKeys(currentTask.scheduledDate, todayKey) < 0 ? "missed" as const : "pending" as const);
+        return { ...currentTask, status: nextStatus, checkedAt };
+      });
+      return { ...item, tasks, updatedAt: new Date().toISOString() };
     }));
     if (session && mode === "supabase") {
       const ok = await syncChallengeTaskCompletionRemote({
@@ -112,13 +122,13 @@ export function useChallenges() {
     const bananasEarned = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
     const claimableChallenges = activeChallenges.filter((challenge) => {
       if (challenge.claimedAt || !challenge.tasks.length) return false;
-      return challenge.tasks.every((task) => task.status === "checked" || task.status === "verified");
+      return challenge.tasks.every((task) => isChallengeTaskDone(task));
     });
     const bananasAvailable = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
-    const pendingTasks = activeChallenges
-      .flatMap((challenge) => challenge.tasks)
-      .filter((task) => task.status === "pending" || task.status === "missed").length;
-    return { active: activeChallenges.length, completed, pendingTasks, bananasEarned, bananasAvailable };
+    const activeTasks = activeChallenges.flatMap((challenge) => challenge.tasks);
+    const missedTasks = activeTasks.filter((task) => isChallengeTaskMissed(task)).length;
+    const pendingTasks = activeTasks.filter((task) => !isChallengeTaskDone(task) && !isChallengeTaskMissed(task)).length;
+    return { active: activeChallenges.length, completed, pendingTasks, missedTasks, bananasEarned, bananasAvailable };
   }, [bananaLedger, challenges]);
 
   return {

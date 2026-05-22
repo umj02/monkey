@@ -300,6 +300,7 @@ export type ChallengeSummary = {
   active: number;
   completed: number;
   pendingTasks: number;
+  missedTasks: number;
   bananasEarned: number;
   bananasAvailable: number;
 };

@@ -1,10 +1,20 @@
 import { createId } from "@/lib/local-storage";
 import { createOptionalClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/services/supabase-data-service";
+import { compareDateKeys, toDateKey } from "@/lib/calendar/calendar-utils";
 import type { BananaLedgerEntry, Challenge, ChallengeTask } from "@/types";
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function todayKey() {
+  return toDateKey(new Date());
+}
+
+function effectiveTaskStatus(task: Pick<ChallengeTask, "status" | "scheduledDate">) {
+  if ((task.status === "pending" || !task.status) && compareDateKeys(task.scheduledDate, todayKey()) < 0) return "missed" as const;
+  return task.status;
 }
 
 function isUuid(id: string) {
@@ -71,7 +81,7 @@ function mapTaskRow(row: any): ChallengeTask {
     activityTypeKey: row.activity_type_key || "otro",
     scheduledDate: row.scheduled_date,
     scheduledTime: (row.scheduled_time || "09:00").slice(0, 5),
-    status: row.status || "pending",
+    status: effectiveTaskStatus({ status: row.status || "pending", scheduledDate: row.scheduled_date }),
     rewardBananas: Number(row.reward_bananas || 0),
     checkedAt: row.checked_at || null,
     verifiedAt: row.verified_at || null,
@@ -115,11 +125,14 @@ export async function fetchChallengesRemote(): Promise<Challenge[] | null> {
     taskRows = data ?? [];
   }
 
-  return (challengeRows ?? []).map((row: any) => {
+  const mapped = (challengeRows ?? []).map((row: any) => {
     const challengeId = row.local_id || row.id;
     const tasks = taskRows.filter((task) => task.challenge_id === challengeId).map(mapTaskRow);
     return mapChallengeRow(row, tasks);
   });
+
+  await reconcileMissedChallengesRemote(supabase, userId, mapped);
+  return mapped;
 }
 
 async function selectChallengeByLocalId(supabase: any, userId: string, localId: string) {
@@ -168,12 +181,46 @@ async function saveChallengeTaskRemote(supabase: any, userId: string, task: Chal
   return !error;
 }
 
+async function reconcileMissedChallengesRemote(supabase: any, userId: string, challenges: Challenge[]) {
+  const now = nowIso();
+  for (const challenge of challenges) {
+    if (challenge.claimedAt || challenge.status === "completed" || challenge.status === "cancelled") continue;
+    const missedTasks = challenge.tasks.filter((task) => task.status === "missed" || (task.status === "pending" && compareDateKeys(task.scheduledDate, todayKey()) < 0));
+    if (!missedTasks.length) continue;
+
+    for (const task of missedTasks) {
+      await supabase
+        .from("challenge_tasks")
+        .update({ status: "missed", checked_at: null, updated_at: now })
+        .eq("user_id", userId)
+        .eq("local_id", task.id);
+
+      if (task.calendarEventId) {
+        await supabase
+          .from("calendar_events")
+          .update({ done: false, verification_status: "none" })
+          .eq("user_id", userId)
+          .eq("id", task.calendarEventId);
+      }
+    }
+
+    const completedTasks = challenge.tasks.filter((task) => task.status === "checked" || task.status === "verified").length;
+    const hasMissed = challenge.tasks.some((task) => task.status === "missed") || missedTasks.length > 0;
+    await supabase
+      .from("personal_challenges")
+      .update({ completed_tasks: completedTasks, status: hasMissed ? "expired" : challenge.status })
+      .eq("user_id", userId)
+      .eq("local_id", challenge.id);
+  }
+}
+
 export async function upsertChallengeRemote(challenge: Challenge): Promise<Challenge | null> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
   if (!supabase || !userId) return null;
 
   const completedTasks = challenge.tasks.filter((task) => task.status === "checked" || task.status === "verified").length;
+  const hasMissed = challenge.tasks.some((task) => effectiveTaskStatus(task) === "missed");
   const payload: any = {
     user_id: userId,
     local_id: challenge.id,
@@ -184,7 +231,7 @@ export async function upsertChallengeRemote(challenge: Challenge): Promise<Chall
     image_path: challenge.imagePath ?? null,
     activity_type_key: challenge.activityTypeKey,
     frequency: challenge.frequency,
-    status: challenge.status,
+    status: hasMissed && !challenge.claimedAt ? "expired" : challenge.status,
     start_date: challenge.startDate,
     end_date: challenge.endDate,
     reward_bananas: challenge.rewardBananas,
@@ -234,12 +281,22 @@ export async function syncChallengeTaskCompletionRemote(input: {
   const userId = await getUserId();
   if (!supabase || !userId || !input.challengeId || !input.challengeTaskId) return false;
 
+  const { data: taskRow } = await supabase
+    .from("challenge_tasks")
+    .select("id,scheduled_date,status")
+    .eq("user_id", userId)
+    .eq("local_id", input.challengeTaskId)
+    .maybeSingle();
+  if (!taskRow?.id) return false;
+
+  const currentToday = todayKey();
+  if (input.done && compareDateKeys(taskRow.scheduled_date, currentToday) > 0) return false;
+  const nextStatus = input.done ? "checked" : (compareDateKeys(taskRow.scheduled_date, currentToday) < 0 ? "missed" : "pending");
   const checkedAt = input.done ? nowIso() : null;
   const { error: taskError } = await supabase
     .from("challenge_tasks")
-    .update({ status: input.done ? "checked" : "pending", checked_at: checkedAt })
-    .eq("user_id", userId)
-    .eq("local_id", input.challengeTaskId);
+    .update({ status: nextStatus, checked_at: checkedAt })
+    .eq("id", taskRow.id);
   if (taskError) return false;
 
   if (input.calendarEventId) {
@@ -258,6 +315,7 @@ export async function syncChallengeTaskCompletionRemote(input: {
   if (tasksError) return false;
 
   const completedTasks = (tasks ?? []).filter((task: any) => task.status === "checked" || task.status === "verified").length;
+  const hasMissed = (tasks ?? []).some((task: any) => task.status === "missed");
   const { data: challengeRow } = await supabase
     .from("personal_challenges")
     .select("id,claimed_at")
@@ -271,7 +329,7 @@ export async function syncChallengeTaskCompletionRemote(input: {
       .from("personal_challenges")
       .update({
         completed_tasks: completedTasks,
-        status: allDone && challengeRow.claimed_at ? "completed" : "active",
+        status: allDone && challengeRow.claimed_at ? "completed" : hasMissed ? "expired" : "active",
       })
       .eq("id", challengeRow.id);
     if (challengeError) return false;
