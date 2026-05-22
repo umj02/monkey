@@ -107,12 +107,18 @@ export function useChallenges() {
   }
 
   const summary = useMemo<ChallengeSummary>(() => {
-    const active = challenges.filter((challenge) => challenge.status === "active").length;
+    const activeChallenges = challenges.filter((challenge) => challenge.status === "active");
     const completed = challenges.filter((challenge) => challenge.status === "completed").length;
     const bananasEarned = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
-    const bananasAvailable = challenges.filter((challenge) => challenge.status === "active" && !challenge.claimedAt).reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
-    const pendingTasks = challenges.filter((challenge) => challenge.status === "active").flatMap((challenge) => challenge.tasks).length;
-    return { active, completed, pendingTasks, bananasEarned, bananasAvailable };
+    const claimableChallenges = activeChallenges.filter((challenge) => {
+      if (challenge.claimedAt || !challenge.tasks.length) return false;
+      return challenge.tasks.every((task) => task.status === "checked" || task.status === "verified");
+    });
+    const bananasAvailable = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
+    const pendingTasks = activeChallenges
+      .flatMap((challenge) => challenge.tasks)
+      .filter((task) => task.status === "pending" || task.status === "missed").length;
+    return { active: activeChallenges.length, completed, pendingTasks, bananasEarned, bananasAvailable };
   }, [bananaLedger, challenges]);
 
   return {

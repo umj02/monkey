@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
   const { overrides } = useCalendarOverrides();
   const { wallet, syncing: walletSyncing, syncStatus: walletSyncStatus, lastError: walletError } = useWallet();
   const { activityItems, walletExpenseItems } = useCategoryPreferences();
-  const { summary: challengeSummary, syncing: challengeSyncing } = useChallenges();
+  const { challenges, bananaLedger, summary: challengeSummary, syncing: challengeSyncing } = useChallenges();
 
   const range = useMemo(() => {
     const start = mode === "week" ? startOfWeek(today) : startOfMonth(today);
@@ -215,6 +215,24 @@ export default function AnalyticsPage() {
     }
     return count;
   }, [dayMetrics, todayKey]);
+
+  const challengeMetrics = useMemo(() => {
+    const active = challenges.filter((challenge) => challenge.status === "active");
+    const completed = challenges.filter((challenge) => challenge.status === "completed");
+    const claimable = active.filter((challenge) => !challenge.claimedAt && challenge.tasks.length > 0 && challenge.tasks.every((task) => task.status === "checked" || task.status === "verified"));
+    const checkedTasks = challenges.flatMap((challenge) => challenge.tasks).filter((task) => task.status === "checked" || task.status === "verified").length;
+    const totalTasks = challenges.flatMap((challenge) => challenge.tasks).length;
+    const latestBanana = bananaLedger[0] ?? null;
+    return {
+      active: active.length,
+      completed: completed.length,
+      claimable: claimable.length,
+      claimableBananas: claimable.reduce((sum, challenge) => sum + challenge.rewardBananas, 0),
+      checkedTasks,
+      totalTasks,
+      latestBanana,
+    };
+  }, [bananaLedger, challenges]);
 
   const activityStats = useMemo<ActivityMetric[]>(() => {
     const byKey = new Map<string, ActivityMetric>();
@@ -515,7 +533,16 @@ export default function AnalyticsPage() {
               Ver
             </Link>
           </div>
-          <p className="mt-3 text-[11px] font-black text-orange-700">{challengeSyncing ? "Actualizando retos…" : "Analítica separada: retos especiales no cambian tus tareas normales."}</p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimableBananas}</p><p className="text-[10px] font-black text-monkey-muted">por cobrar</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.checkedTasks}/{challengeMetrics.totalTasks}</p><p className="text-[10px] font-black text-monkey-muted">checks reto</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimable}</p><p className="text-[10px] font-black text-monkey-muted">listos</p></div>
+          </div>
+          {challengeMetrics.latestBanana ? (
+            <p className="mt-3 rounded-[18px] bg-white/70 p-3 text-[11px] font-black text-orange-700">Último premio: +{challengeMetrics.latestBanana.amount} bananas · {challengeMetrics.latestBanana.reason}</p>
+          ) : (
+            <p className="mt-3 text-[11px] font-black text-orange-700">{challengeSyncing ? "Actualizando retos…" : "Analítica separada: retos especiales no cambian tus tareas normales."}</p>
+          )}
         </section>
 
         <section className="mt-6 rounded-[28px] border border-monkey-green/20 bg-green-50 p-4">
