@@ -71,7 +71,6 @@ export function useChallenges() {
       await upsertChallengeRemote(completedChallenge);
       const remote = await upsertBananaLedgerEntryRemote(entry);
       if (remote) setBananaLedger((list) => [remote, ...list.filter((item) => item.id !== entry.id)]);
-      await refreshChallenges();
     }
     return entry;
   }
@@ -80,13 +79,8 @@ export function useChallenges() {
     const active = challenges.filter((challenge) => challenge.status === "active").length;
     const completed = challenges.filter((challenge) => challenge.status === "completed").length;
     const bananasEarned = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
-    const activeUnclaimed = challenges.filter((challenge) => challenge.status === "active" && !challenge.claimedAt);
-    const bananasAvailable = activeUnclaimed
-      .filter((challenge) => challenge.tasks.length > 0 && challenge.tasks.every((task) => task.status === "checked" || task.status === "verified"))
-      .reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
-    const pendingTasks = activeUnclaimed
-      .flatMap((challenge) => challenge.tasks)
-      .filter((task) => task.status !== "checked" && task.status !== "verified").length;
+    const bananasAvailable = challenges.filter((challenge) => challenge.status === "active" && !challenge.claimedAt).reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
+    const pendingTasks = challenges.filter((challenge) => challenge.status === "active").flatMap((challenge) => challenge.tasks).length;
     return { active, completed, pendingTasks, bananasEarned, bananasAvailable };
   }, [bananaLedger, challenges]);
 

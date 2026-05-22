@@ -1,5 +1,17 @@
 {
-  "framework": "nextjs",
-  "installCommand": "npm ci --no-audit --no-fund",
-  "buildCommand": "npm run build"
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    }
+  ]
 }

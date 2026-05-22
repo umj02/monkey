@@ -593,15 +593,3 @@ Probar:
 - Notificaciones push específicas de retos.
 
 Estos quedan preparados para una versión futura sobre esta base.
-
-
-## v2.28.2-clean.1 — Dependency Lockfile Cleanup
-
-- Corrige la persistencia real de retos personales en Supabase.
-- Refuerza el guardado de `personal_challenges`, `challenge_tasks`, `calendar_events` y `banana_ledger`.
-- Evita depender de `upsert` contra índices parciales para retos y bananas.
-- Sincroniza checks de reto marcados en Hoy con `challenge_tasks`.
-- Recalcula `completed_tasks` en `personal_challenges`.
-- Agrega constructor móvil para crear retos personalizados con nombre, descripción, icono, horarios y bananas.
-- Mantiene retos sugeridos como flujo rápido.
-- No cambia la dinámica de tareas normales.

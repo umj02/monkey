@@ -23,7 +23,6 @@ import { useReminders } from "@/hooks/use-reminders";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
-import { syncChallengeTaskCompletionRemote } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
@@ -460,17 +459,7 @@ export default function TodayPage() {
       void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), nextDone);
     } else {
       const { id: _id, ...input } = event;
-      const updatePromise = updateEvent(event.id, { ...input, done: nextDone, verificationStatus: isChallenge ? (nextDone ? "self_checked" : "none") : input.verificationStatus });
-      if (isChallenge) {
-        void updatePromise.then((savedEvent) =>
-          syncChallengeTaskCompletionRemote({
-            challengeId: savedEvent.challengeId ?? event.challengeId,
-            taskId: savedEvent.challengeTaskId ?? event.challengeTaskId,
-            calendarEventId: savedEvent.id ?? event.id,
-            done: nextDone,
-          }),
-        );
-      }
+      void updateEvent(event.id, { ...input, done: nextDone, verificationStatus: isChallenge ? (nextDone ? "self_checked" : "none") : input.verificationStatus });
     }
     showToast(toastMessage);
   }
@@ -482,18 +471,7 @@ export default function TodayPage() {
       void setCompletion(calendarOccurrenceBaseId(event), calendarOccurrenceDate(event, todayDateKey), false);
     } else {
       const { id: _id, ...input } = event;
-      const isChallenge = isChallengeCalendarEvent(event);
-      const updatePromise = updateEvent(event.id, { ...input, done: false, verificationStatus: isChallenge ? "none" : input.verificationStatus });
-      if (isChallenge) {
-        void updatePromise.then((savedEvent) =>
-          syncChallengeTaskCompletionRemote({
-            challengeId: savedEvent.challengeId ?? event.challengeId,
-            taskId: savedEvent.challengeTaskId ?? event.challengeTaskId,
-            calendarEventId: savedEvent.id ?? event.id,
-            done: false,
-          }),
-        );
-      }
+      void updateEvent(event.id, { ...input, done: false, verificationStatus: isChallengeCalendarEvent(event) ? "none" : input.verificationStatus });
     }
     setCompletingCalendarKeys((current) => {
       const next = new Set(current);
