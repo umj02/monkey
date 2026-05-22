@@ -19,8 +19,22 @@ function formatDate(dateKey: string) {
   return new Intl.DateTimeFormat("es-CR", { day: "numeric", month: "short" }).format(new Date(`${dateKey}T00:00:00`));
 }
 
-function normalizeTime(value: string) {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : "09:00";
+function isValidTime(value: string) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value.trim());
+}
+
+function cleanTime(value: string) {
+  return value.trim();
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 32) || "reto";
 }
 
 function challengeDoneIds(challenge: Challenge, events: CalendarEvent[]) {
@@ -38,10 +52,14 @@ export default function ChallengesPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [templateId, setTemplateId] = useState(PERSONAL_CHALLENGE_TEMPLATES[0]?.id ?? "agua-3");
+  const [builderMode, setBuilderMode] = useState<"suggested" | "custom">("suggested");
   const [days, setDays] = useState("1");
-  const [timeA, setTimeA] = useState("09:00");
-  const [timeB, setTimeB] = useState("13:00");
-  const [timeC, setTimeC] = useState("17:00");
+  const [scheduleTimes, setScheduleTimes] = useState<string[]>([PERSONAL_CHALLENGE_TEMPLATES[0]?.defaultTimes[0] ?? "09:00"]);
+  const [customTitle, setCustomTitle] = useState("Mi reto personal");
+  const [customDescription, setCustomDescription] = useState("Un reto creado por mí para mantener constancia.");
+  const [customBananas, setCustomBananas] = useState("5");
+  const [customIconKey, setCustomIconKey] = useState("monito-otro");
+  const [creating, setCreating] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const selectedTemplate = PERSONAL_CHALLENGE_TEMPLATES.find((item) => item.id === templateId) ?? PERSONAL_CHALLENGE_TEMPLATES[0];
@@ -53,10 +71,14 @@ export default function ChallengesPage() {
   const claimableBananas = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
   const latestBananas = bananaLedger.slice(0, 5);
 
-  const suggestedTimes = useMemo(() => {
-    const base = selectedTemplate?.defaultTimes ?? ["09:00"];
-    return [timeA || base[0] || "09:00", timeB || base[1] || "", timeC || base[2] || ""].filter(Boolean).map(normalizeTime);
-  }, [selectedTemplate, timeA, timeB, timeC]);
+  const validScheduleTimes = useMemo(() => {
+    const unique = new Set<string>();
+    for (const raw of scheduleTimes) {
+      const time = cleanTime(raw);
+      if (isValidTime(time)) unique.add(time);
+    }
+    return Array.from(unique);
+  }, [scheduleTimes]);
 
   function notify(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
@@ -68,88 +90,149 @@ export default function ChallengesPage() {
       notify("Ya tenés ese reto activo. Terminálo o cobrá las bananas antes de repetirlo.", "error");
       return;
     }
+    setBuilderMode("suggested");
     setTemplateId(template.id);
     setDays(String(template.defaultDays));
-    setTimeA(template.defaultTimes[0] ?? "09:00");
-    setTimeB(template.defaultTimes[1] ?? "");
-    setTimeC(template.defaultTimes[2] ?? "");
+    setScheduleTimes([template.defaultTimes[0] ?? "09:00"]);
     setSheetOpen(true);
   }
 
+  function openCustomBuilder() {
+    setBuilderMode("custom");
+    setDays("1");
+    setScheduleTimes(["09:00"]);
+    setSheetOpen(true);
+  }
+
+  function updateScheduleTime(index: number, value: string) {
+    setScheduleTimes((current) => current.map((item, itemIndex) => (itemIndex === index ? value : item)));
+  }
+
+  function addScheduleTime() {
+    setScheduleTimes((current) => current.length >= 3 ? current : [...current, ""]);
+  }
+
+  function removeScheduleTime(index: number) {
+    setScheduleTimes((current) => current.length <= 1 ? current : current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   async function createPersonalChallenge() {
+    if (creating) return;
     const template = selectedTemplate;
     if (!template) return;
-    if (activeChallengeTitles.has(template.title)) {
+
+    const isCustom = builderMode === "custom";
+    const title = (isCustom ? customTitle : template.title).trim();
+    const description = (isCustom ? customDescription : template.description).trim();
+    const iconKey = (isCustom ? customIconKey : template.iconKey).trim() || "monito-otro";
+    const activityTypeKey = isCustom ? "otro" : template.activityTypeKey;
+    const color = isCustom ? "green" as const : template.color;
+    const cleanDays = Math.min(31, Math.max(1, Number(days) || template.defaultDays));
+    const times = validScheduleTimes;
+
+    if (title.length < 3) {
+      notify("Escribí un nombre de reto más claro.", "error");
+      return;
+    }
+    if (activeChallengeTitles.has(title)) {
       notify("Ese reto ya está activo. Evitamos duplicarlo para que la medición quede limpia.", "error");
       return;
     }
-    const cleanDays = Math.min(31, Math.max(1, Number(days) || template.defaultDays));
-    const startDate = todayDateKey();
-    const dates = buildChallengeDates(startDate, cleanDays);
-    const times = Array.from(new Set((suggestedTimes.length ? suggestedTimes : template.defaultTimes).map(normalizeTime))).slice(0, 3);
     if (!times.length) {
-      notify("Agregá al menos una hora válida para programar el reto.", "error");
+      notify("Agregá al menos una hora válida en formato 09:00.", "error");
       return;
     }
-    const rewardBananas = Math.max(template.rewardBananas, Math.round(dates.length * times.length));
-    const perTaskBananas = Math.max(1, Math.floor(rewardBananas / Math.max(1, dates.length * times.length)));
+    if (new Set(scheduleTimes.map((item) => item.trim()).filter(Boolean)).size !== scheduleTimes.map((item) => item.trim()).filter(Boolean).length) {
+      notify("Hay horarios repetidos. Dejá cada hora una sola vez.", "error");
+      return;
+    }
 
-    const draft = createChallengeDraft({
-      origin: "personal",
-      title: template.title,
-      description: template.description,
-      iconKey: template.iconKey,
-      imagePath: null,
-      activityTypeKey: template.activityTypeKey,
-      frequency: cleanDays === 1 ? "daily" : cleanDays > 7 ? "monthly" : "weekly",
-      startDate,
-      endDate: dates[dates.length - 1],
-      rewardBananas,
-      requiresGuardianVerification: false,
-      tasks: dates.flatMap((date) => times.map((time, index) => ({
-        id: `${template.id}-${date}-${time.replace(":", "")}-${index}`,
-        calendarEventId: null,
-        title: template.title,
-        iconKey: template.iconKey,
-        activityTypeKey: template.activityTypeKey,
-        scheduledDate: date,
-        scheduledTime: time,
-        rewardBananas: perTaskBananas,
-      }))),
-    });
+    setCreating(true);
+    try {
+      const startDate = todayDateKey();
+      const dates = buildChallengeDates(startDate, cleanDays);
+      const rawReward = isCustom ? Number(customBananas) : template.rewardBananas;
+      const minimumReward = dates.length * times.length;
+      const rewardBananas = Math.max(1, Math.max(Math.round(rawReward || minimumReward), minimumReward));
+      const perTaskBananas = Math.max(1, Math.floor(rewardBananas / Math.max(1, minimumReward)));
+      const challengeSlug = isCustom ? `custom-${slugify(title)}` : template.id;
+      const taskSeed = Date.now().toString(36);
 
-    const tasksWithEvents = [];
-    for (const task of draft.tasks) {
-      const event = await createEvent({
-        date: task.scheduledDate,
-        time: task.scheduledTime,
-        endTime: null,
-        title: `Reto: ${task.title}`,
-        color: template.color,
-        iconKey: task.iconKey,
-        activityTypeKey: task.activityTypeKey,
-        recurrenceType: "none",
-        recurrenceDays: null,
-        recurrenceUntil: null,
-        recurrenceGroupId: null,
-        done: false,
-        source: "personal_challenge",
-        challengeId: draft.id,
-        challengeTaskId: task.id,
-        isLocked: true,
-        verificationStatus: "none",
-        rewardBananas: task.rewardBananas,
+      const draft = createChallengeDraft({
+        origin: "personal",
+        title,
+        description,
+        iconKey,
+        imagePath: null,
+        activityTypeKey,
+        frequency: cleanDays === 1 ? "daily" : cleanDays > 7 ? "monthly" : "weekly",
+        startDate,
+        endDate: dates[dates.length - 1],
+        rewardBananas,
+        requiresGuardianVerification: false,
+        tasks: dates.flatMap((date) => times.map((time) => ({
+          id: `${challengeSlug}-${taskSeed}-${date}-${time.replace(":", "")}`,
+          calendarEventId: null,
+          title,
+          iconKey,
+          activityTypeKey,
+          scheduledDate: date,
+          scheduledTime: time,
+          rewardBananas: perTaskBananas,
+        }))),
       });
-      tasksWithEvents.push({ ...task, calendarEventId: event.id });
-    }
 
-    const saved = await saveChallenge({ ...draft, tasks: tasksWithEvents });
-    if (!saved) {
-      notify("No se pudo guardar el reto en tu cuenta. Revisá Supabase o la conexión antes de continuar.", "error");
-      return;
+      const tasksWithEvents = [];
+      const createdTaskKeys = new Set<string>();
+      for (const task of draft.tasks) {
+        const dedupKey = `${draft.id}-${task.scheduledDate}-${task.scheduledTime}`;
+        if (createdTaskKeys.has(dedupKey)) continue;
+        createdTaskKeys.add(dedupKey);
+
+        const existingEvent = events.find((event) => (
+          event.source === "personal_challenge" &&
+          event.challengeId === draft.id &&
+          (event.challengeTaskId === task.id || (event.date === task.scheduledDate && event.time === task.scheduledTime))
+        ));
+
+        if (existingEvent) {
+          tasksWithEvents.push({ ...task, calendarEventId: existingEvent.id });
+          continue;
+        }
+
+        const event = await createEvent({
+          date: task.scheduledDate,
+          time: task.scheduledTime,
+          endTime: null,
+          title: `Reto: ${task.title}`,
+          color,
+          iconKey: task.iconKey,
+          activityTypeKey: task.activityTypeKey,
+          recurrenceType: "none",
+          recurrenceDays: null,
+          recurrenceUntil: null,
+          recurrenceGroupId: null,
+          done: false,
+          source: "personal_challenge",
+          challengeId: draft.id,
+          challengeTaskId: task.id,
+          isLocked: true,
+          verificationStatus: "none",
+          rewardBananas: task.rewardBananas,
+        });
+        tasksWithEvents.push({ ...task, calendarEventId: event.id });
+      }
+
+      const saved = await saveChallenge({ ...draft, tasks: tasksWithEvents });
+      if (!saved) {
+        notify("No se pudo guardar el reto en tu cuenta. Revisá Supabase o la conexión antes de continuar.", "error");
+        return;
+      }
+      setSheetOpen(false);
+      notify("Reto creado y guardado en Supabase 🍌");
+    } finally {
+      setCreating(false);
     }
-    setSheetOpen(false);
-    notify("Reto creado y guardado en Supabase 🍌");
   }
 
   async function handleClaim(challenge: Challenge) {
@@ -191,7 +274,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.2 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.3 QA</span>
           </div>
         </div>
 
@@ -217,7 +300,7 @@ export default function ChallengesPage() {
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-[.08em] text-monkey-muted">Retos sugeridos</h2>
-            <button type="button" onClick={() => setSheetOpen(true)} className="flex items-center gap-1 rounded-full bg-monkey-green px-3 py-2 text-xs font-black text-white"><Plus className="h-4 w-4" /> Crear</button>
+            <button type="button" onClick={openCustomBuilder} className="flex items-center gap-1 rounded-full bg-monkey-green px-3 py-2 text-xs font-black text-white"><Plus className="h-4 w-4" /> Crear</button>
           </div>
           <div className="grid gap-3">
             {PERSONAL_CHALLENGE_TEMPLATES.map((template) => {
@@ -328,24 +411,49 @@ export default function ChallengesPage() {
         </section>
       </section>
 
-      <FormSheet open={sheetOpen} title="Aceptar reto" subtitle="Elegí duración y horarios. Después se programa automáticamente como tareas especiales." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel="Crear reto">
-        <div className="grid gap-2">
-          {PERSONAL_CHALLENGE_TEMPLATES.map((template) => (
-            <button key={template.id} type="button" onClick={() => openTemplate(template)} className={cn("flex items-center gap-3 rounded-[18px] p-3 text-left transition active:scale-[.99]", templateId === template.id ? "bg-green-50 ring-2 ring-monkey-green" : "bg-gray-50")}> 
-              <AssetThumb icon={template.iconKey} className="h-11 w-11 rounded-[16px] bg-white" />
-              <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-black">{template.title}</strong><span className="block text-xs font-bold text-monkey-muted">{template.rewardBananas} bananas sugeridas</span></span>
-            </button>
-          ))}
+      <FormSheet open={sheetOpen} title={builderMode === "custom" ? "Crear mi propio reto" : "Aceptar reto"} subtitle="Elegí solo los horarios que querés usar. Después se programa como tareas especiales." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel={creating ? "Creando reto…" : "Crear reto"}>
+        <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-gray-100 p-1">
+          <button type="button" onClick={() => setBuilderMode("suggested")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "suggested" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Sugeridos</button>
+          <button type="button" onClick={() => setBuilderMode("custom")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "custom" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Personalizado</button>
         </div>
-        <Field label="Días de reto" value={days} onChange={(event) => setDays(event.target.value)} placeholder="7" />
+
+        {builderMode === "suggested" ? (
+          <div className="grid gap-2">
+            {PERSONAL_CHALLENGE_TEMPLATES.map((template) => (
+              <button key={template.id} type="button" onClick={() => openTemplate(template)} className={cn("flex items-center gap-3 rounded-[18px] p-3 text-left transition active:scale-[.99]", templateId === template.id ? "bg-green-50 ring-2 ring-monkey-green" : "bg-gray-50")}> 
+                <AssetThumb icon={template.iconKey} className="h-11 w-11 rounded-[16px] bg-white" />
+                <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-black">{template.title}</strong><span className="block text-xs font-bold text-monkey-muted">{template.rewardBananas} bananas sugeridas</span></span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            <Field label="Nombre del reto" value={customTitle} onChange={(event) => setCustomTitle(event.target.value)} placeholder="Ej: Leer 20 minutos" />
+            <Field label="Descripción" value={customDescription} onChange={(event) => setCustomDescription(event.target.value)} placeholder="Ej: Crear constancia sin presión" />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Bananas" value={customBananas} onChange={(event) => setCustomBananas(event.target.value)} placeholder="5" inputMode="numeric" />
+              <Field label="Icono/monito" value={customIconKey} onChange={(event) => setCustomIconKey(event.target.value)} placeholder="monito-otro" />
+            </div>
+          </div>
+        )}
+
+        <Field label="Días de reto" value={days} onChange={(event) => setDays(event.target.value)} placeholder="7" inputMode="numeric" />
         <div>
           <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Clock3 className="h-4 w-4" /> Horarios</span>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="Hora 1" value={timeA} onChange={(event) => setTimeA(event.target.value)} placeholder="09:00" />
-            <Field label="Hora 2" value={timeB} onChange={(event) => setTimeB(event.target.value)} placeholder="13:00" />
-            <Field label="Hora 3" value={timeC} onChange={(event) => setTimeC(event.target.value)} placeholder="17:00" />
+          <div className="grid gap-2">
+            {scheduleTimes.map((time, index) => (
+              <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
+                <Field label={`Hora ${index + 1}`} value={time} onChange={(event) => updateScheduleTime(index, event.target.value)} placeholder="09:00" />
+                {scheduleTimes.length > 1 ? (
+                  <button type="button" onClick={() => removeScheduleTime(index)} className="mt-7 h-[52px] rounded-[18px] bg-gray-100 px-4 text-xs font-black text-monkey-muted">Quitar</button>
+                ) : null}
+              </div>
+            ))}
           </div>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">Dejá vacías las horas que no querés usar. Las tareas del reto quedan bloqueadas para mantener la medición limpia.</p>
+          {scheduleTimes.length < 3 ? (
+            <button type="button" onClick={addScheduleTime} className="mt-3 rounded-full bg-green-50 px-4 py-2 text-xs font-black text-monkey-greenDark">+ Agregar horario</button>
+          ) : null}
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Solo se crearán tareas para los horarios que agregués aquí. No se usan horas ocultas ni valores por defecto adicionales.</p>
         </div>
         <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Al completar todos los checks, podrás cobrar bananas en tu Wallet de logros.</div>
       </FormSheet>
