@@ -10,6 +10,7 @@ import {
   fetchChallengesRemote,
   upsertBananaLedgerEntryRemote,
   upsertChallengeRemote,
+  syncChallengeTaskCompletionRemote,
 } from "@/lib/services/challenge-service";
 import type { BananaLedgerEntry, Challenge, ChallengeSummary } from "@/types";
 
@@ -38,16 +39,45 @@ export function useChallenges() {
   }, [session?.userId, mode]);
 
   async function saveChallenge(challenge: Challenge) {
-    setChallenges((list) => [challenge, ...list.filter((item) => item.id !== challenge.id)]);
     if (session && mode === "supabase") {
       const remote = await upsertChallengeRemote(challenge);
-      if (remote) setChallenges((list) => list.map((item) => (item.id === challenge.id ? { ...remote, tasks: challenge.tasks } : item)));
+      if (!remote) return null;
+      const merged = { ...remote, tasks: challenge.tasks };
+      setChallenges((list) => [merged, ...list.filter((item) => item.id !== challenge.id)]);
+      return merged;
     }
+    setChallenges((list) => [challenge, ...list.filter((item) => item.id !== challenge.id)]);
+    return challenge;
   }
 
   async function updateChallenge(challenge: Challenge) {
+    if (session && mode === "supabase") {
+      const remote = await upsertChallengeRemote(challenge);
+      if (!remote) return false;
+    }
     setChallenges((list) => list.map((item) => (item.id === challenge.id ? challenge : item)));
-    if (session && mode === "supabase") await upsertChallengeRemote(challenge);
+    return true;
+  }
+
+  async function syncChallengeTaskFromCalendarEvent(input: { challengeId?: string | null; challengeTaskId?: string | null; calendarEventId?: string | null; done: boolean }) {
+    if (!input.challengeId || !input.challengeTaskId) return false;
+    const checkedAt = input.done ? new Date().toISOString() : null;
+    setChallenges((list) => list.map((challenge) => {
+      if (challenge.id !== input.challengeId) return challenge;
+      const tasks = challenge.tasks.map((task) => task.id === input.challengeTaskId ? { ...task, status: input.done ? "checked" as const : "pending" as const, checkedAt } : task);
+      return { ...challenge, tasks, updatedAt: new Date().toISOString() };
+    }));
+    if (session && mode === "supabase") {
+      const ok = await syncChallengeTaskCompletionRemote({
+        challengeId: input.challengeId,
+        challengeTaskId: input.challengeTaskId,
+        calendarEventId: input.calendarEventId ?? null,
+        done: input.done,
+      });
+      if (ok) void refreshChallenges();
+      return ok;
+    }
+    return true;
   }
 
   async function claimBananas(challenge: Challenge) {
@@ -68,9 +98,10 @@ export function useChallenges() {
     setChallenges((list) => list.map((item) => (item.id === challenge.id ? completedChallenge : item)));
     setBananaLedger((list) => [entry, ...list.filter((item) => !(item.sourceType === "challenge" && item.sourceId === challenge.id))]);
     if (session && mode === "supabase") {
-      await upsertChallengeRemote(completedChallenge);
+      const challengeOk = await upsertChallengeRemote(completedChallenge);
       const remote = await upsertBananaLedgerEntryRemote(entry);
-      if (remote) setBananaLedger((list) => [remote, ...list.filter((item) => item.id !== entry.id)]);
+      if (!challengeOk || !remote) return null;
+      setBananaLedger((list) => [remote, ...list.filter((item) => item.id !== entry.id)]);
     }
     return entry;
   }
@@ -95,6 +126,7 @@ export function useChallenges() {
     saveChallenge,
     updateChallenge,
     claimBananas,
+    syncChallengeTaskFromCalendarEvent,
     refreshChallenges,
   };
 }

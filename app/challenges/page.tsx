@@ -133,15 +133,19 @@ export default function ChallengesPage() {
         challengeId: draft.id,
         challengeTaskId: task.id,
         isLocked: true,
-        verificationStatus: "self_checked",
+        verificationStatus: "none",
         rewardBananas: task.rewardBananas,
       });
       tasksWithEvents.push({ ...task, calendarEventId: event.id });
     }
 
-    await saveChallenge({ ...draft, tasks: tasksWithEvents });
+    const saved = await saveChallenge({ ...draft, tasks: tasksWithEvents });
+    if (!saved) {
+      notify("No se pudo guardar el reto en tu cuenta. Revisá Supabase o la conexión antes de continuar.", "error");
+      return;
+    }
     setSheetOpen(false);
-    notify("Reto creado y programado en Hoy/Calendario 🍌");
+    notify("Reto creado y guardado en Supabase 🍌");
   }
 
   async function handleClaim(challenge: Challenge) {
@@ -152,7 +156,11 @@ export default function ChallengesPage() {
       return;
     }
     const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
-    await updateChallenge(syncedChallenge);
+    const updated = await updateChallenge(syncedChallenge);
+    if (!updated) {
+      notify("No se pudo sincronizar el avance del reto. Actualizá e intentá de nuevo.", "error");
+      return;
+    }
     const entry = await claimBananas(syncedChallenge);
     notify(entry ? `Ganaste ${entry.amount} bananas 🍌` : "Las bananas ya estaban cobradas", entry ? "success" : "error");
   }

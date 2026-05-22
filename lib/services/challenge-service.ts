@@ -122,11 +122,58 @@ export async function fetchChallengesRemote(): Promise<Challenge[] | null> {
   });
 }
 
+async function selectChallengeByLocalId(supabase: any, userId: string, localId: string) {
+  const { data } = await supabase
+    .from("personal_challenges")
+    .select("id,local_id,origin,title,description,icon_key,image_path,activity_type_key,frequency,status,start_date,end_date,reward_bananas,requires_guardian_verification,claimed_at,created_at,updated_at")
+    .eq("user_id", userId)
+    .eq("local_id", localId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+async function saveChallengeTaskRemote(supabase: any, userId: string, task: ChallengeTask) {
+  const payload = {
+    user_id: userId,
+    local_id: task.id,
+    challenge_id: task.challengeId,
+    calendar_event_id: task.calendarEventId ?? null,
+    title: task.title,
+    icon_key: task.iconKey,
+    activity_type_key: task.activityTypeKey,
+    scheduled_date: task.scheduledDate,
+    scheduled_time: task.scheduledTime,
+    status: task.status,
+    reward_bananas: task.rewardBananas,
+    checked_at: task.checkedAt ?? null,
+    verified_at: task.verifiedAt ?? null,
+  };
+
+  const { data: existing } = await supabase
+    .from("challenge_tasks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("local_id", task.id)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("challenge_tasks")
+      .update(payload)
+      .eq("id", existing.id);
+    return !error;
+  }
+
+  const { error } = await supabase.from("challenge_tasks").insert(payload);
+  return !error;
+}
+
 export async function upsertChallengeRemote(challenge: Challenge): Promise<Challenge | null> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
   if (!supabase || !userId) return null;
 
+  const completedTasks = challenge.tasks.filter((task) => task.status === "checked" || task.status === "verified").length;
   const payload: any = {
     user_id: userId,
     local_id: challenge.id,
@@ -144,52 +191,132 @@ export async function upsertChallengeRemote(challenge: Challenge): Promise<Chall
     requires_guardian_verification: challenge.requiresGuardianVerification,
     claimed_at: challenge.claimedAt ?? null,
     total_tasks: challenge.tasks.length,
-    completed_tasks: challenge.tasks.filter((task) => task.status === "checked" || task.status === "verified").length,
+    completed_tasks: completedTasks,
   };
-  if (isUuid(challenge.id)) payload.id = challenge.id;
 
-  const { data, error } = await supabase
-    .from("personal_challenges")
-    .upsert(payload, { onConflict: "user_id,local_id" })
-    .select("id,local_id,origin,title,description,icon_key,image_path,activity_type_key,frequency,status,start_date,end_date,reward_bananas,requires_guardian_verification,claimed_at,created_at,updated_at")
-    .single();
-  if (error) return null;
+  let row = await selectChallengeByLocalId(supabase, userId, challenge.id);
 
-  for (const task of challenge.tasks) {
-    await supabase.from("challenge_tasks").upsert({
-      user_id: userId,
-      local_id: task.id,
-      challenge_id: challenge.id,
-      calendar_event_id: task.calendarEventId ?? null,
-      title: task.title,
-      icon_key: task.iconKey,
-      activity_type_key: task.activityTypeKey,
-      scheduled_date: task.scheduledDate,
-      scheduled_time: task.scheduledTime,
-      status: task.status,
-      reward_bananas: task.rewardBananas,
-      checked_at: task.checkedAt ?? null,
-      verified_at: task.verifiedAt ?? null,
-    }, { onConflict: "user_id,local_id" });
+  if (row?.id) {
+    const { data, error } = await supabase
+      .from("personal_challenges")
+      .update(payload)
+      .eq("id", row.id)
+      .select("id,local_id,origin,title,description,icon_key,image_path,activity_type_key,frequency,status,start_date,end_date,reward_bananas,requires_guardian_verification,claimed_at,created_at,updated_at")
+      .single();
+    if (error) return null;
+    row = data;
+  } else {
+    if (isUuid(challenge.id)) payload.id = challenge.id;
+    const { data, error } = await supabase
+      .from("personal_challenges")
+      .insert(payload)
+      .select("id,local_id,origin,title,description,icon_key,image_path,activity_type_key,frequency,status,start_date,end_date,reward_bananas,requires_guardian_verification,claimed_at,created_at,updated_at")
+      .single();
+    if (error) return null;
+    row = data;
   }
 
-  return mapChallengeRow(data, challenge.tasks);
+  for (const task of challenge.tasks) {
+    const ok = await saveChallengeTaskRemote(supabase, userId, task);
+    if (!ok) return null;
+  }
+
+  return mapChallengeRow(row, challenge.tasks);
+}
+
+export async function syncChallengeTaskCompletionRemote(input: {
+  challengeId: string;
+  challengeTaskId: string;
+  calendarEventId?: string | null;
+  done: boolean;
+}): Promise<boolean> {
+  const supabase = createOptionalClient() as any;
+  const userId = await getUserId();
+  if (!supabase || !userId || !input.challengeId || !input.challengeTaskId) return false;
+
+  const checkedAt = input.done ? nowIso() : null;
+  const { error: taskError } = await supabase
+    .from("challenge_tasks")
+    .update({ status: input.done ? "checked" : "pending", checked_at: checkedAt })
+    .eq("user_id", userId)
+    .eq("local_id", input.challengeTaskId);
+  if (taskError) return false;
+
+  if (input.calendarEventId) {
+    await supabase
+      .from("calendar_events")
+      .update({ done: input.done, verification_status: input.done ? "self_checked" : "none" })
+      .eq("user_id", userId)
+      .eq("id", input.calendarEventId);
+  }
+
+  const { data: tasks, error: tasksError } = await supabase
+    .from("challenge_tasks")
+    .select("status")
+    .eq("user_id", userId)
+    .eq("challenge_id", input.challengeId);
+  if (tasksError) return false;
+
+  const completedTasks = (tasks ?? []).filter((task: any) => task.status === "checked" || task.status === "verified").length;
+  const { data: challengeRow } = await supabase
+    .from("personal_challenges")
+    .select("id,claimed_at")
+    .eq("user_id", userId)
+    .eq("local_id", input.challengeId)
+    .maybeSingle();
+
+  if (challengeRow?.id) {
+    const allDone = (tasks ?? []).length > 0 && completedTasks >= (tasks ?? []).length;
+    const { error: challengeError } = await supabase
+      .from("personal_challenges")
+      .update({
+        completed_tasks: completedTasks,
+        status: allDone && challengeRow.claimed_at ? "completed" : "active",
+      })
+      .eq("id", challengeRow.id);
+    if (challengeError) return false;
+  }
+
+  return true;
 }
 
 export async function upsertBananaLedgerEntryRemote(entry: BananaLedgerEntry): Promise<BananaLedgerEntry | null> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
   if (!supabase || !userId) return null;
+
+  const { data: existing } = await supabase
+    .from("banana_ledger")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source_type", entry.sourceType)
+    .eq("source_id", entry.sourceId)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from("banana_ledger")
+      .update({
+        local_id: entry.id,
+        amount: entry.amount,
+        reason: entry.reason,
+      })
+      .eq("id", existing.id)
+      .select("id,local_id,user_id,source_type,source_id,amount,reason,created_at")
+      .single();
+    return error ? null : mapLedgerRow(data);
+  }
+
   const { data, error } = await supabase
     .from("banana_ledger")
-    .upsert({
+    .insert({
       user_id: userId,
       local_id: entry.id,
       source_type: entry.sourceType,
       source_id: entry.sourceId,
       amount: entry.amount,
       reason: entry.reason,
-    }, { onConflict: "user_id,source_type,source_id" })
+    })
     .select("id,local_id,user_id,source_type,source_id,amount,reason,created_at")
     .single();
   return error ? null : mapLedgerRow(data);
