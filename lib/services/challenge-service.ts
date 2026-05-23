@@ -128,7 +128,13 @@ export async function fetchChallengesRemote(): Promise<Challenge[] | null> {
   const mapped = (challengeRows ?? []).map((row: any) => {
     const challengeId = row.local_id || row.id;
     const tasks = taskRows.filter((task) => task.challenge_id === challengeId).map(mapTaskRow);
-    return mapChallengeRow(row, tasks);
+    const challenge = mapChallengeRow(row, tasks);
+    const hasMissed = tasks.some((task) => task.status === "missed");
+    const allDone = tasks.length > 0 && tasks.every((task) => task.status === "checked" || task.status === "verified");
+    return {
+      ...challenge,
+      status: allDone && challenge.claimedAt ? "completed" : hasMissed && !challenge.claimedAt ? "expired" : challenge.status,
+    };
   });
 
   await reconcileMissedChallengesRemote(supabase, userId, mapped);

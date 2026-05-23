@@ -428,6 +428,16 @@ export default function TodayPage() {
     const nextDone = !currentDone;
     const occurrenceKey = todayOccurrenceKey(event, todayDateKey);
 
+    const isChallenge = isChallengeCalendarEvent(event);
+    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) > 0) {
+      showToast("Este check aún no está disponible. Se activa el día programado.", "error");
+      return;
+    }
+    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) < 0) {
+      showToast("Este check ya venció y cuenta como no cumplido.", "error");
+      return;
+    }
+
     if (nextDone) {
       setCompletingCalendarKeys((current) => new Set(current).add(occurrenceKey));
       setUndoCompleted({ key: occurrenceKey, event });
@@ -448,16 +458,6 @@ export default function TodayPage() {
         next.delete(occurrenceKey);
         return next;
       });
-    }
-
-    const isChallenge = isChallengeCalendarEvent(event);
-    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) > 0) {
-      showToast("Este check aún no está disponible. Se activa el día programado.", "error");
-      return;
-    }
-    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) < 0) {
-      showToast("Este check ya venció y cuenta como no cumplido.", "error");
-      return;
     }
     const toastMessage = isChallenge
       ? (nextDone ? "Reto cumplido por hoy. Cuando completés todos los checks podrás cobrar bananas 🍌" : "Check de reto marcado como pendiente")

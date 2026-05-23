@@ -10,7 +10,7 @@ import { FormSheet } from "@/components/form-sheet";
 import { Toast, type ToastState } from "@/components/toast";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useChallenges } from "@/hooks/use-challenges";
-import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, isChallengeTaskAvailableToday, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
+import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
 import { createChallengeDraft } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, Challenge } from "@/types";
@@ -66,7 +66,7 @@ export default function ChallengesPage() {
   const totalBananas = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
   const activeChallenges = challenges.filter((challenge) => challenge.status === "active" || challenge.status === "expired");
   const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
-  const activeChallengeTitles = useMemo(() => new Set(activeChallenges.map((challenge) => challenge.title)), [activeChallenges]);
+  const activeChallengeTitles = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "active").map((challenge) => challenge.title)), [challenges]);
   const claimableChallenges = useMemo(() => activeChallenges.filter((challenge) => calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).completed && !challenge.claimedAt), [activeChallenges, events]);
   const claimableBananas = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
   const latestBananas = bananaLedger.slice(0, 5);
@@ -83,6 +83,21 @@ export default function ChallengesPage() {
   function notify(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 2600);
+  }
+
+  function challengePrimaryAction(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>) {
+    if (progress.completed) return { href: null, label: "Cobrar bananas", tone: "claim" as const };
+    if (progress.missed > 0) return { href: "/calendar", label: "Ver resumen del reto", tone: "muted" as const };
+    if (progress.availableToday > 0) return { href: "/today", label: "Ver tareas de hoy", tone: "today" as const };
+    return { href: "/calendar", label: "Ver próximo check", tone: "calendar" as const };
+  }
+
+  function challengeStateMessage(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>, nextTask: Challenge["tasks"][number] | null) {
+    if (progress.completed) return "Todos los checks están listos. Podés cobrar tus bananas.";
+    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. Esas bananas se perdieron.`;
+    if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} disponibles hoy.`;
+    if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}`;
+    return "Reto sincronizado.";
   }
 
   function openTemplate(template: typeof PERSONAL_CHALLENGE_TEMPLATES[number]) {
@@ -278,7 +293,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.4 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.5 QA</span>
           </div>
         </div>
 
@@ -331,6 +346,7 @@ export default function ChallengesPage() {
                 const doneIds = challengeDoneIds(challenge, events);
                 const progress = calculateChallengeProgress(challenge, doneIds);
                 const nextTask = nextPendingChallengeTask(challenge, doneIds);
+                const action = challengePrimaryAction(challenge, progress);
                 return (
                   <article key={challenge.id} className="rounded-[28px] bg-white p-4 shadow-card">
                     <div className="flex items-start gap-3">
@@ -345,29 +361,22 @@ export default function ChallengesPage() {
                         </div>
                         <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-monkey-green" style={{ width: `${progress.percent}%` }} /></div>
                         <div className="mt-2 flex items-center justify-between text-xs font-black text-monkey-muted"><span>{progress.done}/{progress.total} checks</span><span>{progress.percent}%</span></div>
-                        {progress.missed > 0 ? (
-                          <div className="mt-3 rounded-[18px] bg-gray-100 p-3 text-xs font-black text-monkey-muted">{progress.missed} check{progress.missed === 1 ? "" : "s"} no se cumplieron. Esas bananas se perdieron.</div>
-                        ) : nextTask ? (
-                          <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold text-monkey-muted">
-                            Próximo check: <span className="font-black text-monkey-ink">{formatDate(nextTask.scheduledDate)} · {nextTask.scheduledTime}</span>
-                          </div>
-                        ) : (
-                          <div className="mt-3 rounded-[18px] bg-green-50 p-3 text-xs font-black text-monkey-greenDark">Listo para cobrar bananas.</div>
-                        )}
+                        <div className={cn("mt-3 rounded-[18px] p-3 text-xs font-black", progress.completed ? "bg-green-50 text-monkey-greenDark" : progress.missed > 0 ? "bg-gray-100 text-monkey-muted" : progress.availableToday > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-monkey-muted")}>{challengeStateMessage(challenge, progress, nextTask)}</div>
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black">
+                          <div className="rounded-[14px] bg-green-50 px-2 py-2 text-monkey-greenDark">{progress.done} hechos</div>
+                          <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.missed} perdidos</div>
+                          <div className="rounded-[14px] bg-blue-50 px-2 py-2 text-blue-700">{progress.upcoming} futuros</div>
+                        </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
                           <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Tareas bloqueadas</span>
                           <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700"><CalendarDays className="mr-1 inline h-3 w-3" />Hoy/Calendario</span>
                           {progress.missed > 0 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-monkey-muted">No cumplido</span> : null}
                         </div>
-                        {progress.completed ? (
-                          <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Guardando bananas…" : "Cobrar bananas"}</button>
-                        ) : progress.missed > 0 ? (
-                          <Link href="/calendar" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-gray-100 text-sm font-black text-monkey-muted transition active:scale-95">Ver resumen del reto</Link>
-                        ) : challenge.tasks.some((task) => isChallengeTaskAvailableToday(task)) ? (
-                          <Link href="/today" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-blue-600 text-sm font-black text-white transition active:scale-95">Ver tareas de hoy</Link>
-                        ) : (
-                          <Link href="/calendar" className="mt-4 flex h-11 w-full items-center justify-center rounded-pill bg-blue-50 text-sm font-black text-blue-700 transition active:scale-95">Ver próximo check</Link>
-                        )}
+                        {action.tone === "claim" ? (
+                          <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Guardando bananas…" : action.label}</button>
+                        ) : action.href ? (
+                          <Link href={action.href} className={cn("mt-4 flex h-11 w-full items-center justify-center rounded-pill text-sm font-black transition active:scale-95", action.tone === "today" ? "bg-blue-600 text-white" : action.tone === "calendar" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-monkey-muted")}>{action.label}</Link>
+                        ) : null}
                       </div>
                     </div>
                   </article>

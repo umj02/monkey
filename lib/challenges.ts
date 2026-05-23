@@ -113,8 +113,8 @@ export function isChallengeTaskDone(task: ChallengeTask, doneTaskIds?: Set<strin
   return task.status === "checked" || task.status === "verified" || Boolean(doneTaskIds?.has(task.calendarEventId ?? task.id));
 }
 
-export function isChallengeTaskMissed(task: ChallengeTask, todayKey = todayDateKey()) {
-  if (isChallengeTaskDone(task)) return false;
+export function isChallengeTaskMissed(task: ChallengeTask, todayKey = todayDateKey(), doneTaskIds?: Set<string>) {
+  if (isChallengeTaskDone(task, doneTaskIds)) return false;
   if (task.status === "missed") return true;
   return compareDateKeys(task.scheduledDate, todayKey) < 0;
 }
@@ -127,11 +127,26 @@ export function isChallengeTaskUpcoming(task: ChallengeTask, todayKey = todayDat
   return compareDateKeys(task.scheduledDate, todayKey) > 0;
 }
 
+export function challengeTaskTimingState(task: ChallengeTask, doneTaskIds?: Set<string>, todayKey = todayDateKey()) {
+  if (isChallengeTaskDone(task, doneTaskIds)) return "done" as const;
+  if (isChallengeTaskMissed(task, todayKey, doneTaskIds)) return "missed" as const;
+  if (isChallengeTaskUpcoming(task, todayKey)) return "upcoming" as const;
+  return "available" as const;
+}
+
+export function challengeTaskTimingLabel(task: ChallengeTask, doneTaskIds?: Set<string>, todayKey = todayDateKey()) {
+  const state = challengeTaskTimingState(task, doneTaskIds, todayKey);
+  if (state === "done") return "Cumplido";
+  if (state === "missed") return "No se cumplió";
+  if (state === "upcoming") return "Aún no disponible";
+  return "Disponible hoy";
+}
+
 export function calculateChallengeProgress(challenge: Challenge, doneTaskIds: Set<string>) {
   const todayKey = todayDateKey();
   const total = challenge.tasks.length;
   const done = challenge.tasks.filter((task) => isChallengeTaskDone(task, doneTaskIds)).length;
-  const missed = challenge.tasks.filter((task) => isChallengeTaskMissed(task, todayKey)).length;
+  const missed = challenge.tasks.filter((task) => isChallengeTaskMissed(task, todayKey, doneTaskIds)).length;
   const upcoming = challenge.tasks.filter((task) => isChallengeTaskUpcoming(task, todayKey)).length;
   const availableToday = challenge.tasks.filter((task) => isChallengeTaskAvailableToday(task, todayKey)).length;
   const pending = Math.max(0, total - done - missed);

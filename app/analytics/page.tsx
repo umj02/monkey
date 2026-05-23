@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta, resolveWalletCategoryMeta } from "@/lib/category-catalog";
+import { isChallengeTaskDone, isChallengeTaskMissed } from "@/lib/challenges";
 import type { CalendarEvent, WalletTransaction, WalletTransactionType } from "@/types";
 
 type RangeMode = "week" | "month";
@@ -219,10 +220,10 @@ export default function AnalyticsPage() {
   const challengeMetrics = useMemo(() => {
     const active = challenges.filter((challenge) => challenge.status === "active");
     const completed = challenges.filter((challenge) => challenge.status === "completed");
-    const claimable = active.filter((challenge) => !challenge.claimedAt && challenge.tasks.length > 0 && challenge.tasks.every((task) => task.status === "checked" || task.status === "verified"));
+    const claimable = active.filter((challenge) => !challenge.claimedAt && challenge.tasks.length > 0 && challenge.tasks.every((task) => isChallengeTaskDone(task)) && !challenge.tasks.some((task) => isChallengeTaskMissed(task)));
     const allChallengeTasks = challenges.flatMap((challenge) => challenge.tasks);
-    const checkedTasks = allChallengeTasks.filter((task) => task.status === "checked" || task.status === "verified").length;
-    const missedTasks = allChallengeTasks.filter((task) => task.status === "missed").length;
+    const checkedTasks = allChallengeTasks.filter((task) => isChallengeTaskDone(task)).length;
+    const missedTasks = allChallengeTasks.filter((task) => isChallengeTaskMissed(task)).length;
     const totalTasks = allChallengeTasks.length;
     const latestBanana = bananaLedger[0] ?? null;
     return {
