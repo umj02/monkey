@@ -607,3 +607,11 @@ Probar:
 - Notificaciones push específicas de retos.
 
 Estos quedan preparados para una versión futura sobre esta base.
+
+
+## v2.28.1.8 — Challenge State Consistency + Builder Preview QA
+
+- Agrega recursos visuales en `public/assets/rewards`: trofeos oro/plata/bronce, banana de oro y racimo de bananas de oro.
+- Mejora el preview del creador de retos antes de guardar: checks, fechas, horarios y bananas posibles.
+- Refuerza la economía visual de retos: trofeo por estado, bananas en historial y modal de día completado.
+- No toca dependencias, package-lock, next.config, vercel.json ni migraciones.

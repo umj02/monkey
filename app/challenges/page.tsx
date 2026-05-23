@@ -37,6 +37,33 @@ function slugify(value: string) {
     .slice(0, 32) || "reto";
 }
 
+const REWARD_BANANA_SINGLE = "/assets/rewards/banana-gold.png";
+const REWARD_BANANA_BUNCH = "/assets/rewards/banana-bunch-gold.png";
+const REWARD_TROPHY_GOLD = "/assets/rewards/trophy-gold.png";
+const REWARD_TROPHY_SILVER = "/assets/rewards/trophy-silver.png";
+const REWARD_TROPHY_BRONZE = "/assets/rewards/trophy-bronze.png";
+
+function rewardShares(totalBananas: number, totalChecks: number) {
+  const count = Math.max(1, totalChecks);
+  const total = Math.max(count, Math.round(totalBananas || count));
+  const base = Math.floor(total / count);
+  const remainder = total % count;
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
+function rewardShareLabel(shares: number[]) {
+  if (!shares.length) return "0 bananas";
+  const min = Math.min(...shares);
+  const max = Math.max(...shares);
+  return min === max ? `${min} banana${min === 1 ? "" : "s"} por check` : `${min}–${max} bananas por check`;
+}
+
+function trophyForProgress(progress: ReturnType<typeof calculateChallengeProgress>, claimedAmount = 0) {
+  if (progress.completed || claimedAmount >= progress.totalBananas) return REWARD_TROPHY_GOLD;
+  if (progress.earnedBananas > 0 || claimedAmount > 0) return REWARD_TROPHY_SILVER;
+  return REWARD_TROPHY_BRONZE;
+}
+
 function challengeDoneIds(challenge: Challenge, events: CalendarEvent[]) {
   const ids = new Set<string>();
   for (const task of challenge.tasks) {
@@ -84,6 +111,25 @@ export default function ChallengesPage() {
     }
     return Array.from(unique);
   }, [scheduleTimes]);
+
+  const builderPreview = useMemo(() => {
+    const cleanDays = Math.min(31, Math.max(1, Number(days) || selectedTemplate?.defaultDays || 1));
+    const dates = buildChallengeDates(todayDateKey(), cleanDays);
+    const times = validScheduleTimes;
+    const checks = dates.length * times.length;
+    const rawReward = builderMode === "custom" ? Number(customBananas) : selectedTemplate?.rewardBananas;
+    const totalBananas = checks ? Math.max(checks, Math.round(rawReward || checks)) : 0;
+    const shares = rewardShares(totalBananas, checks || 1).slice(0, checks || 0);
+    return {
+      title: builderMode === "custom" ? (customTitle.trim() || "Mi reto personal") : selectedTemplate?.title ?? "Reto",
+      startDate: dates[0] ?? todayDateKey(),
+      endDate: dates[dates.length - 1] ?? todayDateKey(),
+      checks,
+      times,
+      totalBananas,
+      shareLabel: rewardShareLabel(shares),
+    };
+  }, [builderMode, customBananas, customTitle, days, selectedTemplate, validScheduleTimes]);
 
   function notify(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
@@ -180,7 +226,8 @@ export default function ChallengesPage() {
       const rawReward = isCustom ? Number(customBananas) : template.rewardBananas;
       const minimumReward = dates.length * times.length;
       const rewardBananas = Math.max(1, Math.max(Math.round(rawReward || minimumReward), minimumReward));
-      const perTaskBananas = Math.max(1, Math.floor(rewardBananas / Math.max(1, minimumReward)));
+      const shares = rewardShares(rewardBananas, minimumReward);
+      let rewardIndex = 0;
       const challengeSlug = isCustom ? `custom-${slugify(title)}` : template.id;
       const taskSeed = Date.now().toString(36);
 
@@ -204,7 +251,7 @@ export default function ChallengesPage() {
           activityTypeKey,
           scheduledDate: date,
           scheduledTime: time,
-          rewardBananas: perTaskBananas,
+          rewardBananas: shares[rewardIndex++] ?? 1,
         }))),
       });
 
@@ -318,7 +365,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.7 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.8 QA</span>
           </div>
         </div>
 
@@ -329,7 +376,9 @@ export default function ChallengesPage() {
               <h1 className="mt-2 text-3xl font-black leading-tight text-monkey-ink">Ganá bananas creando constancia.</h1>
               <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: cada check cumplido suma bananas, los checks no realizados se registran y el progreso queda visible en Analytics.</p>
             </div>
-            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[24px] bg-white text-4xl shadow-soft">🍌</div>
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[24px] bg-white shadow-soft">
+              <img src={REWARD_BANANA_BUNCH} alt="Bananas de oro" className="h-14 w-14 object-contain animate-floaty" />
+            </div>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2">
             <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{totalBananas}</p><p className="text-[10px] font-bold text-monkey-muted">cobradas</p></div>
@@ -351,7 +400,7 @@ export default function ChallengesPage() {
             {PERSONAL_CHALLENGE_TEMPLATES.map((template) => {
               const alreadyActive = activeChallengeTitles.has(template.title);
               return (
-                <button key={template.id} type="button" onClick={() => openTemplate(template)} className={cn("flex items-center gap-3 rounded-[24px] bg-white p-4 text-left shadow-card transition active:scale-[.99]", alreadyActive && "opacity-70")}> 
+                <button key={template.id} type="button" onClick={() => openTemplate(template)} className={cn("flex items-center gap-3 rounded-[24px] bg-white p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-float active:scale-[.99]", alreadyActive && "opacity-70")}> 
                   <AssetThumb icon={template.iconKey} className="h-14 w-14 rounded-[20px] bg-green-50" />
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm font-black text-monkey-ink">{template.title}</strong>
@@ -374,9 +423,12 @@ export default function ChallengesPage() {
                 const nextTask = nextPendingChallengeTask(challenge, doneIds);
                 const action = challengePrimaryAction(challenge, progress);
                 return (
-                  <article key={challenge.id} className="rounded-[28px] bg-white p-4 shadow-card">
+                  <article key={challenge.id} className="rounded-[28px] bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-float">
                     <div className="flex items-start gap-3">
-                      <AssetThumb icon={challenge.iconKey} src={challenge.imagePath ?? undefined} className="h-14 w-14 rounded-[20px] bg-green-50" />
+                      <div className="relative shrink-0">
+                        <AssetThumb icon={challenge.iconKey} src={challenge.imagePath ?? undefined} className="h-14 w-14 rounded-[20px] bg-green-50" />
+                        <img src={trophyForProgress(progress, bananaByChallengeId.get(challenge.id) ?? 0)} alt="Estado del reto" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full bg-white object-contain p-0.5 shadow-soft" />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div>
@@ -428,7 +480,7 @@ export default function ChallengesPage() {
             <div className="grid gap-2">
               {completedChallenges.slice(0, 5).map((challenge) => (
                 <article key={challenge.id} className="flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-sm">
-                  <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50 text-xl">🏆</div>
+                  <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50"><img src={REWARD_TROPHY_GOLD} alt="Trofeo de oro" className="h-10 w-10 object-contain" /></div>
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{challenge.title}</p><p className="text-xs font-bold text-monkey-muted">{bananaByChallengeId.get(challenge.id) ?? challenge.rewardBananas} bananas cobradas</p></div>
                   <CheckCircle2 className="h-5 w-5 text-monkey-green" />
                 </article>
@@ -446,7 +498,7 @@ export default function ChallengesPage() {
             <div className="grid gap-2">
               {latestBananas.map((entry) => (
                 <article key={entry.id} className="flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-sm">
-                  <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50 text-xl">🍌</div>
+                  <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50"><img src={REWARD_BANANA_SINGLE} alt="Banana de oro" className="h-9 w-9 object-contain" /></div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-black">{entry.reason}</p>
                     <p className="text-xs font-bold text-monkey-muted">{new Date(entry.createdAt).toLocaleDateString("es-CR", { day: "numeric", month: "short" })}</p>
@@ -522,6 +574,20 @@ export default function ChallengesPage() {
             <button type="button" onClick={addScheduleTime} className="mt-3 rounded-full bg-green-50 px-4 py-2 text-xs font-black text-monkey-greenDark">+ Agregar horario</button>
           ) : null}
           <p className="mt-2 text-xs leading-5 text-monkey-muted">Solo se crearán tareas para los horarios que agregués aquí. No se usan horas ocultas ni valores por defecto adicionales.</p>
+        </div>
+        <div className="rounded-[22px] border border-yellow-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <img src={REWARD_BANANA_SINGLE} alt="Banana de oro" className="h-11 w-11 object-contain" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[.08em] text-orange-700">Preview del reto</p>
+              <h3 className="truncate text-sm font-black text-monkey-ink">{builderPreview.title}</h3>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs font-black">
+            <div className="rounded-[16px] bg-gray-50 p-3"><p className="text-base text-monkey-ink">{builderPreview.checks}</p><p className="text-[10px] text-monkey-muted">checks</p></div>
+            <div className="rounded-[16px] bg-yellow-50 p-3"><p className="text-base text-orange-700">{builderPreview.totalBananas}</p><p className="text-[10px] text-monkey-muted">bananas posibles</p></div>
+          </div>
+          <p className="mt-3 text-xs font-bold leading-5 text-monkey-muted">Del {formatDate(builderPreview.startDate)} al {formatDate(builderPreview.endDate)} · {builderPreview.times.length ? builderPreview.times.join(" · ") : "agregá una hora"} · {builderPreview.shareLabel}.</p>
         </div>
         <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks vencidos se pierden y se reflejan en Analytics.</div>
       </FormSheet>

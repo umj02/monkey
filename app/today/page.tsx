@@ -31,6 +31,9 @@ import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/type
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
 const colorLabels: Record<TaskColor, string> = { green: "Verde", blue: "Azul", orange: "Naranja", purple: "Morado", pink: "Rosa", yellow: "Amarillo" };
 
+const REWARD_BANANA_BUNCH = "/assets/rewards/banana-bunch-gold.png";
+const REWARD_BANANA_SINGLE = "/assets/rewards/banana-gold.png";
+
 const calendarStyleMap: Record<CalendarEvent["color"], { card: string; icon: string }> = {
   yellow: { card: "bg-[#FFF7C2] text-[#996D00] border-yellow-100", icon: "calendar-exercise" },
   blue: { card: "bg-[#DDF7F7] text-[#187187] border-cyan-100", icon: "calendar-study" },
@@ -546,14 +549,14 @@ export default function TodayPage() {
       {bananaClaimModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-5 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="w-full max-w-sm rounded-[32px] bg-white p-5 text-center shadow-card">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-[24px] bg-yellow-50 text-orange-700 shadow-soft">
-              <Banana className="h-8 w-8" />
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-[28px] bg-yellow-50 shadow-soft">
+              <img src={bananaClaimModal.bananas > 1 ? REWARD_BANANA_BUNCH : REWARD_BANANA_SINGLE} alt="Bananas ganadas" className="h-20 w-20 object-contain animate-floaty" />
             </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-[.12em] text-orange-700">Día completado</p>
+            <p className="mt-4 text-xs font-black uppercase tracking-[.12em] text-orange-700">Día completado · +{bananaClaimModal.bananas} 🍌</p>
             <h2 className="mt-2 text-2xl font-black text-monkey-ink">{bananaClaimModal.title}</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">{bananaClaimModal.body}</p>
             <div className="mt-5 grid gap-2">
-              <Link href="/challenges" className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white transition active:scale-95" onClick={() => setBananaClaimModal(null)}>Ver progreso del reto</Link>
+              <Link href="/challenges" className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white transition active:scale-95" onClick={() => setBananaClaimModal(null)}>Ir a Retos y bananas</Link>
               <button type="button" onClick={() => setBananaClaimModal(null)} className="rounded-pill bg-gray-100 px-4 py-3 text-sm font-black text-monkey-muted transition active:scale-95">Seguir en Hoy</button>
             </div>
           </div>

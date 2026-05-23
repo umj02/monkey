@@ -32,7 +32,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { useProfile } from "@/hooks/use-profile";
 import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { buildAchievements } from "@/lib/achievements";
-import { getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
+import { getBananaRewardIcon, getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
 import { activityTypePillClass } from "@/lib/activity-types";
 import { applyCalendarOverridesForDate, fromDateKey, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
@@ -531,7 +531,7 @@ export default function AnalyticsPage() {
 
         <section className="mt-6 rounded-[28px] border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-orange-700 shadow-card"><Banana className="h-5 w-5" /></div>
+            <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white shadow-card"><img src={getBananaRewardIcon("bunch")} alt="Bananas" className="h-12 w-12 object-contain" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Retos y bananas</h2>
               <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} cerrados · {challengeMetrics.completionRate}% cumplimiento · {challengeSummary.bananasLost} perdidas.</p>

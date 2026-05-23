@@ -7,6 +7,18 @@ const medalByTier: Record<AchievementTier, string> = {
   special: "/assets/rewards/trophy-gold.png",
 };
 
+export const rewardTrophyByTier: Record<AchievementTier, string> = {
+  bronze: "/assets/rewards/trophy-bronze.png",
+  silver: "/assets/rewards/trophy-silver.png",
+  gold: "/assets/rewards/trophy-gold.png",
+  special: "/assets/rewards/trophy-gold.png",
+};
+
+export const bananaRewardAssets = {
+  single: "/assets/rewards/banana-gold.png",
+  bunch: "/assets/rewards/banana-bunch-gold.png",
+};
+
 const celebrationByTier: Record<AchievementTier, string> = {
   bronze: "/assets/rewards/reward-monkey-bronze.png",
   silver: "/assets/rewards/reward-monkey-silver.png",
@@ -22,6 +34,10 @@ export function getRewardCelebrationArt(tier: AchievementTier) {
   return celebrationByTier[tier] ?? celebrationByTier.bronze;
 }
 
-export function getRewardTrophyIcon() {
-  return "/assets/rewards/trophy-gold.png";
+export function getRewardTrophyIcon(tier: AchievementTier = "special") {
+  return rewardTrophyByTier[tier] ?? rewardTrophyByTier.special;
+}
+
+export function getBananaRewardIcon(kind: "single" | "bunch" = "single") {
+  return bananaRewardAssets[kind];
 }
