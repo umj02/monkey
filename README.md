@@ -512,6 +512,20 @@ npm run build
 ```
 
 
+
+## v2.28.1.7 — Challenge Reward Economy + UX Final Polish
+
+Base: v2.28.1.6 — Partial Banana Rewards + Daily Completion Modal QA.
+
+- Refuerza la economía de bananas separando visualmente cobradas, por cobrar, perdidas y retos cerrados.
+- Permite cierres parciales: si un reto tiene checks perdidos, se pueden cobrar solo las bananas realmente ganadas cuando todos los checks queden cerrados.
+- Mejora los textos de estado de los cards para que sean más claros: reto perfecto, cierre parcial, próximo check, tareas de hoy y reto cerrado.
+- Agrega historial visual de bananas perdidas calculado desde los retos, sin crear migraciones nuevas.
+- Ajusta el modal de Hoy: el cierre del día se comunica como progreso diario, no como cobro inmediato si el reto todavía no terminó.
+- Agrega acción para cancelar un reto sin borrar historial, conservando la medición para Analytics.
+- Mejora Analytics con porcentaje de cumplimiento de retos.
+- No toca dependencias, package.json, lockfiles, next.config, Vercel ni migraciones.
+
 ## v2.28.1 — Challenges UX Polish + Completion QA
 
 Base: v2.28 estable.

@@ -497,8 +497,8 @@ export default function TodayPage() {
       });
       if (nextDone && dayResult?.completedDay) {
         setBananaClaimModal({
-          title: "Genial, reclamá tus bananas",
-          body: `Completaste los ${dayResult.total} check${dayResult.total === 1 ? "" : "s"} de este día. Tenés ${dayResult.earnedBananas} banana${dayResult.earnedBananas === 1 ? "" : "s"} lista${dayResult.earnedBananas === 1 ? "" : "s"} para sumar cuando cierres el reto.`,
+          title: "Día completado",
+          body: `Completaste los ${dayResult.total} check${dayResult.total === 1 ? "" : "s"} de hoy. Sumaste ${dayResult.earnedBananas} banana${dayResult.earnedBananas === 1 ? "" : "s"}; cuando el reto cierre, podrás cobrarlas desde Retos y bananas.`,
           bananas: dayResult.earnedBananas,
         });
       }
@@ -553,7 +553,7 @@ export default function TodayPage() {
             <h2 className="mt-2 text-2xl font-black text-monkey-ink">{bananaClaimModal.title}</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">{bananaClaimModal.body}</p>
             <div className="mt-5 grid gap-2">
-              <Link href="/challenges" className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white transition active:scale-95" onClick={() => setBananaClaimModal(null)}>Ir a Retos y bananas</Link>
+              <Link href="/challenges" className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white transition active:scale-95" onClick={() => setBananaClaimModal(null)}>Ver progreso del reto</Link>
               <button type="button" onClick={() => setBananaClaimModal(null)} className="rounded-pill bg-gray-100 px-4 py-3 text-sm font-black text-monkey-muted transition active:scale-95">Seguir en Hoy</button>
             </div>
           </div>

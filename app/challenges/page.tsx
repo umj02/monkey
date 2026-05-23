@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Banana, CalendarDays, CheckCircle2, Clock3, Flame, History, LockKeyhole, Plus, RefreshCw, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Banana, CalendarDays, CheckCircle2, Clock3, Flame, History, LockKeyhole, Plus, RefreshCw, Sparkles, Trophy, XCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AssetThumb } from "@/components/asset-thumb";
 import { Field } from "@/components/field";
@@ -70,6 +70,11 @@ export default function ChallengesPage() {
   const claimableChallenges = useMemo(() => activeChallenges.filter((challenge) => calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).claimableBananas > 0), [activeChallenges, events]);
   const claimableBananas = claimableChallenges.reduce((sum, challenge) => sum + calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).claimableBananas, 0);
   const latestBananas = bananaLedger.slice(0, 5);
+  const bananaByChallengeId = useMemo(() => new Map(bananaLedger.filter((entry) => entry.sourceType === "challenge").map((entry) => [entry.sourceId, entry.amount])), [bananaLedger]);
+  const trackedProgress = useMemo(() => challenges.map((challenge) => ({ challenge, progress: calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)) })), [challenges, events]);
+  const lostBananasTotal = trackedProgress.reduce((sum, item) => sum + item.progress.lostBananas, 0);
+  const perfectDaysHint = trackedProgress.filter((item) => item.progress.total > 0 && item.progress.completed).length;
+  const recentLosses = trackedProgress.filter((item) => item.progress.lostBananas > 0).slice(0, 4);
 
   const validScheduleTimes = useMemo(() => {
     const unique = new Set<string>();
@@ -86,18 +91,23 @@ export default function ChallengesPage() {
   }
 
   function challengePrimaryAction(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>) {
+    if (challenge.claimedAt) return { href: "/analytics", label: "Ver resumen", tone: "muted" as const };
     if (progress.claimableBananas > 0) return { href: null, label: `Cobrar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}`, tone: "claim" as const };
-    if (progress.missed > 0) return { href: "/calendar", label: "Ver resumen del reto", tone: "muted" as const };
     if (progress.availableToday > 0) return { href: "/today", label: "Ver tareas de hoy", tone: "today" as const };
+    if (progress.missed > 0) return { href: "/calendar", label: "Ver resumen del reto", tone: "muted" as const };
     return { href: "/calendar", label: "Ver próximo check", tone: "calendar" as const };
   }
 
   function challengeStateMessage(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>, nextTask: Challenge["tasks"][number] | null) {
-    if (progress.claimableBananas > 0 && progress.lostBananas > 0) return `Podés cobrar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}. ${progress.lostBananas} se perdieron.`;
-    if (progress.claimableBananas > 0) return "Todos los checks están listos. Podés cobrar tus bananas.";
-    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. ${progress.lostBananas} banana${progress.lostBananas === 1 ? "" : "s"} perdida${progress.lostBananas === 1 ? "" : "s"}.`;
-    if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} disponibles hoy.`;
-    if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}`;
+    if (challenge.claimedAt) {
+      const claimed = bananaByChallengeId.get(challenge.id) ?? progress.earnedBananas;
+      return `Reto cerrado. ${claimed} banana${claimed === 1 ? "" : "s"} cobradas${progress.lostBananas > 0 ? ` · ${progress.lostBananas} perdida${progress.lostBananas === 1 ? "" : "s"}` : ""}.`;
+    }
+    if (progress.claimableBananas > 0 && progress.lostBananas > 0) return `Cierre parcial: cobrás ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"} y ${progress.lostBananas} queda${progress.lostBananas === 1 ? "" : "n"} perdida${progress.lostBananas === 1 ? "" : "s"}.`;
+    if (progress.claimableBananas > 0) return "Reto perfecto. Ya podés cobrar todas tus bananas.";
+    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. Aún podés cerrar el reto si no quedan pendientes o futuros.`;
+    if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} disponibles hoy. Cada check suma bananas.`;
+    if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}. Aún no se puede marcar.`;
     return "Reto sincronizado.";
   }
 
@@ -260,12 +270,12 @@ export default function ChallengesPage() {
     try {
       const doneIds = challengeDoneIds(challenge, events);
       const progress = calculateChallengeProgress(challenge, doneIds);
-      if (progress.missed > 0) {
-        notify("Este reto tiene checks vencidos. Ya no libera todas las bananas.", "error");
+      if (!progress.closed) {
+        notify(`Todavía faltan ${Math.max(0, progress.total - progress.done - progress.missed)} checks por cerrar antes de cobrar.`, "error");
         return;
       }
-      if (!progress.completed) {
-        notify(`Todavía faltan ${Math.max(0, progress.total - progress.done - progress.missed)} checks para cobrar las bananas.`, "error");
+      if (progress.earnedBananas <= 0) {
+        notify("No hay bananas ganadas para cobrar en este reto.", "error");
         return;
       }
       const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
@@ -286,6 +296,20 @@ export default function ChallengesPage() {
     }
   }
 
+  async function handleCancelChallenge(challenge: Challenge) {
+    if (challenge.claimedAt) {
+      notify("Este reto ya está cerrado y conserva su historial.", "error");
+      return;
+    }
+    const ok = await updateChallenge({ ...challenge, status: "cancelled", updatedAt: new Date().toISOString() });
+    if (ok) {
+      notify("Reto cancelado. El historial de checks queda guardado.");
+      void refreshChallenges();
+    } else {
+      notify("No se pudo cancelar el reto. Revisá la conexión.", "error");
+    }
+  }
+
   return (
     <AppShell>
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -294,7 +318,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.5 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.7 QA</span>
           </div>
         </div>
 
@@ -303,17 +327,18 @@ export default function ChallengesPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.12em] text-orange-700">Retos personales</p>
               <h1 className="mt-2 text-3xl font-black leading-tight text-monkey-ink">Ganá bananas creando constancia.</h1>
-              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: se programan en Hoy/Calendario, quedan bloqueadas y suman bananas cuando completás todo el reto.</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: cada check cumplido suma bananas, los checks no realizados se registran y el progreso queda visible en Analytics.</p>
             </div>
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[24px] bg-white text-4xl shadow-soft">🍌</div>
           </div>
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{totalBananas}</p><p className="text-[11px] font-bold text-monkey-muted">ganadas</p></div>
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{claimableBananas}</p><p className="text-[11px] font-bold text-monkey-muted">por cobrar</p></div>
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[11px] font-bold text-monkey-muted">logrados</p></div>
+          <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{totalBananas}</p><p className="text-[10px] font-bold text-monkey-muted">cobradas</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{claimableBananas}</p><p className="text-[10px] font-bold text-monkey-muted">por cobrar</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{lostBananasTotal}</p><p className="text-[10px] font-bold text-monkey-muted">perdidas</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[10px] font-bold text-monkey-muted">cerrados</p></div>
           </div>
           <div className="mt-3 rounded-[20px] bg-white/70 p-3 text-xs font-black text-orange-800">
-            {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} pendientes · ${summary.missedTasks} perdidos`}
+            {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} pendientes · ${summary.missedTasks} perdidos · ${perfectDaysHint} perfectos`}
           </div>
         </div>
 
@@ -358,15 +383,16 @@ export default function ChallengesPage() {
                             <h3 className="text-base font-black text-monkey-ink">{challenge.title}</h3>
                             <p className="mt-1 text-xs font-bold text-monkey-muted">{formatDate(challenge.startDate)} – {formatDate(challenge.endDate)}</p>
                           </div>
-                          <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-black text-orange-700">{challenge.rewardBananas} 🍌</span>
+                          <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-black text-orange-700">{progress.totalBananas} posibles 🍌</span>
                         </div>
                         <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-monkey-green" style={{ width: `${progress.percent}%` }} /></div>
                         <div className="mt-2 flex items-center justify-between text-xs font-black text-monkey-muted"><span>{progress.done}/{progress.total} checks</span><span>{progress.percent}%</span></div>
                         <div className={cn("mt-3 rounded-[18px] p-3 text-xs font-black", progress.completed ? "bg-green-50 text-monkey-greenDark" : progress.missed > 0 ? "bg-gray-100 text-monkey-muted" : progress.availableToday > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-monkey-muted")}>{challengeStateMessage(challenge, progress, nextTask)}</div>
-                        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black">
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[10px] font-black">
                           <div className="rounded-[14px] bg-green-50 px-2 py-2 text-monkey-greenDark">{progress.earnedBananas} ganadas</div>
+                          <div className="rounded-[14px] bg-yellow-50 px-2 py-2 text-orange-700">{progress.claimableBananas} por cobrar</div>
                           <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.lostBananas} perdidas</div>
-                          <div className="rounded-[14px] bg-blue-50 px-2 py-2 text-blue-700">{progress.upcoming} futuros</div>
+                          <div className="rounded-[14px] bg-blue-50 px-2 py-2 text-blue-700">{progress.upcoming} futuras</div>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
                           <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Tareas bloqueadas</span>
@@ -377,6 +403,9 @@ export default function ChallengesPage() {
                           <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Guardando bananas…" : action.label}</button>
                         ) : action.href ? (
                           <Link href={action.href} className={cn("mt-4 flex h-11 w-full items-center justify-center rounded-pill text-sm font-black transition active:scale-95", action.tone === "today" ? "bg-blue-600 text-white" : action.tone === "calendar" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-monkey-muted")}>{action.label}</Link>
+                        ) : null}
+                        {!challenge.claimedAt ? (
+                          <button type="button" onClick={() => void handleCancelChallenge(challenge)} className="mt-2 flex h-10 w-full items-center justify-center rounded-pill bg-gray-50 text-xs font-black text-monkey-muted transition active:scale-95"><XCircle className="mr-1 h-4 w-4" /> Cancelar sin borrar historial</button>
                         ) : null}
                       </div>
                     </div>
@@ -400,7 +429,7 @@ export default function ChallengesPage() {
               {completedChallenges.slice(0, 5).map((challenge) => (
                 <article key={challenge.id} className="flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-sm">
                   <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50 text-xl">🏆</div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{challenge.title}</p><p className="text-xs font-bold text-monkey-muted">{challenge.rewardBananas} bananas cobradas</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{challenge.title}</p><p className="text-xs font-bold text-monkey-muted">{bananaByChallengeId.get(challenge.id) ?? challenge.rewardBananas} bananas cobradas</p></div>
                   <CheckCircle2 className="h-5 w-5 text-monkey-green" />
                 </article>
               ))}
@@ -433,6 +462,20 @@ export default function ChallengesPage() {
               <p className="mt-1 text-sm font-semibold leading-6 text-monkey-muted">Completá todos los checks de un reto y cobrá tus primeras bananas.</p>
             </div>
           )}
+          {recentLosses.length ? (
+            <div className="mt-3 grid gap-2">
+              {recentLosses.map(({ challenge, progress }) => (
+                <article key={`loss-${challenge.id}`} className="flex items-center gap-3 rounded-[22px] bg-gray-50 p-3 shadow-sm">
+                  <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-white text-xl">🍂</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black">{challenge.title}</p>
+                    <p className="text-xs font-bold text-monkey-muted">{progress.missed} check{progress.missed === 1 ? "" : "s"} no cumplido{progress.missed === 1 ? "" : "s"}</p>
+                  </div>
+                  <strong className="rounded-full bg-gray-100 px-3 py-1 text-xs font-black text-monkey-muted">-{progress.lostBananas} 🍌</strong>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </section>
       </section>
 

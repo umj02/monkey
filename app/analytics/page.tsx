@@ -236,6 +236,7 @@ export default function AnalyticsPage() {
       checkedTasks,
       missedTasks,
       totalTasks,
+      completionRate: totalTasks ? Math.round((checkedTasks / totalTasks) * 100) : 0,
       latestBanana,
     };
   }, [bananaLedger, challenges]);
@@ -533,7 +534,7 @@ export default function AnalyticsPage() {
             <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-orange-700 shadow-card"><Banana className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Retos y bananas</h2>
-              <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} logrados · {challengeSummary.bananasEarned} ganadas · {challengeSummary.bananasLost} perdidas.</p>
+              <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} cerrados · {challengeMetrics.completionRate}% cumplimiento · {challengeSummary.bananasLost} perdidas.</p>
             </div>
             <Link href="/challenges" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-orange-700 shadow-card transition active:scale-95">
               Ver
