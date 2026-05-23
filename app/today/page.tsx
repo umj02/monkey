@@ -237,13 +237,15 @@ export default function TodayPage() {
   const [bananaClaimModal, setBananaClaimModal] = useState<{ title: string; body: string; bananas: number } | null>(null);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
+  const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
 
   const visibleBlocks = useMemo(() => blocks.filter((block) => !block.date || block.date === todayDateKey), [blocks, todayDateKey]);
 
   const calendarTodayEvents = useMemo(() => {
     return applyCalendarOverridesForDate(calendarEvents, overrides, todayDateKey)
+      .filter((event) => !(isChallengeCalendarEvent(event) && event.challengeId && cancelledChallengeIds.has(event.challengeId) && !getCalendarEventDone(event, todayDateKey, completionMap)))
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [calendarEvents, overrides, todayDateKey]);
+  }, [calendarEvents, overrides, todayDateKey, cancelledChallengeIds, completionMap]);
 
   const reminderEventIds = useMemo(() => {
     return new Set(reminders.filter((item) => item.enabled && item.calendarEventId).map((item) => item.calendarEventId as string));

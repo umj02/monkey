@@ -137,7 +137,8 @@ export default function ChallengesPage() {
   }
 
   function challengePrimaryAction(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>) {
-    if (challenge.claimedAt) return { href: "/analytics", label: "Ver resumen", tone: "muted" as const };
+    if (challenge.status === "cancelled") return { href: "/analytics", label: "Reto cancelado", tone: "muted" as const };
+    if (challenge.claimedAt) return { href: "/analytics", label: "Ya cobrado", tone: "muted" as const };
     if (progress.claimableBananas > 0) return { href: null, label: `Cobrar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}`, tone: "claim" as const };
     if (progress.availableToday > 0) return { href: "/today", label: "Ver tareas de hoy", tone: "today" as const };
     if (progress.missed > 0) return { href: "/calendar", label: "Ver resumen del reto", tone: "muted" as const };
@@ -145,6 +146,7 @@ export default function ChallengesPage() {
   }
 
   function challengeStateMessage(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>, nextTask: Challenge["tasks"][number] | null) {
+    if (challenge.status === "cancelled") return "Reto cancelado. El historial queda guardado y los checks futuros ya no aparecen como tareas activas.";
     if (challenge.claimedAt) {
       const claimed = bananaByChallengeId.get(challenge.id) ?? progress.earnedBananas;
       return `Reto cerrado. ${claimed} banana${claimed === 1 ? "" : "s"} cobradas${progress.lostBananas > 0 ? ` · ${progress.lostBananas} perdida${progress.lostBananas === 1 ? "" : "s"}` : ""}.`;
@@ -456,9 +458,9 @@ export default function ChallengesPage() {
                         ) : action.href ? (
                           <Link href={action.href} className={cn("mt-4 flex h-11 w-full items-center justify-center rounded-pill text-sm font-black transition active:scale-95", action.tone === "today" ? "bg-blue-600 text-white" : action.tone === "calendar" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-monkey-muted")}>{action.label}</Link>
                         ) : null}
-                        {!challenge.claimedAt ? (
+                        {progress.closed || challenge.claimedAt || challenge.status === "cancelled" ? null : (
                           <button type="button" onClick={() => void handleCancelChallenge(challenge)} className="mt-2 flex h-10 w-full items-center justify-center rounded-pill bg-gray-50 text-xs font-black text-monkey-muted transition active:scale-95"><XCircle className="mr-1 h-4 w-4" /> Cancelar sin borrar historial</button>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   </article>

@@ -615,3 +615,10 @@ Estos quedan preparados para una versión futura sobre esta base.
 - Mejora el preview del creador de retos antes de guardar: checks, fechas, horarios y bananas posibles.
 - Refuerza la economía visual de retos: trofeo por estado, bananas en historial y modal de día completado.
 - No toca dependencias, package-lock, next.config, vercel.json ni migraciones.
+
+
+## v2.28.1.8.1 — Challenge Button Labels + Cancelled Future Checks Polish
+
+- Botones de reto más claros: `Ya cobrado`, `Reto cancelado`, `Cobrar X bananas`, `Ver tareas de hoy` y `Ver próximo check`.
+- Los retos cancelados conservan historial, pero sus checks futuros ya no aparecen como tareas activas en Hoy/Calendario.
+- Analytics y cards mantienen el historial sin contar retos cancelados como acciones pendientes.

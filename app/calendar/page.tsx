@@ -19,6 +19,7 @@ import { Toast, ToastState } from "@/components/toast";
 import { AssetThumb } from "@/components/asset-thumb";
 import { ActivityTypePicker } from "@/components/activity-type-picker";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
+import { useChallenges } from "@/hooks/use-challenges";
 import { useReminders } from "@/hooks/use-reminders";
 import type { CalendarEvent, CalendarRecurrenceType, Reminder } from "@/types";
 import { cn } from "@/lib/utils";
@@ -403,6 +404,7 @@ function ActivityTypeSelect({
 
 export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
+  const { challenges } = useChallenges();
   const { overrides, saveOverride } = useCalendarOverrides();
   const { completionMap } = useCalendarCompletions();
   const { activityItems } = useCategoryPreferences();
@@ -427,6 +429,8 @@ export default function CalendarPage() {
   const [pendingRecurringAction, setPendingRecurringAction] = useState<{ action: RecurringAction; event: CalendarEvent } | null>(null);
 
   const selectedDateKey = toDateKey(selectedDate);
+  const todayKey = toDateKey(new Date());
+  const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
   const visibleMonth = monthNames[selectedDate.getMonth()];
   const visibleYear = selectedDate.getFullYear();
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
@@ -434,8 +438,9 @@ export default function CalendarPage() {
 
   const eventsForSelectedDate = useMemo(() => {
     return applyCalendarOverridesForDate(events, overrides, selectedDateKey)
+      .filter((event) => !(isChallengeCalendarEvent(event) && event.challengeId && cancelledChallengeIds.has(event.challengeId) && selectedDateKey >= todayKey && !getCalendarEventDone(event, selectedDateKey, completionMap)))
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [events, overrides, selectedDateKey]);
+  }, [events, overrides, selectedDateKey, todayKey, cancelledChallengeIds, completionMap]);
 
   const visibleTimelineHours = useMemo(() => getVisibleTimelineHours(eventsForSelectedDate), [eventsForSelectedDate]);
 
@@ -451,10 +456,10 @@ export default function CalendarPage() {
     monthCells.forEach((cell) => { if (cell.dateKey) candidateKeys.add(cell.dateKey); });
     weekDates.forEach((date) => candidateKeys.add(toDateKey(date)));
     candidateKeys.forEach((dateKey) => {
-      if (events.some((event) => eventOccursOnDate(event, dateKey))) days.add(dateKey);
+      if (events.some((event) => eventOccursOnDate(event, dateKey) && !(isChallengeCalendarEvent(event) && event.challengeId && cancelledChallengeIds.has(event.challengeId) && dateKey >= todayKey))) days.add(dateKey);
     });
     return days;
-  }, [events, monthCells, weekDates]);
+  }, [events, monthCells, weekDates, cancelledChallengeIds, todayKey]);
 
   const upcomingCount = useMemo(() => {
     return events.filter((event) => eventOccursOnDate(event, selectedDateKey) || normalizeEventDate(event, selectedDateKey) >= selectedDateKey).length;
