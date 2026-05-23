@@ -142,14 +142,26 @@ export function challengeTaskTimingLabel(task: ChallengeTask, doneTaskIds?: Set<
   return "Disponible hoy";
 }
 
+export function challengeTaskBananas(task: Pick<ChallengeTask, "rewardBananas">) {
+  return Math.max(0, Number(task.rewardBananas || 0));
+}
+
 export function calculateChallengeProgress(challenge: Challenge, doneTaskIds: Set<string>) {
   const todayKey = todayDateKey();
   const total = challenge.tasks.length;
-  const done = challenge.tasks.filter((task) => isChallengeTaskDone(task, doneTaskIds)).length;
-  const missed = challenge.tasks.filter((task) => isChallengeTaskMissed(task, todayKey, doneTaskIds)).length;
-  const upcoming = challenge.tasks.filter((task) => isChallengeTaskUpcoming(task, todayKey)).length;
-  const availableToday = challenge.tasks.filter((task) => isChallengeTaskAvailableToday(task, todayKey)).length;
+  const doneTasks = challenge.tasks.filter((task) => isChallengeTaskDone(task, doneTaskIds));
+  const missedTasks = challenge.tasks.filter((task) => isChallengeTaskMissed(task, todayKey, doneTaskIds));
+  const upcomingTasks = challenge.tasks.filter((task) => isChallengeTaskUpcoming(task, todayKey));
+  const availableTodayTasks = challenge.tasks.filter((task) => isChallengeTaskAvailableToday(task, todayKey));
+  const done = doneTasks.length;
+  const missed = missedTasks.length;
+  const upcoming = upcomingTasks.length;
+  const availableToday = availableTodayTasks.length;
   const pending = Math.max(0, total - done - missed);
+  const totalBananas = challenge.tasks.reduce((sum, task) => sum + challengeTaskBananas(task), 0);
+  const earnedBananas = doneTasks.reduce((sum, task) => sum + challengeTaskBananas(task), 0);
+  const lostBananas = missedTasks.reduce((sum, task) => sum + challengeTaskBananas(task), 0);
+  const closed = total > 0 && pending === 0;
   return {
     total,
     done,
@@ -157,9 +169,14 @@ export function calculateChallengeProgress(challenge: Challenge, doneTaskIds: Se
     upcoming,
     pending,
     availableToday,
+    totalBananas,
+    earnedBananas,
+    lostBananas,
+    claimableBananas: !challenge.claimedAt && closed ? earnedBananas : 0,
     percent: total ? Math.round((done / total) * 100) : 0,
     completed: total > 0 && done >= total && missed === 0,
     incomplete: missed > 0,
+    closed,
   };
 }
 

@@ -67,8 +67,8 @@ export default function ChallengesPage() {
   const activeChallenges = challenges.filter((challenge) => challenge.status === "active" || challenge.status === "expired");
   const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
   const activeChallengeTitles = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "active").map((challenge) => challenge.title)), [challenges]);
-  const claimableChallenges = useMemo(() => activeChallenges.filter((challenge) => calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).completed && !challenge.claimedAt), [activeChallenges, events]);
-  const claimableBananas = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
+  const claimableChallenges = useMemo(() => activeChallenges.filter((challenge) => calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).claimableBananas > 0), [activeChallenges, events]);
+  const claimableBananas = claimableChallenges.reduce((sum, challenge) => sum + calculateChallengeProgress(challenge, challengeDoneIds(challenge, events)).claimableBananas, 0);
   const latestBananas = bananaLedger.slice(0, 5);
 
   const validScheduleTimes = useMemo(() => {
@@ -86,15 +86,16 @@ export default function ChallengesPage() {
   }
 
   function challengePrimaryAction(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>) {
-    if (progress.completed) return { href: null, label: "Cobrar bananas", tone: "claim" as const };
+    if (progress.claimableBananas > 0) return { href: null, label: `Cobrar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}`, tone: "claim" as const };
     if (progress.missed > 0) return { href: "/calendar", label: "Ver resumen del reto", tone: "muted" as const };
     if (progress.availableToday > 0) return { href: "/today", label: "Ver tareas de hoy", tone: "today" as const };
     return { href: "/calendar", label: "Ver próximo check", tone: "calendar" as const };
   }
 
   function challengeStateMessage(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>, nextTask: Challenge["tasks"][number] | null) {
-    if (progress.completed) return "Todos los checks están listos. Podés cobrar tus bananas.";
-    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. Esas bananas se perdieron.`;
+    if (progress.claimableBananas > 0 && progress.lostBananas > 0) return `Podés cobrar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}. ${progress.lostBananas} se perdieron.`;
+    if (progress.claimableBananas > 0) return "Todos los checks están listos. Podés cobrar tus bananas.";
+    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. ${progress.lostBananas} banana${progress.lostBananas === 1 ? "" : "s"} perdida${progress.lostBananas === 1 ? "" : "s"}.`;
     if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} disponibles hoy.`;
     if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}`;
     return "Reto sincronizado.";
@@ -363,8 +364,8 @@ export default function ChallengesPage() {
                         <div className="mt-2 flex items-center justify-between text-xs font-black text-monkey-muted"><span>{progress.done}/{progress.total} checks</span><span>{progress.percent}%</span></div>
                         <div className={cn("mt-3 rounded-[18px] p-3 text-xs font-black", progress.completed ? "bg-green-50 text-monkey-greenDark" : progress.missed > 0 ? "bg-gray-100 text-monkey-muted" : progress.availableToday > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-monkey-muted")}>{challengeStateMessage(challenge, progress, nextTask)}</div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black">
-                          <div className="rounded-[14px] bg-green-50 px-2 py-2 text-monkey-greenDark">{progress.done} hechos</div>
-                          <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.missed} perdidos</div>
+                          <div className="rounded-[14px] bg-green-50 px-2 py-2 text-monkey-greenDark">{progress.earnedBananas} ganadas</div>
+                          <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.lostBananas} perdidas</div>
                           <div className="rounded-[14px] bg-blue-50 px-2 py-2 text-blue-700">{progress.upcoming} futuros</div>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
@@ -479,7 +480,7 @@ export default function ChallengesPage() {
           ) : null}
           <p className="mt-2 text-xs leading-5 text-monkey-muted">Solo se crearán tareas para los horarios que agregués aquí. No se usan horas ocultas ni valores por defecto adicionales.</p>
         </div>
-        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Al completar todos los checks, podrás cobrar bananas en tu Wallet de logros.</div>
+        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks vencidos se pierden y se reflejan en Analytics.</div>
       </FormSheet>
     </AppShell>
   );

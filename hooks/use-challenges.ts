@@ -13,7 +13,7 @@ import {
   syncChallengeTaskCompletionRemote,
 } from "@/lib/services/challenge-service";
 import { compareDateKeys } from "@/lib/calendar/calendar-utils";
-import { isChallengeTaskDone, isChallengeTaskMissed, todayDateKey, hydrateChallengeTaskStatuses } from "@/lib/challenges";
+import { calculateChallengeProgress, isChallengeTaskDone, isChallengeTaskMissed, todayDateKey, hydrateChallengeTaskStatuses } from "@/lib/challenges";
 import type { BananaLedgerEntry, Challenge, ChallengeSummary } from "@/types";
 
 export function useChallenges() {
@@ -93,14 +93,14 @@ export function useChallenges() {
   async function claimBananas(challenge: Challenge) {
     const normalizedChallenge = hydrateChallengeTaskStatuses(challenge, new Set());
     if (normalizedChallenge.claimedAt) return null;
-    if (normalizedChallenge.tasks.some((task) => isChallengeTaskMissed(task))) return null;
-    if (!normalizedChallenge.tasks.length || !normalizedChallenge.tasks.every((task) => isChallengeTaskDone(task))) return null;
+    const progress = calculateChallengeProgress(normalizedChallenge, new Set());
+    if (!progress.closed || progress.earnedBananas <= 0) return null;
     const entry = createBananaLedgerEntry({
       userId: session?.userId ?? null,
       sourceType: "challenge",
       sourceId: normalizedChallenge.id,
-      amount: normalizedChallenge.rewardBananas,
-      reason: `Reto completado: ${normalizedChallenge.title}`,
+      amount: progress.earnedBananas,
+      reason: progress.lostBananas > 0 ? `Reto cerrado: ${normalizedChallenge.title}` : `Reto completado: ${normalizedChallenge.title}`,
     });
     const completedChallenge: Challenge = {
       ...normalizedChallenge,
@@ -124,15 +124,13 @@ export function useChallenges() {
     const activeChallenges = challenges.filter((challenge) => challenge.status === "active");
     const completed = challenges.filter((challenge) => challenge.status === "completed").length;
     const bananasEarned = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
-    const claimableChallenges = activeChallenges.filter((challenge) => {
-      if (challenge.claimedAt || !challenge.tasks.length) return false;
-      return challenge.tasks.every((task) => isChallengeTaskDone(task));
-    });
-    const bananasAvailable = claimableChallenges.reduce((sum, challenge) => sum + challenge.rewardBananas, 0);
+    const challengeProgress = trackedChallenges.map((challenge) => calculateChallengeProgress(challenge, new Set()));
+    const bananasAvailable = challengeProgress.reduce((sum, progress) => sum + progress.claimableBananas, 0);
+    const bananasLost = challengeProgress.reduce((sum, progress) => sum + progress.lostBananas, 0);
     const activeTasks = trackedChallenges.flatMap((challenge) => challenge.tasks);
     const missedTasks = activeTasks.filter((task) => isChallengeTaskMissed(task)).length;
     const pendingTasks = activeTasks.filter((task) => !isChallengeTaskDone(task) && !isChallengeTaskMissed(task)).length;
-    return { active: activeChallenges.length, completed, pendingTasks, missedTasks, bananasEarned, bananasAvailable };
+    return { active: activeChallenges.length, completed, pendingTasks, missedTasks, bananasEarned, bananasAvailable, bananasLost };
   }, [bananaLedger, challenges]);
 
   return {

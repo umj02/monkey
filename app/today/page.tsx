@@ -23,7 +23,7 @@ import { useReminders } from "@/hooks/use-reminders";
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
-import { isChallengeCalendarEvent } from "@/lib/challenges";
+import { isChallengeCalendarEvent, isChallengeTaskDone } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, compareDateKeys, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
@@ -210,7 +210,7 @@ function CalendarTodayCard({
 export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
   const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
-  const { syncChallengeTaskFromCalendarEvent } = useChallenges();
+  const { challenges, syncChallengeTaskFromCalendarEvent } = useChallenges();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const { overrides, saveOverride } = useCalendarOverrides();
   const { activityItems } = useCategoryPreferences();
@@ -231,7 +231,7 @@ export default function TodayPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [completingCalendarKeys, setCompletingCalendarKeys] = useState<Set<string>>(() => new Set());
   const [undoCompleted, setUndoCompleted] = useState<{ key: string; event: CalendarEvent } | null>(null);
-  const [bananaClaimModal, setBananaClaimModal] = useState<CalendarEvent | null>(null);
+  const [bananaClaimModal, setBananaClaimModal] = useState<{ title: string; body: string; bananas: number } | null>(null);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
 
@@ -423,6 +423,24 @@ export default function TodayPage() {
     showToast("Tarea eliminada");
   }
 
+  function challengeDayCompletionResult(event: CalendarEvent, nextDone: boolean) {
+    if (!nextDone || !event.challengeId || !event.challengeTaskId) return null;
+    const challenge = challenges.find((item) => item.id === event.challengeId);
+    if (!challenge) return null;
+    const dayTasks = challenge.tasks.filter((task) => task.scheduledDate === event.date);
+    if (!dayTasks.length) return null;
+    const doneCount = dayTasks.filter((task) => task.id === event.challengeTaskId ? true : isChallengeTaskDone(task)).length;
+    const earnedBananas = dayTasks
+      .filter((task) => task.id === event.challengeTaskId ? true : isChallengeTaskDone(task))
+      .reduce((sum, task) => sum + Math.max(0, Number(task.rewardBananas || 0)), 0);
+    return {
+      total: dayTasks.length,
+      done: doneCount,
+      earnedBananas,
+      completedDay: doneCount >= dayTasks.length,
+    };
+  }
+
   function toggleCalendarEvent(event: CalendarEvent) {
     const currentDone = getCalendarEventDone(event, todayDateKey, completionMap);
     const nextDone = !currentDone;
@@ -459,8 +477,9 @@ export default function TodayPage() {
         return next;
       });
     }
+    const dayResult = isChallenge ? challengeDayCompletionResult(event, nextDone) : null;
     const toastMessage = isChallenge
-      ? (nextDone ? "Reto cumplido por hoy. Cuando completés todos los checks podrás cobrar bananas 🍌" : "Check de reto marcado como pendiente")
+      ? (nextDone ? (dayResult ? `Check guardado · ${dayResult.done}/${dayResult.total} de hoy` : "Check de reto guardado") : "Check de reto marcado como pendiente")
       : (nextDone ? "Actividad completada" : "Actividad pendiente");
 
     if (isRecurringEvent(event)) {
@@ -476,7 +495,13 @@ export default function TodayPage() {
         calendarEventId: event.id,
         done: nextDone,
       });
-      if (nextDone) setBananaClaimModal(event);
+      if (nextDone && dayResult?.completedDay) {
+        setBananaClaimModal({
+          title: "Genial, reclamá tus bananas",
+          body: `Completaste los ${dayResult.total} check${dayResult.total === 1 ? "" : "s"} de este día. Tenés ${dayResult.earnedBananas} banana${dayResult.earnedBananas === 1 ? "" : "s"} lista${dayResult.earnedBananas === 1 ? "" : "s"} para sumar cuando cierres el reto.`,
+          bananas: dayResult.earnedBananas,
+        });
+      }
     }
     showToast(toastMessage);
   }
@@ -524,9 +549,9 @@ export default function TodayPage() {
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-[24px] bg-yellow-50 text-orange-700 shadow-soft">
               <Banana className="h-8 w-8" />
             </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-[.12em] text-orange-700">Reto marcado</p>
-            <h2 className="mt-2 text-2xl font-black text-monkey-ink">Genial, reclamá tus bananas</h2>
-            <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Tu check quedó registrado. Entrá a Retos y bananas para validar el progreso y cobrar cuando el reto esté completo.</p>
+            <p className="mt-4 text-xs font-black uppercase tracking-[.12em] text-orange-700">Día completado</p>
+            <h2 className="mt-2 text-2xl font-black text-monkey-ink">{bananaClaimModal.title}</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">{bananaClaimModal.body}</p>
             <div className="mt-5 grid gap-2">
               <Link href="/challenges" className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white transition active:scale-95" onClick={() => setBananaClaimModal(null)}>Ir a Retos y bananas</Link>
               <button type="button" onClick={() => setBananaClaimModal(null)} className="rounded-pill bg-gray-100 px-4 py-3 text-sm font-black text-monkey-muted transition active:scale-95">Seguir en Hoy</button>

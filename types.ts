@@ -303,4 +303,5 @@ export type ChallengeSummary = {
   missedTasks: number;
   bananasEarned: number;
   bananasAvailable: number;
+  bananasLost: number;
 };
