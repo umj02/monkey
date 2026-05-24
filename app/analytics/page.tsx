@@ -220,24 +220,34 @@ export default function AnalyticsPage() {
   const challengeMetrics = useMemo(() => {
     const active = challenges.filter((challenge) => challenge.status === "active" || challenge.status === "expired");
     const completed = challenges.filter((challenge) => challenge.status === "completed");
-    const progressList = active.map((challenge) => calculateChallengeProgress(challenge, new Set()));
-    const claimable = progressList.filter((progress) => progress.claimableBananas > 0);
-    const allChallengeTasks = challenges.flatMap((challenge) => challenge.tasks);
+    const progressPairs = challenges.map((challenge) => ({ challenge, progress: calculateChallengeProgress(challenge, new Set()) }));
+    const activeProgress = progressPairs.filter(({ challenge }) => challenge.status === "active" || challenge.status === "expired");
+    const claimable = activeProgress.filter(({ progress }) => progress.claimableBananas > 0);
+    const allChallengeTasks = challenges.flatMap((challenge) => challenge.tasks.map((task) => ({ ...task, challengeTitle: challenge.title })));
     const checkedTasks = allChallengeTasks.filter((task) => isChallengeTaskDone(task)).length;
     const missedTasks = allChallengeTasks.filter((task) => isChallengeTaskMissed(task)).length;
     const totalTasks = allChallengeTasks.length;
     const latestBanana = bananaLedger[0] ?? null;
+    const nextTask = allChallengeTasks
+      .filter((task) => !isChallengeTaskDone(task) && !isChallengeTaskMissed(task))
+      .sort((a, b) => `${a.scheduledDate} ${a.scheduledTime}`.localeCompare(`${b.scheduledDate} ${b.scheduledTime}`))[0] ?? null;
+    const perfectClosures = progressPairs.filter(({ challenge, progress }) => (challenge.status === "completed" || Boolean(challenge.claimedAt)) && progress.lostBananas === 0 && progress.done > 0).length;
+    const partialClosures = progressPairs.filter(({ challenge, progress }) => (challenge.status === "completed" || Boolean(challenge.claimedAt)) && progress.lostBananas > 0).length;
     return {
       active: active.length,
       completed: completed.length,
       claimable: claimable.length,
-      claimableBananas: progressList.reduce((sum, progress) => sum + progress.claimableBananas, 0),
-      lostBananas: progressList.reduce((sum, progress) => sum + progress.lostBananas, 0),
+      claimableBananas: activeProgress.reduce((sum, { progress }) => sum + progress.claimableBananas, 0),
+      lostBananas: progressPairs.reduce((sum, { progress }) => sum + progress.lostBananas, 0),
       checkedTasks,
       missedTasks,
       totalTasks,
       completionRate: totalTasks ? Math.round((checkedTasks / totalTasks) * 100) : 0,
       latestBanana,
+      nextTask,
+      perfectClosures,
+      partialClosures,
+      bananasEarned: bananaLedger.reduce((sum, entry) => sum + entry.amount, 0),
     };
   }, [bananaLedger, challenges]);
 
@@ -541,10 +551,14 @@ export default function AnalyticsPage() {
             </Link>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.bananasEarned}</p><p className="text-[10px] font-black text-monkey-muted">cobradas</p></div>
             <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimableBananas}</p><p className="text-[10px] font-black text-monkey-muted">por cobrar</p></div>
             <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.checkedTasks}/{challengeMetrics.totalTasks}</p><p className="text-[10px] font-black text-monkey-muted">checks reto</p></div>
-            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimable}</p><p className="text-[10px] font-black text-monkey-muted">listos</p></div>
-            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.lostBananas}</p><p className="text-[10px] font-black text-monkey-muted">bananas perdidas</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.lostBananas}</p><p className="text-[10px] font-black text-monkey-muted">no ganadas</p></div>
+          </div>
+          <div className="mt-3 grid gap-2 text-[11px] font-black text-orange-800">
+            <p className="rounded-[18px] bg-white/70 p-3">{challengeMetrics.perfectClosures} retos perfectos · {challengeMetrics.partialClosures} cierres parciales · {challengeMetrics.missedTasks} checks no completados.</p>
+            {challengeMetrics.nextTask ? <p className="rounded-[18px] bg-white/70 p-3">Próximo check: {challengeMetrics.nextTask.challengeTitle} · {challengeMetrics.nextTask.scheduledDate} {challengeMetrics.nextTask.scheduledTime}</p> : null}
           </div>
           {challengeMetrics.latestBanana ? (
             <p className="mt-3 rounded-[18px] bg-white/70 p-3 text-[11px] font-black text-orange-700">Último premio: +{challengeMetrics.latestBanana.amount} bananas · {challengeMetrics.latestBanana.reason}</p>

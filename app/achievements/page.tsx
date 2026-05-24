@@ -33,6 +33,8 @@ import { useWallet } from "@/hooks/use-wallet";
 import { buildAchievements, type Achievement, type AchievementGroup, type AchievementTier } from "@/lib/achievements";
 import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { toDateKey } from "@/lib/calendar/calendar-utils";
+import { useChallenges } from "@/hooks/use-challenges";
+import { calculateChallengeProgress } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
 
 type FilterMode = "all" | "unlocked" | "locked";
@@ -82,6 +84,7 @@ export default function AchievementsPage() {
   const { events, syncing: calendarSyncing } = useCalendarEvents();
   const { completionMap, syncStatus: completionSyncStatus } = useCalendarCompletions();
   const { wallet, syncing: walletSyncing } = useWallet();
+  const { challenges, bananaLedger } = useChallenges();
 
   const calculatedResult = useMemo(() => buildAchievements({
     blocks,
@@ -117,6 +120,21 @@ export default function AchievementsPage() {
     total: result.achievements.filter((achievement) => achievement.group === group).length,
     done: result.achievements.filter((achievement) => achievement.group === group && achievement.unlocked).length,
   }));
+  const challengeMedals = useMemo(() => {
+    const closedChallenges = challenges.filter((challenge) => challenge.status === "completed" || Boolean(challenge.claimedAt));
+    const progressList = challenges.map((challenge) => calculateChallengeProgress(challenge, new Set()));
+    const perfectChallenges = progressList.filter((progress, index) => progress.completed && (challenges[index]?.claimedAt || challenges[index]?.status === "completed")).length;
+    const partialClosures = progressList.filter((progress, index) => progress.closed && progress.lostBananas > 0 && (challenges[index]?.claimedAt || challenges[index]?.status === "completed")).length;
+    const bananas = bananaLedger.reduce((sum, entry) => sum + entry.amount, 0);
+    return [
+      { id: "first-banana", title: "Primera banana", body: "Cobrà tu primera banana en un reto.", tier: "bronze" as AchievementTier, value: Math.min(bananas, 1), target: 1, unlocked: bananas >= 1 },
+      { id: "first-challenge", title: "Primer reto cerrado", body: "Cerrá un reto y guardá su avance.", tier: "bronze" as AchievementTier, value: Math.min(closedChallenges.length, 1), target: 1, unlocked: closedChallenges.length >= 1 },
+      { id: "perfect-challenge", title: "Reto perfecto", body: "Completá un reto sin bananas perdidas.", tier: "gold" as AchievementTier, value: Math.min(perfectChallenges, 1), target: 1, unlocked: perfectChallenges >= 1 },
+      { id: "ten-bananas", title: "10 bananas", body: "Acumulá 10 bananas cobradas.", tier: "silver" as AchievementTier, value: Math.min(bananas, 10), target: 10, unlocked: bananas >= 10 },
+      { id: "partial-closure", title: "Cierre honesto", body: "Cerrá un reto parcial sin borrar el historial.", tier: "silver" as AchievementTier, value: Math.min(partialClosures, 1), target: 1, unlocked: partialClosures >= 1 },
+    ];
+  }, [bananaLedger, challenges]);
+
   const hasAnyActivity = result.stats.totalTasks > 0 || result.stats.totalCalendarEvents > 0 || result.stats.totalWalletTransactions > 0 || profile.hasCompletedOnboarding;
 
   return (
@@ -174,6 +192,36 @@ export default function AchievementsPage() {
           {groups.map(({ group, done, total }) => (
             <GroupProgressCard key={group} group={group} done={done} total={total} />
           ))}
+        </section>
+
+        <section className="mt-5 rounded-[28px] border border-yellow-200 bg-yellow-50 p-4 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Retos y bananas</p>
+              <h2 className="text-base font-black">Medallas de constancia</h2>
+              <p className="text-xs font-bold text-monkey-muted">Las bananas muestran avance; estas medallas celebran hitos de retos.</p>
+            </div>
+            <img src={getRewardTrophyIcon("gold")} alt="Trofeo banana" className="h-14 w-14 object-contain" />
+          </div>
+          <div className="mt-4 grid gap-2">
+            {challengeMedals.map((medal) => {
+              const progress = medal.target ? Math.round((medal.value / medal.target) * 100) : 0;
+              return (
+                <article key={medal.id} className={cn("flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-sm", medal.unlocked && "ring-2 ring-monkey-yellow/60")}> 
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[18px] bg-yellow-50">
+                    <img src={getRewardMedalIcon(medal.tier)} alt={`Medalla ${tierLabels[medal.tier]}`} className="h-9 w-9 object-contain" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="truncate text-sm font-black">{medal.title}</h3>
+                      <span className={cn("rounded-full px-2 py-1 text-[10px] font-black", medal.unlocked ? "bg-green-50 text-monkey-greenDark" : "bg-gray-100 text-monkey-muted")}>{medal.unlocked ? "Ganada" : `${progress}%`}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] font-bold leading-4 text-monkey-muted">{medal.body}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </section>
 
         <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">

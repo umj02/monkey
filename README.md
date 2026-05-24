@@ -639,3 +639,24 @@ Estos quedan preparados para una versión futura sobre esta base.
 - Centraliza iconos de retos en `public/assets/challenge`.
 - El selector visual de retos usa iconos específicos de retos y muestra 8 opciones visibles por página/scroll para evitar cortes en móvil.
 - No toca dependencias, lockfiles, configuración de Vercel ni migraciones.
+
+## v2.28.1.10 — Challenge Rewards Readiness + Medal Integration QA
+
+Base: v2.28.1.9.2.
+
+Cambios aplicados sin tocar dependencias ni configuración:
+
+- Se agregó una capa visual de medallas de retos en `/challenges`.
+- Se agregó una sección de medallas de constancia en `/achievements` conectada a retos y bananas.
+- `/analytics` ahora cuenta mejor retos perfectos, cierres parciales, bananas cobradas, bananas por cobrar, bananas no ganadas y próximo check.
+- El preview del builder explica de forma más clara cuántos checks se crearán, fechas, horarios y bananas por check.
+- Se mantiene la economía limpia: bananas como puntos, medallas como hitos, retos como acciones especiales.
+
+Archivos intencionalmente no modificados:
+
+- `package.json`
+- `package-lock.json`
+- `next.config.mjs`
+- `tsconfig.json`
+- `vercel.json`
+- `supabase/migrations/*`

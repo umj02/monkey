@@ -118,6 +118,18 @@ export default function ChallengesPage() {
   const lostBananasTotal = trackedProgress.reduce((sum, item) => sum + item.progress.lostBananas, 0);
   const perfectDaysHint = trackedProgress.filter((item) => item.progress.total > 0 && item.progress.completed).length;
   const recentLosses = trackedProgress.filter((item) => item.progress.lostBananas > 0).slice(0, 4);
+  const rewardMilestones = useMemo(() => {
+    const closed = challenges.filter((challenge) => challenge.status === "completed" || Boolean(challenge.claimedAt)).length;
+    const perfect = trackedProgress.filter(({ challenge, progress }) => (challenge.status === "completed" || Boolean(challenge.claimedAt)) && progress.lostBananas === 0 && progress.done > 0).length;
+    const partial = trackedProgress.filter(({ challenge, progress }) => (challenge.status === "completed" || Boolean(challenge.claimedAt)) && progress.lostBananas > 0).length;
+    return [
+      { label: "Primera banana", value: totalBananas >= 1, helper: `${Math.min(totalBananas, 1)}/1`, trophy: REWARD_TROPHY_BRONZE },
+      { label: "Primer reto", value: closed >= 1, helper: `${Math.min(closed, 1)}/1`, trophy: REWARD_TROPHY_BRONZE },
+      { label: "Reto perfecto", value: perfect >= 1, helper: `${Math.min(perfect, 1)}/1`, trophy: REWARD_TROPHY_GOLD },
+      { label: "10 bananas", value: totalBananas >= 10, helper: `${Math.min(totalBananas, 10)}/10`, trophy: REWARD_TROPHY_SILVER },
+      { label: "Cierre honesto", value: partial >= 1, helper: `${Math.min(partial, 1)}/1`, trophy: REWARD_TROPHY_SILVER },
+    ];
+  }, [challenges, totalBananas, trackedProgress]);
 
   const validScheduleTimes = useMemo(() => {
     const unique = new Set<string>();
@@ -418,6 +430,29 @@ export default function ChallengesPage() {
           </div>
         </div>
 
+        <section className="mt-5 rounded-[28px] border border-yellow-200 bg-yellow-50 p-4 shadow-card">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Medallas de retos</p>
+              <h2 className="text-base font-black text-monkey-ink">Tu camino banana</h2>
+              <p className="text-xs font-bold leading-5 text-monkey-muted">Las bananas son puntos; estas medallas celebran hitos de constancia.</p>
+            </div>
+            <img src={REWARD_TROPHY_GOLD} alt="Trofeo banana" className="h-14 w-14 object-contain" />
+          </div>
+          <div className="mt-4 grid gap-2">
+            {rewardMilestones.map((milestone) => (
+              <div key={milestone.label} className={cn("flex items-center gap-3 rounded-[20px] bg-white p-3 shadow-sm", milestone.value && "ring-2 ring-monkey-yellow/60")}> 
+                <img src={milestone.trophy} alt="Trofeo" className="h-11 w-11 object-contain" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-monkey-ink">{milestone.label}</p>
+                  <p className="text-[11px] font-bold text-monkey-muted">{milestone.value ? "Ganada" : "En progreso"}</p>
+                </div>
+                <span className={cn("rounded-full px-3 py-1 text-xs font-black", milestone.value ? "bg-green-50 text-monkey-greenDark" : "bg-gray-100 text-monkey-muted")}>{milestone.helper}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-[.08em] text-monkey-muted">Retos sugeridos</h2>
@@ -635,7 +670,7 @@ export default function ChallengesPage() {
             <div className="rounded-[16px] bg-gray-50 p-3"><p className="text-base text-monkey-ink">{builderPreview.checks}</p><p className="text-[10px] text-monkey-muted">checks</p></div>
             <div className="rounded-[16px] bg-yellow-50 p-3"><p className="text-base text-orange-700">{builderPreview.totalBananas}</p><p className="text-[10px] text-monkey-muted">bananas posibles</p></div>
           </div>
-          <p className="mt-3 text-xs font-bold leading-5 text-monkey-muted">Del {formatDate(builderPreview.startDate)} al {formatDate(builderPreview.endDate)} · {builderPreview.times.length ? builderPreview.times.join(" · ") : "agregá una hora"} · {builderPreview.shareLabel}.</p>
+          <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold leading-5 text-monkey-muted"><p>Se crearán {builderPreview.checks} check{builderPreview.checks === 1 ? "" : "s"} del {formatDate(builderPreview.startDate)} al {formatDate(builderPreview.endDate)}.</p><p>{builderPreview.times.length ? `Horarios: ${builderPreview.times.join(" · ")}` : "Agregá al menos una hora."}</p><p>{builderPreview.shareLabel} · total posible: {builderPreview.totalBananas} banana{builderPreview.totalBananas === 1 ? "" : "s"}.</p></div>
         </div>
         <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks que dejás pasar se cuentan como bananas perdidas.</div>
       </FormSheet>
