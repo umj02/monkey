@@ -11,7 +11,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useChallenges } from "@/hooks/use-challenges";
 import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
-import { activityAssets } from "@/lib/asset-library";
+import { challengeAssets } from "@/lib/asset-library";
 import { createChallengeDraft } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, Challenge } from "@/types";
@@ -44,7 +44,7 @@ const REWARD_TROPHY_GOLD = "/assets/rewards/trophy-gold.png";
 const REWARD_TROPHY_SILVER = "/assets/rewards/trophy-silver.png";
 const REWARD_TROPHY_BRONZE = "/assets/rewards/trophy-bronze.png";
 const REWARDS_INTRO_DISABLED_KEY = "monkey-rewards-intro-disabled";
-const REWARD_ICON_OPTIONS = activityAssets.filter((asset) => asset.group === "activity").slice(0, 16);
+const REWARD_ICON_OPTIONS = challengeAssets;
 
 function rewardShares(totalBananas: number, totalChecks: number) {
   const count = Math.max(1, totalChecks);
@@ -88,7 +88,7 @@ export default function ChallengesPage() {
   const [customTitle, setCustomTitle] = useState("Mi reto personal");
   const [customDescription, setCustomDescription] = useState("Un reto creado por mí para mantener constancia.");
   const [customBananas, setCustomBananas] = useState("5");
-  const [customIconKey, setCustomIconKey] = useState("monito-otro");
+  const [customIconKey, setCustomIconKey] = useState("challenge-otro");
   const [creating, setCreating] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [rewardsIntroEnabled, setRewardsIntroEnabled] = useState(true);
@@ -590,11 +590,11 @@ export default function ChallengesPage() {
             <div>
               <p className="mb-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Icono / monito</p>
               <p className="mb-2 text-[11px] font-bold text-monkey-muted">Elegí cómo se verá tu reto en Hoy y Calendario.</p>
-              <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto rounded-[22px] bg-gray-50 p-2">
+              <div className="grid max-h-[13.5rem] grid-cols-4 gap-2 overflow-y-auto rounded-[22px] bg-gray-50 p-2">
                 {REWARD_ICON_OPTIONS.map((asset) => (
-                  <button key={asset.key} type="button" onClick={() => setCustomIconKey(asset.key)} className={cn("grid gap-1 rounded-[18px] bg-white p-2 text-center text-[10px] font-black text-monkey-muted shadow-sm transition active:scale-95", customIconKey === asset.key && "ring-2 ring-monkey-green text-monkey-green")}> 
+                  <button key={asset.key} type="button" onClick={() => setCustomIconKey(asset.key)} className={cn("grid min-h-[5.7rem] gap-1 rounded-[18px] bg-white p-2 text-center text-[10px] font-black text-monkey-muted shadow-sm transition active:scale-95", customIconKey === asset.key && "ring-2 ring-monkey-green text-monkey-green")}> 
                     <AssetThumb icon={asset.key} className="mx-auto h-11 w-11 rounded-[14px] bg-green-50" />
-                    <span className="truncate">{asset.label}</span>
+                    <span className="line-clamp-2 leading-tight">{asset.label}</span>
                   </button>
                 ))}
               </div>

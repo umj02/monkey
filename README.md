@@ -632,3 +632,10 @@ Estos quedan preparados para una versión futura sobre esta base.
 - Ajustes de copy: Tema pasa a Configuración y se reducen textos técnicos visibles.
 - Builder de reto personalizado con microcopy por campo y selector visual de monitos/iconos.
 - Sin cambios en dependencias, package.json, next.config, vercel.json o migraciones.
+
+## v2.28.1.9.1 — Rewards modal CTA + Challenge icon folder polish
+
+- Ajusta el modal diario de Retos y bananas para que el título y el CTA sean legibles sobre el fondo verde/amarillo.
+- Centraliza iconos de retos en `public/assets/challenge`.
+- El selector visual de retos usa iconos específicos de retos y muestra 8 opciones visibles por página/scroll para evitar cortes en móvil.
+- No toca dependencias, lockfiles, configuración de Vercel ni migraciones.

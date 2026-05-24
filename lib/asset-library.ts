@@ -73,6 +73,19 @@ export const activityAssets: AppAsset[] = [
   { key: "monito-otro", label: "Otro", src: "/assets/monitos/otro.png", category: "activity", group: "activity" }
 ];
 
+
+export const challengeAssets: AppAsset[] = [
+  { key: "challenge-correr", label: "Correr", src: "/assets/challenge/correr.png", category: "activity", group: "challenge" },
+  { key: "challenge-levantarse-temprano", label: "Levantarse temprano", src: "/assets/challenge/levantarse-temprano.png", category: "activity", group: "challenge" },
+  { key: "challenge-leer-libro", label: "Leer un libro", src: "/assets/challenge/leer-libro.png", category: "activity", group: "challenge" },
+  { key: "challenge-comer-frutas", label: "Comer frutas", src: "/assets/challenge/comer-frutas.png", category: "activity", group: "challenge" },
+  { key: "challenge-beber-agua", label: "Beber agua", src: "/assets/challenge/beber-agua.png", category: "activity", group: "challenge" },
+  { key: "challenge-caminar", label: "Caminar", src: "/assets/challenge/caminar.png", category: "activity", group: "challenge" },
+  { key: "challenge-entrenamiento", label: "Entrenamiento", src: "/assets/challenge/entrenamiento.png", category: "activity", group: "challenge" },
+  { key: "challenge-dormir-temprano", label: "Dormir temprano", src: "/assets/challenge/dormir-temprano.png", category: "activity", group: "challenge" },
+  { key: "challenge-otro", label: "Otro", src: "/assets/challenge/otro.png", category: "activity", group: "challenge" }
+];
+
 export const calendarActivityAssets = activityAssets;
 export const monkeyActivityAssets = activityAssets;
 
@@ -205,6 +218,7 @@ export const appAssets = [
   ...faceAssets,
   ...todayQuickAssets,
   ...activityAssets,
+  ...challengeAssets,
   ...legacyActivityAssets,
   ...walletAssets,
 ];

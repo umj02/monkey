@@ -573,14 +573,14 @@ export default function TodayPage() {
       <Toast toast={toast} onClose={() => setToast(null)} />
       {rewardsIntroModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-5 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className={cn("relative w-full max-w-sm overflow-visible rounded-[36px] bg-gradient-to-br from-lime-300 via-yellow-200 to-lime-500 px-6 pb-6 pt-24 text-center text-white shadow-card", rewardsIntroClosing ? "animate-rewardIntroOut" : "animate-rewardIntroIn")}> 
+          <div className={cn("relative w-full max-w-sm overflow-visible rounded-[36px] bg-gradient-to-br from-lime-300 via-yellow-200 to-lime-500 px-6 pb-6 pt-24 text-center shadow-card", rewardsIntroClosing ? "animate-rewardIntroOut" : "animate-rewardIntroIn")}> 
             <img src={REWARD_BANANA_BUNCH} alt="Bananas de oro" className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 object-contain drop-shadow-[0_18px_24px_rgba(77,72,0,.28)]" />
             <button type="button" onClick={closeRewardsIntroModal} className="absolute -right-4 top-12 grid h-16 w-16 place-items-center rounded-full bg-white text-lime-600 shadow-soft transition active:scale-95" aria-label="Cerrar aviso de retos"><X className="h-9 w-9" /></button>
             <p className="text-xs font-black uppercase tracking-[.16em] text-lime-900/70">Retos y bananas</p>
-            <h2 className="mt-2 text-4xl font-black leading-tight tracking-tight">Ganá bananas completando retos</h2>
+            <h2 className="mt-2 text-4xl font-black leading-tight tracking-tight text-lime-950">Ganá bananas completando retos</h2>
             <p className="mx-auto mt-2 max-w-[250px] text-sm font-bold leading-6 text-lime-950/75">Aceptá mini retos, completá tus checks del día y reclamá tus bananas cuando avances.</p>
             <div className="mt-6 grid gap-2">
-              <Link href="/challenges" onClick={closeRewardsIntroModal} className="rounded-pill bg-white px-4 py-3 text-sm font-black text-lime-700 shadow-sm transition active:scale-95">Ir a Retos y bananas</Link>
+              <Link href="/challenges" onClick={closeRewardsIntroModal} className="rounded-pill bg-monkey-green px-4 py-3 text-sm font-black text-white shadow-sm transition active:scale-95">Ir a Retos y bananas</Link>
               <button type="button" onClick={closeRewardsIntroModal} className="rounded-pill bg-lime-900/10 px-4 py-3 text-sm font-black text-lime-950/70 transition active:scale-95">Ahora no</button>
             </div>
           </div>
