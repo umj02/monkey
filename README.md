@@ -622,3 +622,13 @@ Estos quedan preparados para una versión futura sobre esta base.
 - Botones de reto más claros: `Ya cobrado`, `Reto cancelado`, `Cobrar X bananas`, `Ver tareas de hoy` y `Ver próximo check`.
 - Los retos cancelados conservan historial, pero sus checks futuros ya no aparecen como tareas activas en Hoy/Calendario.
 - Analytics y cards mantienen el historial sin contar retos cancelados como acciones pendientes.
+
+## v2.28.1.9 — Friendly UX Copy + Rewards Intro Modal Polish
+
+- Fix visual del hero de Hoy: ahora renderiza el monito en lugar de mostrar la key técnica.
+- Modal motivacional diario de Retos y bananas en Hoy, con animación de entrada/salida tipo brinco y arte de banana.
+- Switch en Retos y bananas para apagar o encender el aviso diario.
+- Navegación inferior: Perfil pasa a Cuenta.
+- Ajustes de copy: Tema pasa a Configuración y se reducen textos técnicos visibles.
+- Builder de reto personalizado con microcopy por campo y selector visual de monitos/iconos.
+- Sin cambios en dependencias, package.json, next.config, vercel.json o migraciones.

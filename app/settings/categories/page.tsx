@@ -116,7 +116,7 @@ export default function CategorySettingsPage() {
     const saved = await upsertCategoryPreference(payload);
     const itemToStore = saved ?? payload;
     setPreferences((current) => [...current.filter((item) => !(item.scope === editing.scope && item.key === editing.key) && !(item.scope === itemToStore.scope && item.key === itemToStore.key)), itemToStore]);
-    showToast(saved ? "success" : "info", saved ? "Categoría guardada y sincronizada." : "Guardado en esta sesión. Con Supabase activo se sincroniza automáticamente.");
+    showToast(saved ? "success" : "info", saved ? "Categoría guardada y sincronizada." : "Guardado en esta sesión. Se actualizará en tu cuenta cuando haya conexión.");
     setEditing(null);
   }
 
@@ -250,7 +250,7 @@ export default function CategorySettingsPage() {
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[16px] bg-white text-monkey-green shadow-sm"><ImagePlus className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-black uppercase tracking-[.08em] text-monkey-greenDark">Imagen propia</p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Subí PNG, JPG, WEBP o GIF de máximo 2 MB. Se guarda en Supabase Storage y se aplica al guardar.</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Subí PNG, JPG, WEBP o GIF de máximo 2 MB. Se aplicará a esta categoría cuando guardés.</p>
             </div>
           </div>
           <label className={cn("mt-3 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[18px] bg-white text-sm font-black text-monkey-greenDark shadow-sm transition active:scale-95", uploadingImage && "pointer-events-none opacity-70")}>

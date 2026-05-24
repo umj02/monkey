@@ -597,7 +597,7 @@ export default function AnalyticsPage() {
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
             <div className="h-full rounded-full bg-monkey-purple" style={{ width: `${achievementResult.completion}%` }} />
           </div>
-          <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Calculado localmente" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Sync pendiente" : "Historial conectado a Supabase"}</p>
+          <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Calculado localmente" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Actualización pendiente" : "Historial actualizado"}</p>
           {achievementResult.nextAchievement ? (
             <div className="mt-2 flex items-start gap-2 text-[11px] font-bold text-monkey-muted">
               <img src={getRewardMedalIcon(achievementResult.nextAchievement.tier)} alt="Próxima medalla" className="mt-0.5 h-5 w-5 shrink-0 object-contain" />

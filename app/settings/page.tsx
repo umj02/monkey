@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Award, Banana, BarChart3, ClipboardList, ShieldCheck, Tags } from "lucide-react";
+import { Award, Banana, BarChart3, ClipboardList, ShieldCheck, SlidersHorizontal, Tags } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -17,13 +17,13 @@ export default function SettingsPage() {
     <AppShell>
       <section className="page-pad pt-8">
         <h1 className="text-2xl font-black">Configuración</h1>
-        <p className="mt-1 text-sm font-semibold text-monkey-muted">Preparado para sincronizar estas preferencias con Supabase.</p>
+        <p className="mt-1 text-sm font-semibold text-monkey-muted">Ajustá la app a tu estilo y mantené tus preferencias al día.</p>
         <div className="mt-6 space-y-5">
           <section>
             <h2 className="mb-2 text-sm font-black">Apariencia</h2>
             <div className={`overflow-hidden rounded-card ${appTone} shadow-card`}>
               <button onClick={() => setSettings((value) => ({ ...value, theme: value.theme === "colorful" ? "soft" : "colorful" }))} className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold">
-                <span>Tema</span><span className="text-monkey-muted">{settings.theme === "colorful" ? "Colorido" : "Suave"} ›</span>
+                <span className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-monkey-purple" /> Configuración</span><span className="text-monkey-muted">{settings.theme === "colorful" ? "Colorido" : "Suave"} ›</span>
               </button>
               <div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Modo oscuro</span><Toggle on={settings.darkMode} onClick={() => setSettings((value) => ({ ...value, darkMode: !value.darkMode }))} /></div>
             </div>
@@ -40,7 +40,7 @@ export default function SettingsPage() {
               <Link href="/guardian-share" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-monkey-green" /> Vista encargado</span><span className="text-monkey-muted">Compartir ›</span></Link>
               <Link href="/welcome?review=1" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Ver guía de uso</span><span className="text-monkey-muted">Aprender ›</span></Link>
               <div className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Sonidos</span><Toggle on={settings.sounds} onClick={() => setSettings((value) => ({ ...value, sounds: !value.sounds }))} /></div>
-              <div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Sincronización</span><Toggle on={settings.sync} onClick={() => setSettings((value) => ({ ...value, sync: !value.sync }))} /></div>
+              <div className="flex h-14 w-full items-center justify-between px-4 text-sm font-semibold"><span>Guardar avances</span><Toggle on={settings.sync} onClick={() => setSettings((value) => ({ ...value, sync: !value.sync }))} /></div>
             </div>
           </section>
           <section>

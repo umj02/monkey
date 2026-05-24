@@ -34,7 +34,7 @@ export default function ConfirmAccountPage() {
 
         if (!supabase) {
           setState("error");
-          setMessage("No se pudo conectar con Supabase. Revisá las variables de entorno en Vercel.");
+          setMessage("No pudimos confirmar tu cuenta. Revisá la conexión e intentá de nuevo.");
           return;
         }
 

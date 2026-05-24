@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Banana, CalendarDays, CheckCircle2, Clock3, Flame, History, LockKeyhole, Plus, RefreshCw, Sparkles, Trophy, XCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AssetThumb } from "@/components/asset-thumb";
@@ -11,6 +11,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useChallenges } from "@/hooks/use-challenges";
 import { buildChallengeDates, calculateChallengeProgress, hydrateChallengeTaskStatuses, nextPendingChallengeTask, PERSONAL_CHALLENGE_TEMPLATES, todayDateKey } from "@/lib/challenges";
+import { activityAssets } from "@/lib/asset-library";
 import { createChallengeDraft } from "@/lib/services/challenge-service";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, Challenge } from "@/types";
@@ -42,6 +43,8 @@ const REWARD_BANANA_BUNCH = "/assets/rewards/banana-bunch-gold.png";
 const REWARD_TROPHY_GOLD = "/assets/rewards/trophy-gold.png";
 const REWARD_TROPHY_SILVER = "/assets/rewards/trophy-silver.png";
 const REWARD_TROPHY_BRONZE = "/assets/rewards/trophy-bronze.png";
+const REWARDS_INTRO_DISABLED_KEY = "monkey-rewards-intro-disabled";
+const REWARD_ICON_OPTIONS = activityAssets.filter((asset) => asset.group === "activity").slice(0, 16);
 
 function rewardShares(totalBananas: number, totalChecks: number) {
   const count = Math.max(1, totalChecks);
@@ -88,6 +91,19 @@ export default function ChallengesPage() {
   const [customIconKey, setCustomIconKey] = useState("monito-otro");
   const [creating, setCreating] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [rewardsIntroEnabled, setRewardsIntroEnabled] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setRewardsIntroEnabled(window.localStorage.getItem(REWARDS_INTRO_DISABLED_KEY) !== "true");
+  }, []);
+
+  function toggleRewardsIntro(enabled: boolean) {
+    setRewardsIntroEnabled(enabled);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(REWARDS_INTRO_DISABLED_KEY, enabled ? "false" : "true");
+    }
+  }
 
   const selectedTemplate = PERSONAL_CHALLENGE_TEMPLATES.find((item) => item.id === templateId) ?? PERSONAL_CHALLENGE_TEMPLATES[0];
   const totalBananas = bananaLedger.reduce((sum, item) => sum + item.amount, 0);
@@ -300,11 +316,11 @@ export default function ChallengesPage() {
 
       const saved = await saveChallenge({ ...draft, tasks: tasksWithEvents });
       if (!saved) {
-        notify("No se pudo guardar el reto en tu cuenta. Revisá Supabase o la conexión antes de continuar.", "error");
+        notify("No pudimos guardar tu reto. Revisá tu conexión e intentá de nuevo.", "error");
         return;
       }
       setSheetOpen(false);
-      notify("Reto creado y guardado en Supabase 🍌");
+      notify("Reto creado. Ya aparece en Hoy y Calendario 🍌");
     } finally {
       setCreating(false);
     }
@@ -330,7 +346,7 @@ export default function ChallengesPage() {
       const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
       const updated = await updateChallenge(syncedChallenge);
       if (!updated) {
-        notify("No se pudo sincronizar el avance del reto. Actualizá e intentá de nuevo.", "error");
+        notify("No pudimos actualizar el avance. Actualizá e intentá de nuevo.", "error");
         return;
       }
       const entry = await claimBananas(syncedChallenge);
@@ -367,7 +383,7 @@ export default function ChallengesPage() {
           <Link href="/settings" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void refreshChallenges()} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm transition active:scale-95" aria-label="Actualizar retos"><RefreshCw className={cn("h-4 w-4 text-monkey-muted", syncing && "animate-spin")} /></button>
-            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">v2.28.1.8 QA</span>
+            <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-orange-700">Retos</span>
           </div>
         </div>
 
@@ -376,7 +392,7 @@ export default function ChallengesPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.12em] text-orange-700">Retos personales</p>
               <h1 className="mt-2 text-3xl font-black leading-tight text-monkey-ink">Ganá bananas creando constancia.</h1>
-              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: cada check cumplido suma bananas, los checks no realizados se registran y el progreso queda visible en Analytics.</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: cada check cumplido suma bananas, y tus avances quedan claros sin mezclar tus tareas normales.</p>
             </div>
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[24px] bg-white shadow-soft">
               <img src={REWARD_BANANA_BUNCH} alt="Bananas de oro" className="h-14 w-14 object-contain animate-floaty" />
@@ -390,6 +406,15 @@ export default function ChallengesPage() {
           </div>
           <div className="mt-3 rounded-[20px] bg-white/70 p-3 text-xs font-black text-orange-800">
             {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} pendientes · ${summary.missedTasks} perdidos · ${perfectDaysHint} perfectos`}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-[20px] bg-white/80 p-3">
+            <div>
+              <p className="text-xs font-black text-monkey-ink">Aviso diario de bananas</p>
+              <p className="text-[11px] font-bold leading-4 text-monkey-muted">Mostrá el saltito motivacional una vez al día en Hoy.</p>
+            </div>
+            <button type="button" onClick={() => toggleRewardsIntro(!rewardsIntroEnabled)} className={cn("relative h-8 w-14 rounded-full transition", rewardsIntroEnabled ? "bg-monkey-green" : "bg-gray-300")} aria-label="Activar o apagar aviso diario de bananas">
+              <span className={cn("absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition", rewardsIntroEnabled ? "left-7" : "left-1")} />
+            </button>
           </div>
         </div>
 
@@ -533,7 +558,7 @@ export default function ChallengesPage() {
         </section>
       </section>
 
-      <FormSheet open={sheetOpen} title={builderMode === "custom" ? "Crear mi propio reto" : "Aceptar reto"} subtitle="Elegí solo los horarios que querés usar. Después se programa como tareas especiales." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel={creating ? "Creando reto…" : "Crear reto"}>
+      <FormSheet open={sheetOpen} title={builderMode === "custom" ? "Crear mi propio reto" : "Aceptar reto"} subtitle="Armá un reto simple, elegí horarios y mirá cuántas bananas podés ganar." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel={creating ? "Creando reto…" : "Crear reto"}>
         <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-gray-100 p-1">
           <button type="button" onClick={() => setBuilderMode("suggested")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "suggested" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Sugeridos</button>
           <button type="button" onClick={() => setBuilderMode("custom")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "custom" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Personalizado</button>
@@ -550,16 +575,37 @@ export default function ChallengesPage() {
           </div>
         ) : (
           <div className="grid gap-3">
-            <Field label="Nombre del reto" value={customTitle} onChange={(event) => setCustomTitle(event.target.value)} placeholder="Ej: Leer 20 minutos" />
-            <Field label="Descripción" value={customDescription} onChange={(event) => setCustomDescription(event.target.value)} placeholder="Ej: Crear constancia sin presión" />
-            <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="mb-1 text-[11px] font-bold text-monkey-muted">Poné un nombre corto y fácil de reconocer.</p>
+              <Field label="Nombre del reto" value={customTitle} onChange={(event) => setCustomTitle(event.target.value)} placeholder="Ej: Leer 20 minutos" />
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] font-bold text-monkey-muted">Una frase breve para recordar por qué lo querés lograr.</p>
+              <Field label="Descripción" value={customDescription} onChange={(event) => setCustomDescription(event.target.value)} placeholder="Ej: Crear constancia sin presión" />
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] font-bold text-monkey-muted">Elegí cuántas bananas se reparten entre los checks.</p>
               <Field label="Bananas" value={customBananas} onChange={(event) => setCustomBananas(event.target.value)} placeholder="5" inputMode="numeric" />
-              <Field label="Icono/monito" value={customIconKey} onChange={(event) => setCustomIconKey(event.target.value)} placeholder="monito-otro" />
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Icono / monito</p>
+              <p className="mb-2 text-[11px] font-bold text-monkey-muted">Elegí cómo se verá tu reto en Hoy y Calendario.</p>
+              <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto rounded-[22px] bg-gray-50 p-2">
+                {REWARD_ICON_OPTIONS.map((asset) => (
+                  <button key={asset.key} type="button" onClick={() => setCustomIconKey(asset.key)} className={cn("grid gap-1 rounded-[18px] bg-white p-2 text-center text-[10px] font-black text-monkey-muted shadow-sm transition active:scale-95", customIconKey === asset.key && "ring-2 ring-monkey-green text-monkey-green")}> 
+                    <AssetThumb icon={asset.key} className="mx-auto h-11 w-11 rounded-[14px] bg-green-50" />
+                    <span className="truncate">{asset.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        <Field label="Días de reto" value={days} onChange={(event) => setDays(event.target.value)} placeholder="7" inputMode="numeric" />
+        <div>
+          <p className="mb-1 text-[11px] font-bold text-monkey-muted">Cuántos días querés mantener este reto activo.</p>
+          <Field label="Días de reto" value={days} onChange={(event) => setDays(event.target.value)} placeholder="7" inputMode="numeric" />
+        </div>
         <div>
           <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Clock3 className="h-4 w-4" /> Horarios</span>
           <div className="grid gap-2">
@@ -591,7 +637,7 @@ export default function ChallengesPage() {
           </div>
           <p className="mt-3 text-xs font-bold leading-5 text-monkey-muted">Del {formatDate(builderPreview.startDate)} al {formatDate(builderPreview.endDate)} · {builderPreview.times.length ? builderPreview.times.join(" · ") : "agregá una hora"} · {builderPreview.shareLabel}.</p>
         </div>
-        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks vencidos se pierden y se reflejan en Analytics.</div>
+        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks que dejás pasar se cuentan como bananas perdidas.</div>
       </FormSheet>
     </AppShell>
   );

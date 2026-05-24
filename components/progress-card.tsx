@@ -10,7 +10,7 @@ export function ProgressCard({ percent }: { percent: number }) {
       <div className="absolute right-10 top-10 h-24 w-24 rounded-full bg-white/10 animate-heroBlobSlow" />
       <div className="absolute right-[38px] top-1/2 h-32 w-32 -translate-y-1/2 rounded-full bg-white/10 blur-[1px]" />
       <AssetThumb
-        icon="hero-sentado"
+        icon="monkey-hero-sentado"
         size={132}
         className="absolute bottom-3 right-4 animate-floaty"
         imageClassName="object-contain object-center drop-shadow-[0_16px_20px_rgba(17,24,39,.16)]"

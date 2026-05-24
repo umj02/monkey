@@ -10,7 +10,7 @@ const items = [
   { href: "/calendar", label: "Calendario", icon: CalendarDays },
   { href: "/notes", label: "Notas", icon: StickyNote },
   { href: "/wallet", label: "Wallet", icon: WalletCards },
-  { href: "/profile", label: "Perfil", icon: UserRound }
+  { href: "/profile", label: "Cuenta", icon: UserRound }
 ];
 
 export function BottomNav() {

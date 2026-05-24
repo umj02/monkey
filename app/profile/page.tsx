@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Award, BarChart3, Bell, ChevronRight, ClipboardList, Lock, LogOut, Palette, Pencil, ShieldCheck } from "lucide-react";
+import { Award, BarChart3, Bell, ChevronRight, ClipboardList, Lock, LogOut, Pencil, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Field } from "@/components/field";
 import { FormSheet } from "@/components/form-sheet";
@@ -31,18 +31,18 @@ export default function ProfilePage() {
     if (Object.keys(nextErrors).length) return;
     setProfile({ ...profile, name: name.trim(), email: email.trim() });
     setSheetOpen(false);
-    notify("Perfil actualizado");
+    notify("Cuenta actualizada");
   }
 
   const rows = [
     { label: "Editar información", icon: Pencil, action: openEdit },
-    { label: "Cambiar contraseña", icon: Lock, action: () => notify("Función lista para activar recuperación con Supabase Auth") },
+    { label: "Cambiar contraseña", icon: Lock, action: () => notify("La recuperación de contraseña estará disponible desde tu cuenta") },
     { label: "Analítica", icon: BarChart3, href: "/analytics" },
     { label: "Logros y medallas", icon: Award, href: "/achievements" },
     { label: "Resumen semanal", icon: ClipboardList, href: "/weekly-summary" },
     { label: "Vista encargado", icon: ShieldCheck, href: "/guardian-share" },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
-    { label: "Tema", icon: Palette, href: "/settings" },
+    { label: "Configuración", icon: SlidersHorizontal, href: "/settings" },
     { label: session ? "Cerrar sesión" : "Sesión inactiva", icon: LogOut, action: () => { logout(); notify("Sesión cerrada"); } }
   ];
 
@@ -50,12 +50,12 @@ export default function ProfilePage() {
     <AppShell>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <section className="page-pad pt-8">
-        <h1 className="text-2xl font-black">Mi Perfil</h1>
+        <h1 className="text-2xl font-black">Mi cuenta</h1>
         <section className="mt-6 rounded-card bg-gradient-to-br from-monkey-purple to-monkey-green p-5 text-white shadow-soft">
           <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25"><MonkeyAvatar size={76} variant="face" /></div>
           <h2 className="mt-3 text-center text-xl font-black">{profile.name}</h2>
           <p className="text-center text-sm text-white/80">{profile.email}</p>
-          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Sesión activa: ${session.provider}` : "Sin sesión activa"}</p>
+          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Cuenta activa: ${session.provider}` : "Cuenta sin iniciar sesión"}</p>
         </section>
         <div className="mt-6 space-y-3">
           {rows.map((row) => {
@@ -65,7 +65,7 @@ export default function ProfilePage() {
           })}
         </div>
       </section>
-      <FormSheet open={sheetOpen} title="Editar perfil" subtitle="Estos datos se sincronizan con Supabase cuando hay sesión activa." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel="Guardar perfil">
+      <FormSheet open={sheetOpen} title="Editar cuenta" subtitle="Actualizá tus datos principales de Monkey Checks." onClose={() => setSheetOpen(false)} onSubmit={submit} submitLabel="Guardar perfil">
         <Field label="Nombre" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" error={errors.name} />
         <Field label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" error={errors.email} />
       </FormSheet>

@@ -208,9 +208,9 @@ export default function AchievementsPage() {
 
 function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedCount, lastSyncedAt }: { syncStatus: string; lastError: string | null; isPersistent: boolean; persistedCount: number; lastSyncedAt: string | null }) {
   const copy = !isPersistent
-    ? { title: "Modo local", body: "Los logros se calculan en este dispositivo. Al iniciar sesión con Supabase se guardarán con fecha de desbloqueo." }
+    ? { title: "Modo local", body: "Los logros se calculan en este dispositivo. Al iniciar sesión se guardarán con fecha de desbloqueo." }
     : syncStatus === "saving"
-      ? { title: "Guardando medallas", body: "Estamos sincronizando tus nuevos logros con Supabase." }
+      ? { title: "Guardando medallas", body: "Estamos guardando tus nuevos logros." }
       : syncStatus === "loading"
         ? { title: "Cargando historial", body: "Buscando tus medallas guardadas en tu cuenta." }
         : syncStatus === "error"
@@ -363,7 +363,7 @@ function AllDoneCard() {
         <img src={getRewardTrophyIcon()} alt="Trofeo" className="h-8 w-8 object-contain" />
         <div>
           <h2 className="text-base font-black">¡Tablero completo!</h2>
-          <p className="text-xs font-bold opacity-80">Ya desbloqueaste todas las medallas base. La próxima etapa puede guardar historial en Supabase.</p>
+          <p className="text-xs font-bold opacity-80">Ya desbloqueaste todas las medallas base. La próxima etapa puede guardar mejor tu historial.</p>
         </div>
       </div>
     </section>
@@ -476,7 +476,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22.1, el momento de recompensa usa arte dedicado de oro, plata y bronce, respeta mejor el espacio móvil, conserva el guardado en Supabase y evita repetir animaciones al recargar.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22.1, el momento de recompensa usa arte dedicado de oro, plata y bronce, respeta mejor el espacio móvil, conserva el historial de medallas y evita repetir animaciones al recargar.
           </p>
         </div>
       </div>

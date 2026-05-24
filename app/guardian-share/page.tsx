@@ -430,7 +430,7 @@ function GuardianShareBuilder() {
     setShareSaving(false);
 
     if (!secureRecord) {
-      notify("No se pudo guardar el link seguro en Supabase. Validá sesión y migración v2.25.", "error");
+      notify("No pudimos guardar el link seguro. Revisá tu sesión e intentá de nuevo.", "error");
       return "";
     }
 
@@ -488,7 +488,7 @@ function GuardianShareBuilder() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white/80">Reporte seguro de 7 días</p>
               <h2 className="mt-2 text-[40px] font-black leading-none">{totals.completion}%</h2>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista compacta de solo lectura con token seguro en Supabase, sin exponer login ni edición.</p>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-white/85">Generá una vista compacta de solo lectura con link seguro, sin exponer login ni edición.</p>
             </div>
             <div className="hidden w-24 shrink-0 sm:block"><MonkeyAvatar size={88} variant="face" /></div>
           </div>
@@ -496,7 +496,7 @@ function GuardianShareBuilder() {
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
             <span className="rounded-full bg-white/20 px-3 py-1.5">{syncing ? "Actualizando…" : "Sincronizado"}</span>
             <span className="rounded-full bg-white/20 px-3 py-1.5">Solo lectura</span>
-            <span className="rounded-full bg-white/20 px-3 py-1.5">Token Supabase</span>
+            <span className="rounded-full bg-white/20 px-3 py-1.5">Link seguro</span>
           </div>
         </section>
 
@@ -555,7 +555,7 @@ function GuardianShareBuilder() {
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><Copy className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Link compartible</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link usa un token corto guardado en Supabase. El resumen no viaja completo en la URL y podés desactivarlo cuando querás.</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">El link usa un código seguro guardado en tu cuenta. El resumen no viaja completo en la URL y podés desactivarlo cuando querás.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" onClick={generateLink} disabled={shareSaving} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-monkey-green px-4 text-xs font-black text-white shadow-card transition active:scale-95 disabled:opacity-60">{shareSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}{generatedLink ? "Regenerar" : "Generar"}</button>
                 <button type="button" onClick={copyLink} disabled={shareSaving} className="h-11 rounded-full bg-white px-4 text-xs font-black text-monkey-greenDark shadow-card transition active:scale-95 disabled:opacity-60">Copiar</button>

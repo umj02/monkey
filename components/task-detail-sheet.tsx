@@ -142,7 +142,7 @@ export function TaskDetailSheet({ open, block, task, onClose, onToggle, onEdit, 
           </div>
         </section>
       </div>
-      <ConfirmSheet open={confirmOpen} title="¿Eliminar tarea?" body="Esta acción quitará la tarea de tu día. Luego en Supabase podremos guardar historial si lo necesitás." onCancel={() => setConfirmOpen(false)} onConfirm={() => { if (selectedTask) onDelete?.(activeBlock.id, selectedTask.id); setConfirmOpen(false); }} />
+      <ConfirmSheet open={confirmOpen} title="¿Eliminar tarea?" body="Esta acción quitará la tarea de tu día. El historial se podrá conservar cuando lo necesités." onCancel={() => setConfirmOpen(false)} onConfirm={() => { if (selectedTask) onDelete?.(activeBlock.id, selectedTask.id); setConfirmOpen(false); }} />
     </>
   );
 }

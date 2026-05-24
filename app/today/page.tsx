@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Banana, BarChart3, Bell, BellOff, BookOpen, CalendarDays, Check, Plus, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Banana, BarChart3, Bell, BellOff, BookOpen, CalendarDays, Check, Plus, RefreshCw, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
 import { ProgressCard } from "@/components/progress-card";
@@ -33,6 +33,8 @@ const colorLabels: Record<TaskColor, string> = { green: "Verde", blue: "Azul", o
 
 const REWARD_BANANA_BUNCH = "/assets/rewards/banana-bunch-gold.png";
 const REWARD_BANANA_SINGLE = "/assets/rewards/banana-gold.png";
+const REWARDS_INTRO_DISABLED_KEY = "monkey-rewards-intro-disabled";
+const REWARDS_INTRO_LAST_SEEN_KEY = "monkey-rewards-intro-last-seen";
 
 const calendarStyleMap: Record<CalendarEvent["color"], { card: string; icon: string }> = {
   yellow: { card: "bg-[#FFF7C2] text-[#996D00] border-yellow-100", icon: "calendar-exercise" },
@@ -235,9 +237,30 @@ export default function TodayPage() {
   const [completingCalendarKeys, setCompletingCalendarKeys] = useState<Set<string>>(() => new Set());
   const [undoCompleted, setUndoCompleted] = useState<{ key: string; event: CalendarEvent } | null>(null);
   const [bananaClaimModal, setBananaClaimModal] = useState<{ title: string; body: string; bananas: number } | null>(null);
+  const [rewardsIntroModal, setRewardsIntroModal] = useState(false);
+  const [rewardsIntroClosing, setRewardsIntroClosing] = useState(false);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const disabled = window.localStorage.getItem(REWARDS_INTRO_DISABLED_KEY) === "true";
+    const lastSeen = window.localStorage.getItem(REWARDS_INTRO_LAST_SEEN_KEY);
+    if (!disabled && lastSeen !== todayDateKey) {
+      const timer = window.setTimeout(() => setRewardsIntroModal(true), 650);
+      return () => window.clearTimeout(timer);
+    }
+  }, [todayDateKey]);
+
+  function closeRewardsIntroModal() {
+    setRewardsIntroClosing(true);
+    if (typeof window !== "undefined") window.localStorage.setItem(REWARDS_INTRO_LAST_SEEN_KEY, todayDateKey);
+    window.setTimeout(() => {
+      setRewardsIntroModal(false);
+      setRewardsIntroClosing(false);
+    }, 230);
+  }
 
   const visibleBlocks = useMemo(() => blocks.filter((block) => !block.date || block.date === todayDateKey), [blocks, todayDateKey]);
 
@@ -548,6 +571,21 @@ export default function TodayPage() {
   return (
     <AppShell>
       <Toast toast={toast} onClose={() => setToast(null)} />
+      {rewardsIntroModal ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-5 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className={cn("relative w-full max-w-sm overflow-visible rounded-[36px] bg-gradient-to-br from-lime-300 via-yellow-200 to-lime-500 px-6 pb-6 pt-24 text-center text-white shadow-card", rewardsIntroClosing ? "animate-rewardIntroOut" : "animate-rewardIntroIn")}> 
+            <img src={REWARD_BANANA_BUNCH} alt="Bananas de oro" className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 object-contain drop-shadow-[0_18px_24px_rgba(77,72,0,.28)]" />
+            <button type="button" onClick={closeRewardsIntroModal} className="absolute -right-4 top-12 grid h-16 w-16 place-items-center rounded-full bg-white text-lime-600 shadow-soft transition active:scale-95" aria-label="Cerrar aviso de retos"><X className="h-9 w-9" /></button>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-lime-900/70">Retos y bananas</p>
+            <h2 className="mt-2 text-4xl font-black leading-tight tracking-tight">Ganá bananas completando retos</h2>
+            <p className="mx-auto mt-2 max-w-[250px] text-sm font-bold leading-6 text-lime-950/75">Aceptá mini retos, completá tus checks del día y reclamá tus bananas cuando avances.</p>
+            <div className="mt-6 grid gap-2">
+              <Link href="/challenges" onClick={closeRewardsIntroModal} className="rounded-pill bg-white px-4 py-3 text-sm font-black text-lime-700 shadow-sm transition active:scale-95">Ir a Retos y bananas</Link>
+              <button type="button" onClick={closeRewardsIntroModal} className="rounded-pill bg-lime-900/10 px-4 py-3 text-sm font-black text-lime-950/70 transition active:scale-95">Ahora no</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {bananaClaimModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-5 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="w-full max-w-sm rounded-[32px] bg-white p-5 text-center shadow-card">
