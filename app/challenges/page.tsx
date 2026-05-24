@@ -590,10 +590,10 @@ export default function ChallengesPage() {
             <div>
               <p className="mb-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Icono / monito</p>
               <p className="mb-2 text-[11px] font-bold text-monkey-muted">Elegí cómo se verá tu reto en Hoy y Calendario.</p>
-              <div className="grid max-h-[13.5rem] grid-cols-4 gap-2 overflow-y-auto rounded-[22px] bg-gray-50 p-2">
+              <div className="grid max-h-[12.5rem] grid-cols-4 gap-2 overflow-y-auto rounded-[22px] border border-blue-100 bg-gray-50 p-2">
                 {REWARD_ICON_OPTIONS.map((asset) => (
-                  <button key={asset.key} type="button" onClick={() => setCustomIconKey(asset.key)} className={cn("grid min-h-[5.7rem] gap-1 rounded-[18px] bg-white p-2 text-center text-[10px] font-black text-monkey-muted shadow-sm transition active:scale-95", customIconKey === asset.key && "ring-2 ring-monkey-green text-monkey-green")}> 
-                    <AssetThumb icon={asset.key} className="mx-auto h-11 w-11 rounded-[14px] bg-green-50" />
+                  <button key={asset.key} type="button" onClick={() => setCustomIconKey(asset.key)} className={cn("grid min-h-[5.35rem] gap-1 rounded-[18px] border border-blue-100 bg-white p-2 text-center text-[9px] font-black text-monkey-muted shadow-sm transition active:scale-95", customIconKey === asset.key && "border-blue-500 ring-2 ring-blue-500 text-blue-700")}> 
+                    <AssetThumb icon={asset.key} className="mx-auto h-10 w-10 rounded-[14px] bg-blue-50" />
                     <span className="line-clamp-2 leading-tight">{asset.label}</span>
                   </button>
                 ))}

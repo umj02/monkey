@@ -83,6 +83,9 @@ export const challengeAssets: AppAsset[] = [
   { key: "challenge-caminar", label: "Caminar", src: "/assets/challenge/caminar.png", category: "activity", group: "challenge" },
   { key: "challenge-entrenamiento", label: "Entrenamiento", src: "/assets/challenge/entrenamiento.png", category: "activity", group: "challenge" },
   { key: "challenge-dormir-temprano", label: "Dormir temprano", src: "/assets/challenge/dormir-temprano.png", category: "activity", group: "challenge" },
+  { key: "challenge-escuchar-audio", label: "Escuchar audio", src: "/assets/challenge/escuchar-audio.png", category: "activity", group: "challenge" },
+  { key: "challenge-escribir", label: "Escribir", src: "/assets/challenge/escribir.png", category: "activity", group: "challenge" },
+  { key: "challenge-relajarse", label: "Relajarse", src: "/assets/challenge/relajarse.png", category: "activity", group: "challenge" },
   { key: "challenge-otro", label: "Otro", src: "/assets/challenge/otro.png", category: "activity", group: "challenge" }
 ];
 
