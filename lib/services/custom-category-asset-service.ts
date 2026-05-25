@@ -35,7 +35,7 @@ export async function uploadCategoryImage({
   const userId = await getUserId();
 
   if (!supabase || !userId) {
-    return { ok: false, message: "Supabase no está configurado o la sesión no está activa." };
+    return { ok: false, message: "No pudimos preparar la subida. Iniciá sesión e intentá de nuevo." };
   }
 
   if (!allowedTypes.has(file.type)) {

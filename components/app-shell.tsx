@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { BottomNav } from "./bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
@@ -10,15 +10,14 @@ import { AchievementRewardEngine } from "@/components/achievement-reward-engine"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { ready, isAuthenticated } = useAuth();
   const { profile, ready: profileReady } = useProfile();
 
   useEffect(() => {
     if (ready && !isAuthenticated) {
-      router.replace(`/login?next=${encodeURIComponent(pathname || "/today")}`);
+      router.replace("/");
     }
-  }, [ready, isAuthenticated, pathname, router]);
+  }, [ready, isAuthenticated, router]);
 
   useEffect(() => {
     if (!ready || !profileReady || !isAuthenticated) return;
@@ -40,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="app-screen grid place-items-center px-6 text-center">
         <div>
           <div className="mx-auto h-14 w-14 animate-pulse rounded-full bg-monkey-green/20" />
-          <p className="mt-4 text-sm font-bold text-monkey-muted">Cargando Monkey Checks...</p>
+          <p className="mt-4 text-sm font-bold text-monkey-muted">Preparando Monkey Checks…</p>
         </div>
       </main>
     );
@@ -49,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     return (
       <main className="app-screen grid place-items-center px-6 text-center">
-        <p className="text-sm font-bold text-monkey-muted">Redirigiendo al inicio de sesión...</p>
+        <p className="text-sm font-bold text-monkey-muted">Volviendo al inicio…</p>
       </main>
     );
   }
@@ -59,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="app-screen grid place-items-center px-6 text-center">
         <div>
           <div className="mx-auto h-14 w-14 animate-pulse rounded-full bg-monkey-green/20" />
-          <p className="mt-4 text-sm font-bold text-monkey-muted">Preparando tu bienvenida...</p>
+          <p className="mt-4 text-sm font-bold text-monkey-muted">Preparando tu bienvenida…</p>
         </div>
       </main>
     );

@@ -76,7 +76,7 @@ export function usePersistentAchievements(result: AchievementResult) {
       .then((rows) => {
         if (!rows) {
           setSyncStatus("error");
-          setLastError("Hay medallas nuevas, pero no se pudieron guardar en Supabase.");
+          setLastError("Hay medallas nuevas, pero no pudimos guardarlas en tu cuenta.");
           return;
         }
         setPersisted((current) => {
@@ -95,7 +95,7 @@ export function usePersistentAchievements(result: AchievementResult) {
       })
       .catch(() => {
         setSyncStatus("error");
-        setLastError("Hay medallas nuevas, pero no se pudieron guardar en Supabase.");
+        setLastError("Hay medallas nuevas, pero no pudimos guardarlas en tu cuenta.");
       });
   }, [mode, persisted, result.achievements, session?.userId]);
 

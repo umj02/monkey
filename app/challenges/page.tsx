@@ -174,22 +174,22 @@ export default function ChallengesPage() {
   }
 
   function challengeStateMessage(challenge: Challenge, progress: ReturnType<typeof calculateChallengeProgress>, nextTask: Challenge["tasks"][number] | null) {
-    if (challenge.status === "cancelled") return "Reto cancelado. El historial queda guardado y los checks futuros ya no aparecen como tareas activas.";
+    if (challenge.status === "cancelled") return "Reto pausado. Tus avances quedan guardados.";
     if (challenge.claimedAt) {
       const claimed = bananaByChallengeId.get(challenge.id) ?? progress.earnedBananas;
-      return `Reto cerrado. ${claimed} banana${claimed === 1 ? "" : "s"} cobradas${progress.lostBananas > 0 ? ` · ${progress.lostBananas} perdida${progress.lostBananas === 1 ? "" : "s"}` : ""}.`;
+      return `${claimed} banana${claimed === 1 ? "" : "s"} reclamadas${progress.lostBananas > 0 ? ` · ${progress.lostBananas} no ganada${progress.lostBananas === 1 ? "" : "s"}` : ""}.`;
     }
-    if (progress.claimableBananas > 0 && progress.lostBananas > 0) return `Cierre parcial: cobrás ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"} y ${progress.lostBananas} queda${progress.lostBananas === 1 ? "" : "n"} perdida${progress.lostBananas === 1 ? "" : "s"}.`;
-    if (progress.claimableBananas > 0) return "Reto perfecto. Ya podés cobrar todas tus bananas.";
-    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} no se cumplieron. Aún podés cerrar el reto si no quedan pendientes o futuros.`;
-    if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} disponibles hoy. Cada check suma bananas.`;
-    if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}. Aún no se puede marcar.`;
-    return "Reto sincronizado.";
+    if (progress.claimableBananas > 0 && progress.lostBananas > 0) return `Avance listo: podés reclamar ${progress.claimableBananas} banana${progress.claimableBananas === 1 ? "" : "s"}. ${progress.lostBananas} quedó${progress.lostBananas === 1 ? "" : "s"} sin ganar.`;
+    if (progress.claimableBananas > 0) return "¡Reto completo! Ya podés reclamar tus bananas.";
+    if (progress.missed > 0) return `${progress.missed} check${progress.missed === 1 ? "" : "s"} quedó${progress.missed === 1 ? "" : "n"} sin completar. Podés seguir con lo que queda.`;
+    if (progress.availableToday > 0) return `${progress.availableToday} check${progress.availableToday === 1 ? "" : "s"} para hoy. Cada check suma bananas.`;
+    if (nextTask) return `Próximo check: ${formatDate(nextTask.scheduledDate)} · ${nextTask.scheduledTime}.`;
+    return "Todo listo.";
   }
 
   function openTemplate(template: typeof PERSONAL_CHALLENGE_TEMPLATES[number]) {
     if (activeChallengeTitles.has(template.title)) {
-      notify("Ya tenés ese reto activo. Terminálo o cobrá las bananas antes de repetirlo.", "error");
+      notify("Ya tenés ese reto activo. Completalo o reclamá tus bananas antes de repetirlo.", "error");
       return;
     }
     setBuilderMode("suggested");
@@ -340,7 +340,7 @@ export default function ChallengesPage() {
 
   async function handleClaim(challenge: Challenge) {
     if (challenge.claimedAt) {
-      notify("Este reto ya tenía bananas cobradas.", "error");
+      notify("Este reto ya tenía bananas reclamadas.", "error");
       return;
     }
     setClaimingId(challenge.id);
@@ -348,25 +348,25 @@ export default function ChallengesPage() {
       const doneIds = challengeDoneIds(challenge, events);
       const progress = calculateChallengeProgress(challenge, doneIds);
       if (!progress.closed) {
-        notify(`Todavía faltan ${Math.max(0, progress.total - progress.done - progress.missed)} checks por cerrar antes de cobrar.`, "error");
+        notify(`Aún faltan ${Math.max(0, progress.total - progress.done - progress.missed)} checks antes de reclamar bananas.`, "error");
         return;
       }
       if (progress.earnedBananas <= 0) {
-        notify("No hay bananas ganadas para cobrar en este reto.", "error");
+        notify("No hay bananas listas en este reto.", "error");
         return;
       }
       const syncedChallenge = hydrateChallengeTaskStatuses(challenge, doneIds);
       const updated = await updateChallenge(syncedChallenge);
       if (!updated) {
-        notify("No pudimos actualizar el avance. Actualizá e intentá de nuevo.", "error");
+        notify("No pudimos actualizar tu avance. Intentá de nuevo.", "error");
         return;
       }
       const entry = await claimBananas(syncedChallenge);
       if (entry) {
-        notify(`Ganaste ${entry.amount} bananas 🍌`);
+        notify(`Reclamaste ${entry.amount} bananas 🍌`);
         void refreshChallenges();
       } else {
-        notify("Las bananas ya estaban cobradas o no se pudieron guardar.", "error");
+        notify("Estas bananas ya estaban reclamadas o no pudimos guardarlas.", "error");
       }
     } finally {
       setClaimingId(null);
@@ -375,15 +375,15 @@ export default function ChallengesPage() {
 
   async function handleCancelChallenge(challenge: Challenge) {
     if (challenge.claimedAt) {
-      notify("Este reto ya está cerrado y conserva su historial.", "error");
+      notify("Este reto ya está cerrado y conserva tus avances.", "error");
       return;
     }
     const ok = await updateChallenge({ ...challenge, status: "cancelled", updatedAt: new Date().toISOString() });
     if (ok) {
-      notify("Reto cancelado. El historial de checks queda guardado.");
+      notify("Reto pausado. Tus avances quedan guardados.");
       void refreshChallenges();
     } else {
-      notify("No se pudo cancelar el reto. Revisá la conexión.", "error");
+      notify("No pudimos pausar el reto. Revisá tu conexión.", "error");
     }
   }
 
@@ -403,26 +403,26 @@ export default function ChallengesPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[.12em] text-orange-700">Retos personales</p>
-              <h1 className="mt-2 text-3xl font-black leading-tight text-monkey-ink">Ganá bananas creando constancia.</h1>
-              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Los retos son tareas especiales: cada check cumplido suma bananas, y tus avances quedan claros sin mezclar tus tareas normales.</p>
+              <h1 className="mt-2 text-3xl font-black leading-tight text-monkey-ink">Sumá bananas con mini retos.</h1>
+              <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Elegí un reto, completá checks y reclamá tus bananas cuando avances. Tus tareas normales siguen igual.</p>
             </div>
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[24px] bg-white shadow-soft">
               <img src={REWARD_BANANA_BUNCH} alt="Bananas de oro" className="h-14 w-14 object-contain animate-floaty" />
             </div>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2">
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{totalBananas}</p><p className="text-[10px] font-bold text-monkey-muted">cobradas</p></div>
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{claimableBananas}</p><p className="text-[10px] font-bold text-monkey-muted">por cobrar</p></div>
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{lostBananasTotal}</p><p className="text-[10px] font-bold text-monkey-muted">perdidas</p></div>
-            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[10px] font-bold text-monkey-muted">cerrados</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{totalBananas}</p><p className="text-[10px] font-bold text-monkey-muted">reclamadas</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{claimableBananas}</p><p className="text-[10px] font-bold text-monkey-muted">listas</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{lostBananasTotal}</p><p className="text-[10px] font-bold text-monkey-muted">no ganadas</p></div>
+            <div className="rounded-[20px] bg-white/80 p-3 text-center"><p className="text-xl font-black">{summary.completed}</p><p className="text-[10px] font-bold text-monkey-muted">completados</p></div>
           </div>
           <div className="mt-3 rounded-[20px] bg-white/70 p-3 text-xs font-black text-orange-800">
-            {syncing ? "Actualizando retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks pendientes` : `${summary.pendingTasks} pendientes · ${summary.missedTasks} perdidos · ${perfectDaysHint} perfectos`}
+            {syncing ? "Actualizando tus retos…" : claimableBananas > 0 ? `${claimableBananas} bananas listas para cobrar · ${summary.pendingTasks} checks por hacer` : `${summary.pendingTasks} por hacer · ${summary.missedTasks} no completados · ${perfectDaysHint} perfectos`}
           </div>
           <div className="mt-3 flex items-center justify-between gap-3 rounded-[20px] bg-white/80 p-3">
             <div>
-              <p className="text-xs font-black text-monkey-ink">Aviso diario de bananas</p>
-              <p className="text-[11px] font-bold leading-4 text-monkey-muted">Mostrá el saltito motivacional una vez al día en Hoy.</p>
+              <p className="text-xs font-black text-monkey-ink">Recordatorio divertido</p>
+              <p className="text-[11px] font-bold leading-4 text-monkey-muted">Mostrame el saltito de bananas una vez al día en Hoy.</p>
             </div>
             <button type="button" onClick={() => toggleRewardsIntro(!rewardsIntroEnabled)} className={cn("relative h-8 w-14 rounded-full transition", rewardsIntroEnabled ? "bg-monkey-green" : "bg-gray-300")} aria-label="Activar o apagar aviso diario de bananas">
               <span className={cn("absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition", rewardsIntroEnabled ? "left-7" : "left-1")} />
@@ -435,7 +435,7 @@ export default function ChallengesPage() {
             <div>
               <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Medallas de retos</p>
               <h2 className="text-base font-black text-monkey-ink">Tu camino banana</h2>
-              <p className="text-xs font-bold leading-5 text-monkey-muted">Las bananas son puntos; estas medallas celebran hitos de constancia.</p>
+              <p className="text-xs font-bold leading-5 text-monkey-muted">Las bananas muestran avance; las medallas celebran tus logros.</p>
             </div>
             <img src={REWARD_TROPHY_GOLD} alt="Trofeo banana" className="h-14 w-14 object-contain" />
           </div>
@@ -466,7 +466,7 @@ export default function ChallengesPage() {
                   <AssetThumb icon={template.iconKey} className="h-14 w-14 rounded-[20px] bg-green-50" />
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm font-black text-monkey-ink">{template.title}</strong>
-                    <span className="mt-1 block text-xs font-semibold leading-5 text-monkey-muted">{alreadyActive ? "Ya está activo. Terminálo antes de repetir." : template.helper}</span>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-monkey-muted">{alreadyActive ? "Ya está activo. Completalo antes de repetir." : template.helper}</span>
                   </span>
                   <span className={cn("rounded-full px-3 py-1 text-xs font-black", alreadyActive ? "bg-gray-100 text-monkey-muted" : "bg-yellow-50 text-orange-700")}>{alreadyActive ? "Activo" : `+${template.rewardBananas} 🍌`}</span>
                 </button>
@@ -504,22 +504,22 @@ export default function ChallengesPage() {
                         <div className={cn("mt-3 rounded-[18px] p-3 text-xs font-black", progress.completed ? "bg-green-50 text-monkey-greenDark" : progress.missed > 0 ? "bg-gray-100 text-monkey-muted" : progress.availableToday > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-monkey-muted")}>{challengeStateMessage(challenge, progress, nextTask)}</div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[10px] font-black">
                           <div className="rounded-[14px] bg-green-50 px-2 py-2 text-monkey-greenDark">{progress.earnedBananas} ganadas</div>
-                          <div className="rounded-[14px] bg-yellow-50 px-2 py-2 text-orange-700">{progress.claimableBananas} por cobrar</div>
-                          <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.lostBananas} perdidas</div>
+                          <div className="rounded-[14px] bg-yellow-50 px-2 py-2 text-orange-700">{progress.claimableBananas} listas</div>
+                          <div className="rounded-[14px] bg-gray-100 px-2 py-2 text-monkey-muted">{progress.lostBananas} no ganadas</div>
                           <div className="rounded-[14px] bg-blue-50 px-2 py-2 text-blue-700">{progress.upcoming} futuras</div>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
-                          <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Tareas bloqueadas</span>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700"><CalendarDays className="mr-1 inline h-3 w-3" />Hoy/Calendario</span>
-                          {progress.missed > 0 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-monkey-muted">No cumplido</span> : null}
+                          <span className="rounded-full bg-green-50 px-2.5 py-1 text-monkey-greenDark"><LockKeyhole className="mr-1 inline h-3 w-3" />Reto especial</span>
+                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700"><CalendarDays className="mr-1 inline h-3 w-3" />En tu día</span>
+                          {progress.missed > 0 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-monkey-muted">Quedó pendiente</span> : null}
                         </div>
                         {action.tone === "claim" ? (
-                          <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Guardando bananas…" : action.label}</button>
+                          <button type="button" disabled={claimingId === challenge.id} onClick={() => handleClaim(challenge)} className="mt-4 h-11 w-full rounded-pill bg-monkey-green text-sm font-black text-white transition active:scale-95 disabled:opacity-70">{claimingId === challenge.id ? "Reclamando bananas…" : action.label}</button>
                         ) : action.href ? (
                           <Link href={action.href} className={cn("mt-4 flex h-11 w-full items-center justify-center rounded-pill text-sm font-black transition active:scale-95", action.tone === "today" ? "bg-blue-600 text-white" : action.tone === "calendar" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-monkey-muted")}>{action.label}</Link>
                         ) : null}
                         {progress.closed || challenge.claimedAt || challenge.status === "cancelled" ? null : (
-                          <button type="button" onClick={() => void handleCancelChallenge(challenge)} className="mt-2 flex h-10 w-full items-center justify-center rounded-pill bg-gray-50 text-xs font-black text-monkey-muted transition active:scale-95"><XCircle className="mr-1 h-4 w-4" /> Cancelar sin borrar historial</button>
+                          <button type="button" onClick={() => void handleCancelChallenge(challenge)} className="mt-2 flex h-10 w-full items-center justify-center rounded-pill bg-gray-50 text-xs font-black text-monkey-muted transition active:scale-95"><XCircle className="mr-1 h-4 w-4" /> Pausar reto</button>
                         )}
                       </div>
                     </div>
@@ -530,20 +530,20 @@ export default function ChallengesPage() {
           ) : (
             <div className="rounded-[28px] bg-white p-5 text-center shadow-card">
               <Sparkles className="mx-auto h-8 w-8 text-monkey-yellow" />
-              <h3 className="mt-3 text-lg font-black">Sin retos activos</h3>
-              <p className="mt-1 text-sm font-semibold leading-6 text-monkey-muted">Aceptá uno pequeño para probar el flujo de bananas sin cambiar tus tareas normales.</p>
+              <h3 className="mt-3 text-lg font-black">Sin retos activos por ahora</h3>
+              <p className="mt-1 text-sm font-semibold leading-6 text-monkey-muted">Elegí uno pequeño y empezá a sumar bananas a tu ritmo.</p>
             </div>
           )}
         </section>
 
         {completedChallenges.length ? (
           <section className="mt-7">
-            <h2 className="mb-3 text-sm font-black uppercase tracking-[.08em] text-monkey-muted">Logrados</h2>
+            <h2 className="mb-3 text-sm font-black uppercase tracking-[.08em] text-monkey-muted">Completados</h2>
             <div className="grid gap-2">
               {completedChallenges.slice(0, 5).map((challenge) => (
                 <article key={challenge.id} className="flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-sm">
                   <div className="grid h-11 w-11 place-items-center rounded-[16px] bg-yellow-50"><img src={REWARD_TROPHY_GOLD} alt="Trofeo de oro" className="h-10 w-10 object-contain" /></div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{challenge.title}</p><p className="text-xs font-bold text-monkey-muted">{bananaByChallengeId.get(challenge.id) ?? challenge.rewardBananas} bananas cobradas</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{challenge.title}</p><p className="text-xs font-bold text-monkey-muted">{bananaByChallengeId.get(challenge.id) ?? challenge.rewardBananas} bananas reclamadas</p></div>
                   <CheckCircle2 className="h-5 w-5 text-monkey-green" />
                 </article>
               ))}
@@ -572,8 +572,8 @@ export default function ChallengesPage() {
           ) : (
             <div className="rounded-[28px] bg-white p-5 text-center shadow-card">
               <Banana className="mx-auto h-8 w-8 text-orange-600" />
-              <h3 className="mt-3 text-lg font-black">Aún no hay bananas cobradas</h3>
-              <p className="mt-1 text-sm font-semibold leading-6 text-monkey-muted">Completá todos los checks de un reto y cobrá tus primeras bananas.</p>
+              <h3 className="mt-3 text-lg font-black">Aún no reclamaste bananas</h3>
+              <p className="mt-1 text-sm font-semibold leading-6 text-monkey-muted">Completá checks de un reto y reclamá tus primeras bananas.</p>
             </div>
           )}
           {recentLosses.length ? (
@@ -593,7 +593,7 @@ export default function ChallengesPage() {
         </section>
       </section>
 
-      <FormSheet open={sheetOpen} title={builderMode === "custom" ? "Crear mi propio reto" : "Aceptar reto"} subtitle="Armá un reto simple, elegí horarios y mirá cuántas bananas podés ganar." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel={creating ? "Creando reto…" : "Crear reto"}>
+      <FormSheet open={sheetOpen} title={builderMode === "custom" ? "Crear mi propio reto" : "Aceptar reto"} subtitle="Creá un reto simple, elegí horarios y mirá cuántas bananas podés ganar." onClose={() => setSheetOpen(false)} onSubmit={createPersonalChallenge} submitLabel={creating ? "Creando reto…" : "Crear reto"}>
         <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-gray-100 p-1">
           <button type="button" onClick={() => setBuilderMode("suggested")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "suggested" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Sugeridos</button>
           <button type="button" onClick={() => setBuilderMode("custom")} className={cn("rounded-[16px] px-3 py-3 text-xs font-black transition", builderMode === "custom" ? "bg-white text-monkey-ink shadow-sm" : "text-monkey-muted")}>Personalizado</button>
@@ -672,7 +672,7 @@ export default function ChallengesPage() {
           </div>
           <div className="mt-3 rounded-[18px] bg-gray-50 p-3 text-xs font-bold leading-5 text-monkey-muted"><p>Se crearán {builderPreview.checks} check{builderPreview.checks === 1 ? "" : "s"} del {formatDate(builderPreview.startDate)} al {formatDate(builderPreview.endDate)}.</p><p>{builderPreview.times.length ? `Horarios: ${builderPreview.times.join(" · ")}` : "Agregá al menos una hora."}</p><p>{builderPreview.shareLabel} · total posible: {builderPreview.totalBananas} banana{builderPreview.totalBananas === 1 ? "" : "s"}.</p></div>
         </div>
-        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check cumplido suma bananas. Los checks que dejás pasar se cuentan como bananas perdidas.</div>
+        <div className="rounded-[20px] bg-yellow-50 p-4 text-sm font-bold leading-6 text-orange-800"><Banana className="mr-1 inline h-4 w-4" /> Cada check suma bananas. Si un check se pasa, simplemente queda como no ganado.</div>
       </FormSheet>
     </AppShell>
   );

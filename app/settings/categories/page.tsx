@@ -116,7 +116,7 @@ export default function CategorySettingsPage() {
     const saved = await upsertCategoryPreference(payload);
     const itemToStore = saved ?? payload;
     setPreferences((current) => [...current.filter((item) => !(item.scope === editing.scope && item.key === editing.key) && !(item.scope === itemToStore.scope && item.key === itemToStore.key)), itemToStore]);
-    showToast(saved ? "success" : "info", saved ? "Categoría guardada y sincronizada." : "Guardado en esta sesión. Se actualizará en tu cuenta cuando haya conexión.");
+    showToast(saved ? "success" : "info", saved ? "Categoría guardada." : "Guardado por ahora. Se actualizará en tu cuenta cuando haya conexión.");
     setEditing(null);
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Award, BarChart3, Bell, ChevronRight, ClipboardList, Lock, LogOut, Pencil, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Field } from "@/components/field";
@@ -13,6 +14,7 @@ import { validateEmail } from "@/lib/services/auth-service";
 import { useState } from "react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { profile, setProfile } = useProfile();
   const { session, logout } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function ProfilePage() {
     { label: "Vista encargado", icon: ShieldCheck, href: "/guardian-share" },
     { label: "Notificaciones", icon: Bell, href: "/reminders" },
     { label: "Configuración", icon: SlidersHorizontal, href: "/settings" },
-    { label: session ? "Cerrar sesión" : "Sesión inactiva", icon: LogOut, action: () => { logout(); notify("Sesión cerrada"); } }
+    { label: session ? "Cerrar sesión" : "Sesión inactiva", icon: LogOut, action: async () => { await logout(); router.replace("/"); } }
   ];
 
   return (
@@ -55,7 +57,7 @@ export default function ProfilePage() {
           <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-white/25"><MonkeyAvatar size={76} variant="face" /></div>
           <h2 className="mt-3 text-center text-xl font-black">{profile.name}</h2>
           <p className="text-center text-sm text-white/80">{profile.email}</p>
-          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Cuenta activa: ${session.provider}` : "Cuenta sin iniciar sesión"}</p>
+          <p className="mt-2 text-center text-xs font-bold text-white/70">{session ? `Sesión activa: ${session.provider}` : "Aún no iniciaste sesión"}</p>
         </section>
         <div className="mt-6 space-y-3">
           {rows.map((row) => {

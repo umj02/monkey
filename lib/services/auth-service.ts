@@ -61,7 +61,7 @@ export function mapSupabaseUserToSession(user: { id: string; email?: string | nu
 export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "La conexión de la cuenta no está lista. Revisá la configuración e intentá de nuevo.", mode: "supabase" };
     return { session: createMockSession({ name: "Juan", email: input.email.trim(), hasCompletedOnboarding: false }), error: null, mode: "local" };
   }
 
@@ -76,7 +76,7 @@ export async function signInWithEmail(input: LoginInput): Promise<AuthResult> {
 export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "Supabase no está configurado para producción. Revisá las variables de entorno.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { session: null, error: "La conexión de la cuenta no está lista. Revisá la configuración e intentá de nuevo.", mode: "supabase" };
     return { session: createMockSession({ name: input.name.trim(), email: input.email.trim(), hasCompletedOnboarding: false }), error: null, mode: "local" };
   }
 
@@ -110,7 +110,7 @@ export async function signUpWithEmail(input: RegisterInput): Promise<AuthResult>
 export async function resendConfirmationEmail(email: string): Promise<{ error: string | null; mode: "local" | "supabase" }> {
   const supabase = createOptionalClient();
   if (!supabase) {
-    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { error: "Supabase no está configurado para producción.", mode: "supabase" };
+    if (hasSupabaseEnv() || !allowLocalAuthFallback()) return { error: "La conexión de la cuenta no está lista.", mode: "supabase" };
     return { error: null, mode: "local" };
   }
 

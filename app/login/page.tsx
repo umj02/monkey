@@ -33,9 +33,7 @@ export default function LoginPage() {
       setToast({ message: result.error || "No se pudo iniciar sesión.", type: "error" });
       return;
     }
-    const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
-    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/today";
-    router.push(safeNext);
+    router.replace("/today");
   }
 
   async function social(provider: "google" | "apple") {
@@ -49,7 +47,7 @@ export default function LoginPage() {
       <section className="mx-auto max-w-[360px] text-center">
         <div className="mx-auto w-fit"><MonkeyLogo size={72} /></div>
         <h1 className="mt-5 text-2xl font-black tracking-tight">¡Bienvenido de vuelta!</h1>
-        <p className="mt-1 text-sm text-monkey-muted">Entrá con tu cuenta para sincronizar tus datos</p>
+        <p className="mt-1 text-sm text-monkey-muted">Entrá y seguí organizando tu día</p>
         <form className="mt-7 space-y-3 text-left" onSubmit={(event) => { event.preventDefault(); submit(); }}>
           <div><AppInput placeholder="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /><p className="mt-1 min-h-4 text-xs font-bold text-monkey-pink">{errors.email}</p></div>
           <div>
@@ -73,7 +71,7 @@ export default function LoginPage() {
             <p className="mt-1 min-h-4 text-xs font-bold text-monkey-pink">{errors.password}</p>
           </div>
           <div className="text-right"><button type="button" onClick={() => setToast({ message: "Luego activamos recuperación de contraseña", type: "success" })} className="text-xs font-bold text-monkey-green">¿Olvidaste tu contraseña?</button></div>
-          <button type="submit" disabled={submitting} className="flex h-14 w-full items-center justify-center rounded-pill bg-monkey-green text-sm font-bold text-white shadow-float transition active:scale-95 disabled:opacity-70">{submitting ? "Entrando..." : "Entrar"}</button>
+          <button type="submit" disabled={submitting} className="flex h-14 w-full items-center justify-center rounded-pill bg-monkey-green text-sm font-bold text-white shadow-float transition active:scale-95 disabled:opacity-70">{submitting ? "Entrando…" : "Entrar"}</button>
         </form>
         <div className="my-5 flex items-center gap-4 text-xs text-monkey-muted"><span className="h-px flex-1 bg-gray-200" />o<span className="h-px flex-1 bg-gray-200" /></div>
         <div className="space-y-3">

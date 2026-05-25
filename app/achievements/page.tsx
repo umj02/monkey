@@ -127,11 +127,11 @@ export default function AchievementsPage() {
     const partialClosures = progressList.filter((progress, index) => progress.closed && progress.lostBananas > 0 && (challenges[index]?.claimedAt || challenges[index]?.status === "completed")).length;
     const bananas = bananaLedger.reduce((sum, entry) => sum + entry.amount, 0);
     return [
-      { id: "first-banana", title: "Primera banana", body: "Cobrà tu primera banana en un reto.", tier: "bronze" as AchievementTier, value: Math.min(bananas, 1), target: 1, unlocked: bananas >= 1 },
-      { id: "first-challenge", title: "Primer reto cerrado", body: "Cerrá un reto y guardá su avance.", tier: "bronze" as AchievementTier, value: Math.min(closedChallenges.length, 1), target: 1, unlocked: closedChallenges.length >= 1 },
+      { id: "first-banana", title: "Primera banana", body: "Reclamá tu primera banana en un reto.", tier: "bronze" as AchievementTier, value: Math.min(bananas, 1), target: 1, unlocked: bananas >= 1 },
+      { id: "first-challenge", title: "Primer reto cerrado", body: "Completá un reto y guardá tu avance.", tier: "bronze" as AchievementTier, value: Math.min(closedChallenges.length, 1), target: 1, unlocked: closedChallenges.length >= 1 },
       { id: "perfect-challenge", title: "Reto perfecto", body: "Completá un reto sin bananas perdidas.", tier: "gold" as AchievementTier, value: Math.min(perfectChallenges, 1), target: 1, unlocked: perfectChallenges >= 1 },
       { id: "ten-bananas", title: "10 bananas", body: "Acumulá 10 bananas cobradas.", tier: "silver" as AchievementTier, value: Math.min(bananas, 10), target: 10, unlocked: bananas >= 10 },
-      { id: "partial-closure", title: "Cierre honesto", body: "Cerrá un reto parcial sin borrar el historial.", tier: "silver" as AchievementTier, value: Math.min(partialClosures, 1), target: 1, unlocked: partialClosures >= 1 },
+      { id: "partial-closure", title: "Avance honesto", body: "Guardá un avance parcial sin borrar lo logrado.", tier: "silver" as AchievementTier, value: Math.min(partialClosures, 1), target: 1, unlocked: partialClosures >= 1 },
     ];
   }, [bananaLedger, challenges]);
 
@@ -199,7 +199,7 @@ export default function AchievementsPage() {
             <div>
               <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Retos y bananas</p>
               <h2 className="text-base font-black">Medallas de constancia</h2>
-              <p className="text-xs font-bold text-monkey-muted">Las bananas muestran avance; estas medallas celebran hitos de retos.</p>
+              <p className="text-xs font-bold text-monkey-muted">Las bananas muestran avance; estas medallas celebran tus logros.</p>
             </div>
             <img src={getRewardTrophyIcon("gold")} alt="Trofeo banana" className="h-14 w-14 object-contain" />
           </div>
@@ -258,12 +258,12 @@ function PersistenceStatusCard({ syncStatus, lastError, isPersistent, persistedC
   const copy = !isPersistent
     ? { title: "Modo local", body: "Los logros se calculan en este dispositivo. Al iniciar sesión se guardarán con fecha de desbloqueo." }
     : syncStatus === "saving"
-      ? { title: "Guardando medallas", body: "Estamos guardando tus nuevos logros." }
+      ? { title: "Guardando tus medallas", body: "Estamos guardando tus nuevos logros." }
       : syncStatus === "loading"
-        ? { title: "Cargando historial", body: "Buscando tus medallas guardadas en tu cuenta." }
+        ? { title: "Preparando tus medallas", body: "Estamos preparando tus medallas." }
         : syncStatus === "error"
-          ? { title: "Sincronización pendiente", body: lastError || "No se pudo sincronizar el historial de logros." }
-          : { title: "Historial sincronizado", body: persistedCount ? `${persistedCount} medallas guardadas${lastSyncedAt ? ` · ${formatSyncTime(lastSyncedAt)}` : ""}.` : "Cuando ganés una medalla, quedará guardada en tu cuenta." };
+          ? { title: "No pudimos actualizar medallas", body: lastError || "No pudimos actualizar tus logros." }
+          : { title: "Medallas al día", body: persistedCount ? `${persistedCount} medallas guardadas${lastSyncedAt ? ` · ${formatSyncTime(lastSyncedAt)}` : ""}.` : "Cuando ganés una medalla, quedará en tu cuenta." };
 
   return (
     <section className={cn("mt-5 rounded-[24px] border p-4", syncStatus === "error" ? "border-orange-200 bg-orange-50" : "border-monkey-green/15 bg-white")}>
@@ -314,7 +314,7 @@ function UnlockFeedbackBanner({ achievements, onClose }: { achievements: Achieve
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-black uppercase tracking-[.1em] text-orange-700">Desbloqueada ahora</p>
               <h2 className="mt-1 text-lg font-black">{title}</h2>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Tus medallas nuevas ya se guardan y este banner solo aparece para desbloqueos recientes.</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">Tus medallas nuevas ya están listas. Este aviso aparece solo cuando ganás algo reciente.</p>
             </div>
             <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-white text-monkey-muted shadow-sm transition active:scale-95" aria-label="Cerrar banner de logro">
               <X className="h-4 w-4" />

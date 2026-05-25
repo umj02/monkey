@@ -546,7 +546,7 @@ export default function CalendarPage() {
       isCancelled: true,
     });
     if (result.ok) notify("Solo se eliminó esta fecha");
-    else notify("No se pudo sincronizar la eliminación de esta fecha.", "error");
+    else notify("No pudimos actualizar la eliminación de esta fecha.", "error");
     setSheetMode("closed");
   }
 
@@ -638,7 +638,7 @@ export default function CalendarPage() {
         isCancelled: false,
       });
       savedEvent = { ...editing, ...payload, parentEventId: baseId, occurrenceDate, isOccurrenceOverride: true };
-      if (!result.ok) notify("El cambio quedó temporal, pero no se pudo sincronizar.", "error");
+      if (!result.ok) notify("Guardamos el cambio aquí, pero no pudimos actualizar tu cuenta.", "error");
     } else {
       const targetId = editing ? calendarOccurrenceBaseId(editing) : null;
       savedEvent = editing && targetId ? await updateEvent(targetId, payload) : await createEvent(payload);
@@ -660,10 +660,10 @@ export default function CalendarPage() {
 
     setSheetMode("closed");
     if (!alertSynced) {
-      notify("Actividad guardada, pero la alerta no se pudo sincronizar. Revisá Recordatorios.", "error");
+      notify("Actividad guardada. Revisá Recordatorios para la alerta.", "error");
       return;
     }
-    notify(editing ? "Actividad actualizada y sincronizada" : alertTime ? "Actividad y alerta creadas" : "Actividad creada");
+    notify(editing ? "Actividad actualizada" : alertTime ? "Actividad y alerta creadas" : "Actividad creada");
   }
 
   return (
@@ -923,7 +923,7 @@ export default function CalendarPage() {
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
           <p className="mt-2 text-xs leading-5 text-monkey-muted">
-            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Actualizando calendario..." : syncStatus === "saving" ? "Guardando cambios..." : syncStatus === "synced" ? "Sincronizado." : "Calendario listo."}
+            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Actualizando calendario..." : syncStatus === "saving" ? "Guardando cambios..." : syncStatus === "synced" ? "Todo al día." : "Calendario listo."}
           </p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">

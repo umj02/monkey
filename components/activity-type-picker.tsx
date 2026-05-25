@@ -52,7 +52,7 @@ export function ActivityTypePicker({ label = "Tipo de actividad", value, onChang
     <div className="min-w-0 max-w-full overflow-hidden">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">{label}</span>
-        {loading ? <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-black text-monkey-muted">Sincronizando</span> : null}
+        {loading ? <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-black text-monkey-muted">Actualizando</span> : null}
       </div>
       <div className="rounded-[22px] bg-gray-50 p-2">
         <div className="mb-2 flex items-center gap-2 rounded-[16px] bg-white px-3 py-2 shadow-sm">

@@ -354,7 +354,7 @@ export default function TodayPage() {
         isCancelled: false,
       });
       savedEvent = { ...editingCalendarEvent, ...payload, parentEventId: baseId, occurrenceDate, isOccurrenceOverride: true };
-      if (!result.ok) showToast("El cambio quedó temporal, pero no se pudo sincronizar.", "error");
+      if (!result.ok) showToast("Guardamos el cambio aquí, pero no pudimos actualizar tu cuenta.", "error");
     } else {
       const targetId = editingCalendarEvent ? calendarOccurrenceBaseId(editingCalendarEvent) : null;
       savedEvent = editingCalendarEvent && targetId
@@ -378,7 +378,7 @@ export default function TodayPage() {
     setFormOpen(false);
     resetForm();
     if (!alarmSynced) {
-      showToast("Tarea guardada, pero la alarma no se pudo sincronizar.", "error");
+      showToast("Tarea guardada. No pudimos actualizar la alarma.", "error");
       return;
     }
     showToast(wasEditing ? "Tarea actualizada en Hoy y Calendario" : "Tarea creada y agregada al calendario de hoy");
@@ -612,7 +612,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Actualizando…" : calendarError || completionError ? "Revisá la sincronización" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" ? "Guardando…" : "Sincronizado"}
+              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Actualizando…" : calendarError || completionError ? "Revisá la conexión" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" ? "Guardando…" : "Todo al día"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

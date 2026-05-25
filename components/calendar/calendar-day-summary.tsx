@@ -13,9 +13,9 @@ export function CalendarDaySummary({
       : syncStatus === "loading"
         ? "Cargando"
         : syncStatus === "synced"
-          ? "Sincronizado"
+          ? "Todo al día"
           : syncStatus === "error"
-            ? "Error de sync"
+            ? "Revisar"
             : null;
 
   return (

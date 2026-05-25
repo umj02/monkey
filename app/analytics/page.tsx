@@ -529,7 +529,7 @@ export default function AnalyticsPage() {
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
-          <SectionTitle title="Fuentes del reporte" subtitle="De dónde salen estos números" icon={<BarChart3 className="h-5 w-5 text-sky-700" />} />
+          <SectionTitle title="Datos del resumen" subtitle="Qué se tomó en cuenta" icon={<BarChart3 className="h-5 w-5 text-sky-700" />} />
           <div className="grid gap-2 text-xs font-bold text-monkey-muted">
             <SourceRow label="Hoy" value={`${summary.taskTotal} checks`} status={tasksSyncing ? "Actualizando" : "OK"} />
             <SourceRow label="Calendario" value={`${summary.calendarTotal} actividades`} status={calendarError ? "Revisar" : calendarSyncing ? "Actualizando" : "OK"} />
@@ -544,26 +544,26 @@ export default function AnalyticsPage() {
             <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white shadow-card"><img src={getBananaRewardIcon("bunch")} alt="Bananas" className="h-12 w-12 object-contain" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Retos y bananas</h2>
-              <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} cerrados · {challengeMetrics.completionRate}% cumplimiento · {challengeSummary.bananasLost} perdidas.</p>
+              <p className="text-xs font-bold text-monkey-muted">{challengeSummary.active} activos · {challengeSummary.completed} completados · {challengeMetrics.completionRate}% cumplimiento · {challengeSummary.bananasLost} no ganadas.</p>
             </div>
             <Link href="/challenges" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-orange-700 shadow-card transition active:scale-95">
               Ver
             </Link>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.bananasEarned}</p><p className="text-[10px] font-black text-monkey-muted">cobradas</p></div>
-            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimableBananas}</p><p className="text-[10px] font-black text-monkey-muted">por cobrar</p></div>
-            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.checkedTasks}/{challengeMetrics.totalTasks}</p><p className="text-[10px] font-black text-monkey-muted">checks reto</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.bananasEarned}</p><p className="text-[10px] font-black text-monkey-muted">reclamadas</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.claimableBananas}</p><p className="text-[10px] font-black text-monkey-muted">listas</p></div>
+            <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.checkedTasks}/{challengeMetrics.totalTasks}</p><p className="text-[10px] font-black text-monkey-muted">checks</p></div>
             <div className="rounded-[18px] bg-white/80 p-3 text-center"><p className="text-lg font-black">{challengeMetrics.lostBananas}</p><p className="text-[10px] font-black text-monkey-muted">no ganadas</p></div>
           </div>
           <div className="mt-3 grid gap-2 text-[11px] font-black text-orange-800">
-            <p className="rounded-[18px] bg-white/70 p-3">{challengeMetrics.perfectClosures} retos perfectos · {challengeMetrics.partialClosures} cierres parciales · {challengeMetrics.missedTasks} checks no completados.</p>
+            <p className="rounded-[18px] bg-white/70 p-3">{challengeMetrics.perfectClosures} retos perfectos · {challengeMetrics.partialClosures} avances parciales · {challengeMetrics.missedTasks} checks pendientes.</p>
             {challengeMetrics.nextTask ? <p className="rounded-[18px] bg-white/70 p-3">Próximo check: {challengeMetrics.nextTask.challengeTitle} · {challengeMetrics.nextTask.scheduledDate} {challengeMetrics.nextTask.scheduledTime}</p> : null}
           </div>
           {challengeMetrics.latestBanana ? (
-            <p className="mt-3 rounded-[18px] bg-white/70 p-3 text-[11px] font-black text-orange-700">Último premio: +{challengeMetrics.latestBanana.amount} bananas · {challengeMetrics.latestBanana.reason}</p>
+            <p className="mt-3 rounded-[18px] bg-white/70 p-3 text-[11px] font-black text-orange-700">Última recompensa: +{challengeMetrics.latestBanana.amount} bananas · {challengeMetrics.latestBanana.reason}</p>
           ) : (
-            <p className="mt-3 text-[11px] font-black text-orange-700">{challengeSyncing ? "Actualizando retos…" : "Analítica separada: retos especiales no cambian tus tareas normales."}</p>
+            <p className="mt-3 text-[11px] font-black text-orange-700">{challengeSyncing ? "Actualizando retos…" : "Tus retos no cambian tus tareas normales."}</p>
           )}
         </section>
 
@@ -572,7 +572,7 @@ export default function AnalyticsPage() {
             <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><ClipboardList className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Resumen semanal</h2>
-              <p className="text-xs font-bold text-monkey-muted">Reporte de 7 días con checks, calendario, wallet y logros.</p>
+              <p className="text-xs font-bold text-monkey-muted">Un vistazo simple a tus checks, calendario, wallet y logros.</p>
             </div>
             <Link href="/weekly-summary" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-card transition active:scale-95">
               Ver
@@ -611,7 +611,7 @@ export default function AnalyticsPage() {
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
             <div className="h-full rounded-full bg-monkey-purple" style={{ width: `${achievementResult.completion}%` }} />
           </div>
-          <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Calculado localmente" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Actualización pendiente" : "Historial actualizado"}</p>
+          <p className="mt-2 text-[11px] font-black text-monkey-purple">{achievementSyncStatus === "local" ? "Listo en este dispositivo" : achievementSyncStatus === "saving" ? "Guardando medallas…" : achievementSyncStatus === "error" ? "Actualización pendiente" : "Historial actualizado"}</p>
           {achievementResult.nextAchievement ? (
             <div className="mt-2 flex items-start gap-2 text-[11px] font-bold text-monkey-muted">
               <img src={getRewardMedalIcon(achievementResult.nextAchievement.tier)} alt="Próxima medalla" className="mt-0.5 h-5 w-5 shrink-0 object-contain" />
@@ -627,7 +627,7 @@ export default function AnalyticsPage() {
 }
 
 function StatusPill({ syncing, saving, error }: { syncing: boolean; saving: boolean; error: boolean }) {
-  const label = syncing ? "Actualizando…" : saving ? "Guardando…" : error ? "Revisar sync" : "Sincronizado";
+  const label = syncing ? "Actualizando…" : saving ? "Guardando…" : error ? "Revisar" : "Todo al día";
   return <span className="rounded-full bg-white/20 px-3 py-1.5">{label}</span>;
 }
 

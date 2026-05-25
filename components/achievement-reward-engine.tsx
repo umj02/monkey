@@ -124,7 +124,7 @@ function RewardMoment({ achievements, syncing, isPersistent, onClose }: { achiev
                   <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-black leading-tight text-slate-950">{title}</h2>
                     <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-                      {isPersistent ? "Guardado en tu historial de medallas." : "Logro calculado en este dispositivo."} {syncing ? "Sincronizando…" : "¡Seguí así!"}
+                      {isPersistent ? "Guardado en tus medallas." : "Logro listo en este dispositivo."} {syncing ? "Actualizando…" : "¡Seguí así!"}
                     </p>
                   </div>
                 </div>

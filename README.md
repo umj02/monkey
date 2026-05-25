@@ -660,3 +660,46 @@ Archivos intencionalmente no modificados:
 - `tsconfig.json`
 - `vercel.json`
 - `supabase/migrations/*`
+
+## v2.28.1.11 — Friendly UX Copy + Auth Flow Reset QA
+
+Base: `v2.28.1.10 — Challenge Rewards Readiness + Medal Integration QA`.
+
+Objetivo: cerrar la experiencia individual antes de avanzar a retos padre/hijo, sin tocar dependencias, Vercel, lockfiles ni migraciones.
+
+Cambios principales:
+
+- Cerrar sesión ahora devuelve al inicio/intro (`/`) en vez de quedarse en la pantalla anterior.
+- Iniciar sesión ahora entra siempre a `/today`, sin reutilizar `next` de rutas anteriores.
+- AppShell ya no conserva `next=/ruta-anterior` cuando una sesión queda inactiva.
+- Copy de Retos y bananas más corto, más amigable y menos técnico.
+- Copy de Analytics y Medallas más humano: `reclamadas`, `listas`, `no ganadas`, `completados`.
+- Se reducen textos visibles como `sincronizado/sync/Supabase` en pantallas de usuario cuando se podían expresar de forma más clara.
+- Se mantiene la lógica de retos, bananas, medallas y calendario sin cambios de esquema.
+
+No se modifica:
+
+- `package.json`
+- `package-lock.json`
+- `next.config.mjs`
+- `tsconfig.json`
+- `vercel.json`
+- dependencias
+- migraciones Supabase
+
+Validación esperada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas UX:
+
+1. Cerrar sesión desde Cuenta debe enviar a `/`.
+2. Iniciar sesión debe entrar a `/today`.
+3. Entrar a Retos y bananas y validar textos más cortos.
+4. Revisar Analytics y Medallas para confirmar que no se muestran textos técnicos.
+5. Confirmar que retos/bananas siguen reclamando y mostrando historial correctamente.
