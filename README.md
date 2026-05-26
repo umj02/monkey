@@ -859,3 +859,34 @@ Pruebas UX:
 3. Editar una tarea existente y conservar su hora inicial original debe permitirse.
 4. Editar solo la hora final debe permitirse si el fin queda después del inicio.
 5. Cambiar manualmente la hora inicial a una hora pasada distinta debe bloquearse.
+
+## v2.28.1.15 — Reactivation Penalty Supabase Metrics Consistency
+
+Esta versión persiste en Supabase las reactivaciones de actividades vencidas por tiempo para que el Hero de Hoy y Analytics no dependan de `localStorage`.
+
+### Requisito antes de deploy
+
+Ejecutar la migración:
+
+```sql
+supabase/migrations/0018_v228115_calendar_reactivation_penalties.sql
+```
+
+### Qué cambia
+
+- `calendar_events` ahora puede guardar:
+  - `reactivation_count`
+  - `reactivation_penalty`
+  - `expired_at`
+  - `last_reactivated_at`
+- Si una actividad se edita antes de vencer, no se penaliza.
+- Si una actividad ya venció por su ventana de tiempo y se reprograma desde Calendario, aumenta la penalización.
+- Hero de Hoy calcula el avance usando la penalización persistida.
+- Analytics también descuenta penalizaciones en el resumen y ritmo por día.
+
+### Qué no cambia
+
+- No se tocaron dependencias.
+- No se tocó Vercel config.
+- No se cambiaron policies RLS.
+- No se alteró la lógica de autenticación.

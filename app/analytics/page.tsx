@@ -40,6 +40,7 @@ import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta, resolveWalletCategoryMeta } from "@/lib/category-catalog";
 import { calculateChallengeProgress, isChallengeTaskDone, isChallengeTaskMissed } from "@/lib/challenges";
+import { eventReactivationPenalty } from "@/hooks/use-calendar-reactivations";
 import type { CalendarEvent, WalletTransaction, WalletTransactionType } from "@/types";
 
 type RangeMode = "week" | "month";
@@ -48,6 +49,8 @@ type DayMetric = {
   dateKey: string;
   total: number;
   done: number;
+  penalty: number;
+  completion: number;
 };
 
 type ActivityMetric = {
@@ -190,7 +193,9 @@ export default function AnalyticsPage() {
       const dayEvents = calendarOccurrences.filter((item) => item.dateKey === dateKey);
       const total = blockTasks.length + dayEvents.length;
       const done = blockTasks.filter((task) => task.done).length + dayEvents.filter(({ event }) => getCalendarEventDone(event, dateKey, completionMap)).length;
-      return { dateKey, total, done };
+      const rawCompletion = percent(done, total);
+      const penalty = dayEvents.reduce((sum, { event }) => sum + eventReactivationPenalty(event), 0);
+      return { dateKey, total, done, penalty, completion: Math.max(0, rawCompletion - penalty) };
     });
   }, [blocks, calendarOccurrences, completionMap, range.days, todayKey]);
 
@@ -202,7 +207,9 @@ export default function AnalyticsPage() {
     const total = taskTotal + calendarTotal;
     const done = taskDone + calendarDone;
     const activeDays = dayMetrics.filter((day) => day.total > 0 || walletTransactionsInRange.some((tx) => tx.date === day.dateKey)).length;
-    return { taskTotal, taskDone, calendarTotal, calendarDone, total, done, completion: percent(done, total), activeDays };
+    const rawCompletion = percent(done, total);
+    const reactivationPenalty = calendarOccurrences.reduce((sum, { event }) => sum + eventReactivationPenalty(event), 0);
+    return { taskTotal, taskDone, calendarTotal, calendarDone, total, done, completion: Math.max(0, rawCompletion - reactivationPenalty), rawCompletion, reactivationPenalty, activeDays };
   }, [calendarOccurrences, completionMap, dayMetrics, taskBlocksInRange, walletTransactionsInRange]);
 
   const streak = useMemo(() => {
@@ -305,7 +312,7 @@ export default function AnalyticsPage() {
   const bestDay = useMemo(() => {
     return [...dayMetrics]
       .filter((day) => day.total > 0)
-      .sort((a, b) => percent(b.done, b.total) - percent(a.done, a.total) || b.done - a.done)[0] ?? null;
+      .sort((a, b) => b.completion - a.completion || b.done - a.done)[0] ?? null;
   }, [dayMetrics]);
 
   const syncing = tasksSyncing || calendarSyncing || completionSyncStatus === "loading" || walletSyncing;
@@ -410,10 +417,10 @@ export default function AnalyticsPage() {
           {hasActivityData ? (
             <div className="flex items-end gap-2 overflow-x-auto pb-1">
               {dayMetrics.map((day) => {
-                const value = percent(day.done, day.total);
+                const value = day.completion;
                 return (
                   <div key={day.dateKey} className="flex min-w-[42px] flex-col items-center gap-2">
-                    <div className="flex h-24 w-8 items-end rounded-full bg-gray-100 p-1" title={`${day.done}/${day.total}`}>
+                    <div className="flex h-24 w-8 items-end rounded-full bg-gray-100 p-1" title={`${day.done}/${day.total}${day.penalty ? ` · -${day.penalty}% reactivación` : ""}`}>
                       <div className={cn("w-full rounded-full transition-all", day.done ? "bg-monkey-green" : "bg-gray-300")} style={{ height: `${Math.max(value, day.total ? 12 : 4)}%` }} />
                     </div>
                     <span className="text-[10px] font-black uppercase text-monkey-muted">{shortDay(day.dateKey)}</span>

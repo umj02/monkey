@@ -24,6 +24,10 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     isLocked: Boolean(input.isLocked),
     verificationStatus: input.verificationStatus ?? null,
     rewardBananas: input.rewardBananas ?? null,
+    reactivationCount: input.reactivationCount ?? 0,
+    reactivationPenalty: input.reactivationPenalty ?? 0,
+    expiredAt: input.expiredAt ?? null,
+    lastReactivatedAt: input.lastReactivatedAt ?? null,
   };
 }
 

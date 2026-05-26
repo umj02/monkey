@@ -36,7 +36,7 @@ import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurr
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
-import { calendarReactivationKey, useCalendarReactivations } from "@/hooks/use-calendar-reactivations";
+import { calendarReactivationKey, useCalendarReactivations, reactivationPenaltyPercent } from "@/hooks/use-calendar-reactivations";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -646,6 +646,12 @@ export default function CalendarPage() {
     }
 
     const meta = resolveActivityCategoryMeta({ key: activityTypeKey }, activityItems);
+    const wasExpiredBeforeEdit = Boolean(editing && isEventExpiredOnDate(editing, selectedDateKey));
+    const previousReactivationKey = editing ? calendarReactivationKey(editing, selectedDateKey) : null;
+    const nextReactivationCount = wasExpiredBeforeEdit ? (editing?.reactivationCount ?? 0) + 1 : editing?.reactivationCount ?? 0;
+    const nextReactivationPenalty = wasExpiredBeforeEdit ? reactivationPenaltyPercent(nextReactivationCount) : editing?.reactivationPenalty ?? 0;
+    const reactivatedAt = wasExpiredBeforeEdit ? new Date().toISOString() : editing?.lastReactivatedAt ?? null;
+
     const payload = {
       title: cleanTitle,
       time,
@@ -659,10 +665,17 @@ export default function CalendarPage() {
       recurrenceUntil: recurrenceUntil || null,
       recurrenceGroupId: editing?.recurrenceGroupId ?? null,
       done: editing?.done ?? false,
+      source: editing?.source ?? "normal",
+      challengeId: editing?.challengeId ?? null,
+      challengeTaskId: editing?.challengeTaskId ?? null,
+      isLocked: editing?.isLocked ?? false,
+      verificationStatus: editing?.verificationStatus ?? null,
+      rewardBananas: editing?.rewardBananas ?? null,
+      reactivationCount: nextReactivationCount,
+      reactivationPenalty: nextReactivationPenalty,
+      expiredAt: wasExpiredBeforeEdit ? editing?.expiredAt ?? new Date().toISOString() : editing?.expiredAt ?? null,
+      lastReactivatedAt: reactivatedAt,
     } satisfies Omit<CalendarEvent, "id">;
-
-    const wasExpiredBeforeEdit = Boolean(editing && isEventExpiredOnDate(editing, selectedDateKey));
-    const previousReactivationKey = editing ? calendarReactivationKey(editing, selectedDateKey) : null;
     const isRecurringOccurrenceEdit = Boolean(editing && recurringScope === "occurrence" && isRecurringEvent(editing));
     let savedEvent: CalendarEvent;
     if (isRecurringOccurrenceEdit && editing) {

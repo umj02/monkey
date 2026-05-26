@@ -20,11 +20,37 @@ export function reactivationPenaltyPercent(count: number) {
   return 30;
 }
 
+export function eventReactivationCount(event: CalendarEvent) {
+  return Math.max(0, event.reactivationCount ?? 0);
+}
+
+export function eventReactivationPenalty(event: CalendarEvent) {
+  return Math.max(0, event.reactivationPenalty ?? reactivationPenaltyPercent(eventReactivationCount(event)));
+}
+
+export function withReactivationPenalty(event: CalendarEvent, expiredAt?: string): CalendarEvent {
+  const nextCount = eventReactivationCount(event) + 1;
+  return {
+    ...event,
+    reactivationCount: nextCount,
+    reactivationPenalty: reactivationPenaltyPercent(nextCount),
+    expiredAt: event.expiredAt ?? expiredAt ?? new Date().toISOString(),
+    lastReactivatedAt: new Date().toISOString(),
+  };
+}
+
 export function useCalendarReactivations() {
   const [counts, setCounts, ready] = useLocalStorageState<ReactivationMap>(STORAGE_KEY, {});
 
-  const getReactivationCount = useCallback((key: string) => counts[key] ?? 0, [counts]);
-  const getPenaltyPercent = useCallback((key: string) => reactivationPenaltyPercent(counts[key] ?? 0), [counts]);
+  const getReactivationCount = useCallback((key: string, event?: CalendarEvent) => {
+    return Math.max(eventReactivationCount(event ?? ({} as CalendarEvent)), counts[key] ?? 0);
+  }, [counts]);
+
+  const getPenaltyPercent = useCallback((key: string, event?: CalendarEvent) => {
+    const localPenalty = reactivationPenaltyPercent(counts[key] ?? 0);
+    const remotePenalty = event ? eventReactivationPenalty(event) : 0;
+    return Math.max(localPenalty, remotePenalty);
+  }, [counts]);
 
   const recordReactivation = useCallback((key: string) => {
     setCounts((current) => ({ ...current, [key]: (current[key] ?? 0) + 1 }));

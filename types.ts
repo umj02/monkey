@@ -81,6 +81,10 @@ export type CalendarEvent = {
   isLocked?: boolean;
   verificationStatus?: ChallengeVerificationStatus | null;
   rewardBananas?: number | null;
+  reactivationCount?: number;
+  reactivationPenalty?: number;
+  expiredAt?: string | null;
+  lastReactivatedAt?: string | null;
 };
 
 export type CalendarOccurrenceOverride = {
