@@ -61,7 +61,7 @@ export function useChallenges() {
     return true;
   }
 
-  async function syncChallengeTaskFromCalendarEvent(input: { challengeId?: string | null; challengeTaskId?: string | null; calendarEventId?: string | null; done: boolean }) {
+  async function syncChallengeTaskFromCalendarEvent(input: { challengeId?: string | null; challengeTaskId?: string | null; calendarEventId?: string | null; done: boolean; missed?: boolean }) {
     if (!input.challengeId || !input.challengeTaskId) return false;
     const todayKey = todayDateKey();
     const challenge = challenges.find((item) => item.id === input.challengeId);
@@ -72,7 +72,7 @@ export function useChallenges() {
       if (item.id !== input.challengeId) return item;
       const tasks = item.tasks.map((currentTask) => {
         if (currentTask.id !== input.challengeTaskId) return currentTask;
-        const nextStatus = input.done ? "checked" as const : (compareDateKeys(currentTask.scheduledDate, todayKey) < 0 ? "missed" as const : "pending" as const);
+        const nextStatus = input.done ? "checked" as const : (input.missed || compareDateKeys(currentTask.scheduledDate, todayKey) < 0 ? "missed" as const : "pending" as const);
         return { ...currentTask, status: nextStatus, checkedAt };
       });
       return { ...item, tasks, updatedAt: new Date().toISOString() };
@@ -83,6 +83,7 @@ export function useChallenges() {
         challengeTaskId: input.challengeTaskId,
         calendarEventId: input.calendarEventId ?? null,
         done: input.done,
+        missed: input.missed,
       });
       if (ok) void refreshChallenges();
       return ok;

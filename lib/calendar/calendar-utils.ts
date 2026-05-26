@@ -1,6 +1,6 @@
 import type { CalendarEvent, CalendarOccurrenceOverride } from "@/types";
 
-export const DEFAULT_CALENDAR_DURATION_MINUTES = 60;
+export const DEFAULT_CALENDAR_DURATION_MINUTES = 30;
 
 export function toDateKey(date: Date) {
   const year = date.getFullYear();

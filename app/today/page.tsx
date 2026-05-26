@@ -35,6 +35,7 @@ const REWARD_BANANA_BUNCH = "/assets/rewards/banana-bunch-gold.png";
 const REWARD_BANANA_SINGLE = "/assets/rewards/banana-gold.png";
 const REWARDS_INTRO_DISABLED_KEY = "monkey-rewards-intro-disabled";
 const REWARDS_INTRO_LAST_SEEN_KEY = "monkey-rewards-intro-last-seen";
+const DEFAULT_TODAY_TIME_WINDOW_MINUTES = 30;
 
 const calendarStyleMap: Record<CalendarEvent["color"], { card: string; icon: string }> = {
   yellow: { card: "bg-[#FFF7C2] text-[#996D00] border-yellow-100", icon: "calendar-exercise" },
@@ -105,11 +106,30 @@ function timeToMinutes(value: string) {
 
 function eventEndMinutes(event: CalendarEvent) {
   if (event.endTime && /^([01]\d|2[0-3]):[0-5]\d$/.test(event.endTime)) return timeToMinutes(event.endTime);
-  return timeToMinutes(event.time) + 60;
+  return timeToMinutes(event.time) + DEFAULT_TODAY_TIME_WINDOW_MINUTES;
 }
 
 function isLongEvent(event: CalendarEvent) {
-  return Boolean(event.endTime && eventEndMinutes(event) > timeToMinutes(event.time) + 60);
+  return Boolean(event.endTime && eventEndMinutes(event) > timeToMinutes(event.time) + DEFAULT_TODAY_TIME_WINDOW_MINUTES);
+}
+
+
+function nowMinutes(date = new Date()) {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function isEventExpiredForDate(event: CalendarEvent, dateKey: string, now = new Date()) {
+  const occurrenceDate = calendarOccurrenceDate(event, dateKey);
+  const todayKey = toDateKey(now);
+  if (compareDateKeys(occurrenceDate, todayKey) < 0) return true;
+  if (compareDateKeys(occurrenceDate, todayKey) > 0) return false;
+  return nowMinutes(now) > eventEndMinutes(event);
+}
+
+function timeWindowHelper(event: CalendarEvent, expired: boolean) {
+  if (expired) return "No se completó";
+  if (event.endTime) return eventRangeLabel(event);
+  return `${event.time}–${String(Math.floor(eventEndMinutes(event) / 60)).padStart(2, "0")}:${String(eventEndMinutes(event) % 60).padStart(2, "0")}`;
 }
 
 function containingLongEvent(events: CalendarEvent[], child: CalendarEvent) {
@@ -138,6 +158,7 @@ function CalendarTodayCard({
   contextLabel,
   hasReminder,
   isCompleting,
+  expired,
   onToggle,
   onEdit,
   onToggleReminder,
@@ -148,6 +169,7 @@ function CalendarTodayCard({
   contextLabel?: string | null;
   hasReminder: boolean;
   isCompleting?: boolean;
+  expired?: boolean;
   onToggle: (event: CalendarEvent) => void;
   onEdit: (event: CalendarEvent) => void;
   onToggleReminder: (event: CalendarEvent) => void;
@@ -155,7 +177,7 @@ function CalendarTodayCard({
   const style = calendarStyleMap[event.color] ?? calendarStyleMap.blue;
   return (
     <article
-      className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", style.card, isCompleting && "pointer-events-none animate-completeOut")}
+      className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", expired ? "border-gray-200 bg-gray-100 text-gray-500 opacity-85" : style.card, isCompleting && "pointer-events-none animate-completeOut")}
       onClick={() => onEdit(event)}
       role="button"
       tabIndex={0}
@@ -168,7 +190,7 @@ function CalendarTodayCard({
         <div className="min-w-0">
           <div className="flex max-w-full min-w-0 items-center text-left text-[15px] font-black text-monkey-ink">
             <AssetThumb icon={calendarIcon(event)} size={28} className="mr-2 shrink-0 rounded-[10px] bg-white/60 p-1" />
-            <span className={cn("min-w-0 truncate", done && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
+            <span className={cn("min-w-0 truncate", (done || expired) && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
           </div>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
             <span className="rounded-full bg-white/70 px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-monkey-muted">{sourceLabel}</span>
@@ -176,7 +198,7 @@ function CalendarTodayCard({
           </div>
           <div className="mt-2 flex min-h-10 w-full min-w-0 items-center gap-2 overflow-hidden rounded-[14px] bg-white/75 px-3 text-left text-[13px] text-monkey-ink">
             <span className={cn("min-w-0 flex-1 truncate", done && "text-gray-400 line-through")}>{stripEmoji(event.title)}</span>
-            <span className="shrink-0 rounded-pill bg-green-50 px-2 py-1 text-[10px] font-black text-monkey-green">{eventRangeLabel(event)}</span>
+            <span className={cn("shrink-0 rounded-pill px-2 py-1 text-[10px] font-black", expired ? "bg-gray-200 text-gray-500" : "bg-green-50 text-monkey-green")}>{timeWindowHelper(event, Boolean(expired))}</span>
             <button
               type="button"
               onClick={(clickEvent) => {
@@ -195,13 +217,14 @@ function CalendarTodayCard({
               type="button"
               onClick={(clickEvent) => {
                 clickEvent.stopPropagation();
-                onToggle(event);
+                if (!expired) onToggle(event);
               }}
+              disabled={Boolean(expired)}
               className={cn(
                 "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition active:scale-95",
-                done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white",
+                expired ? "cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400" : done ? "animate-checkPulse border-monkey-green bg-monkey-green text-white" : "border-gray-300 bg-white",
               )}
-              aria-label={done ? "Marcar pendiente" : "Marcar completada"}
+              aria-label={expired ? "No se completó" : done ? "Marcar pendiente" : "Marcar completada"}
             >
               {done ? <Check className="h-3.5 w-3.5" /> : null}
             </button>
@@ -227,12 +250,13 @@ export default function TodayPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [blockTitle, setBlockTitle] = useState("Nuevo bloque");
   const [time, setTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("");
   const [color, setColor] = useState<TaskColor>("green");
   const [activityTypeKey, setActivityTypeKey] = useState("study");
   const [alarmOn, setAlarmOn] = useState(false);
   const [recurringEditScope, setRecurringEditScope] = useState<"series" | "occurrence">("series");
   const [pendingRecurringEvent, setPendingRecurringEvent] = useState<CalendarEvent | null>(null);
-  const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string; time?: string; endTime?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
   const [completingCalendarKeys, setCompletingCalendarKeys] = useState<Set<string>>(() => new Set());
   const [undoCompleted, setUndoCompleted] = useState<{ key: string; event: CalendarEvent } | null>(null);
@@ -241,7 +265,13 @@ export default function TodayPage() {
   const [rewardsIntroClosing, setRewardsIntroClosing] = useState(false);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
+  const [clockNow, setClockNow] = useState(() => new Date());
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -306,6 +336,7 @@ export default function TodayPage() {
     setTaskTitle("");
     setBlockTitle("Nuevo bloque");
     setTime("09:00");
+    setEndTime("");
     setColor("green");
     setActivityTypeKey("study");
     setAlarmOn(false);
@@ -314,10 +345,13 @@ export default function TodayPage() {
   }
 
   async function submitTask() {
-    const nextErrors: { title?: string; time?: string } = {};
+    const nextErrors: { title?: string; time?: string; endTime?: string } = {};
     const cleanTitle = taskTitle.trim();
     if (cleanTitle.length < 3) nextErrors.title = "Escribí al menos 3 caracteres.";
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) nextErrors.time = "Usá formato HH:MM, por ejemplo 09:00.";
+    const cleanEndTime = endTime.trim();
+    if (cleanEndTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el fin vacío.";
+    if (!nextErrors.time && !nextErrors.endTime && cleanEndTime && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) nextErrors.endTime = "El fin debe ser posterior al inicio.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -326,7 +360,7 @@ export default function TodayPage() {
       title: cleanTitle,
       date: editingCalendarEvent?.date ?? todayDateKey,
       time,
-      endTime: editingCalendarEvent?.endTime ?? null,
+      endTime: cleanEndTime || null,
       color: meta.color,
       iconKey: meta.iconKey,
       activityTypeKey: meta.key,
@@ -388,6 +422,7 @@ export default function TodayPage() {
     resetForm();
     const now = new Date();
     setTime(`${String(now.getHours()).padStart(2, "0")}:00`);
+    setEndTime("");
     setFormOpen(true);
   }
 
@@ -408,6 +443,7 @@ export default function TodayPage() {
     setEditingCalendarEvent(event);
     setTaskTitle(stripEmoji(event.title));
     setTime(event.time);
+    setEndTime(event.endTime ?? "");
     setColor(event.color as TaskColor);
     setActivityTypeKey(inferActivityTypeFromEvent(event).key);
     setAlarmOn(reminderEventIds.has(calendarOccurrenceBaseId(event)));
@@ -479,8 +515,17 @@ export default function TodayPage() {
       showToast("Este check aún no está disponible. Se activa el día programado.", "error");
       return;
     }
-    if (isChallenge && nextDone && compareDateKeys(event.date, todayDateKey) < 0) {
-      showToast("Este check ya venció y cuenta como no cumplido.", "error");
+    if (nextDone && isEventExpiredForDate(event, todayDateKey, clockNow)) {
+      if (isChallenge) {
+        void syncChallengeTaskFromCalendarEvent({
+          challengeId: event.challengeId ?? null,
+          challengeTaskId: event.challengeTaskId ?? null,
+          calendarEventId: event.id,
+          done: false,
+          missed: true,
+        });
+      }
+      showToast("Esta tarea ya venció. Podés reprogramarla desde Calendario.", "error");
       return;
     }
 
@@ -635,6 +680,7 @@ export default function TodayPage() {
               contextLabel={containingLongEvent(calendarTodayEvents, item.event) ? `Dentro de ${stripEmoji(containingLongEvent(calendarTodayEvents, item.event)!.title)}` : null}
               hasReminder={reminderEventIds.has(calendarOccurrenceBaseId(item.event))}
               isCompleting={completingCalendarKeys.has(todayOccurrenceKey(item.event, todayDateKey))}
+              expired={!getCalendarEventDone(item.event, todayDateKey, completionMap) && isEventExpiredForDate(item.event, todayDateKey, clockNow)}
               onToggle={toggleCalendarEvent}
               onEdit={requestCalendarEventEditor}
               onToggleReminder={toggleCalendarReminder}
@@ -652,7 +698,14 @@ export default function TodayPage() {
       ) : null}
       <FormSheet open={formOpen} title={editingCalendarEvent ? "Editar tarea" : "Nueva tarea"} subtitle={editingCalendarEvent ? "Los cambios se actualizan también en Calendario." : "Creá una tarea rápida para hoy. También aparecerá en Calendario."} onClose={() => { setFormOpen(false); resetForm(); }} onSubmit={submitTask} submitLabel={editingCalendarEvent ? "Guardar cambios" : "Crear tarea"}>
         <Field label="Tarea" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Ej: Repasar matemáticas" error={errors.title} />
-        <Field label="Hora" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
+        <div>
+          <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Horario</span>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Inicio" value={time} onChange={(e) => setTime(e.target.value)} placeholder="09:00" error={errors.time} />
+            <Field label="Fin opcional" value={endTime} onChange={(e) => setEndTime(e.target.value)} placeholder="09:30" error={errors.endTime} />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, tendrá 30 minutos para completarse.</p>
+        </div>
         <div>
           <span className="mb-2 block text-xs font-black uppercase tracking-[.08em] text-monkey-muted">Alarma</span>
           <button

@@ -55,7 +55,7 @@ const monthNames = [
 ];
 const timelineHours = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
 
-const DEFAULT_DURATION_MINUTES = 60;
+const DEFAULT_DURATION_MINUTES = 30;
 const MAX_VISIBLE_EVENTS_PER_HOUR = 2;
 
 type CalendarSheetMode = "closed" | "event" | "settings" | "month" | "recurrence" | "recurringScope";
@@ -751,7 +751,7 @@ export default function CalendarPage() {
             <Field label="Inicio" value={time} onChange={(event: ChangeEvent<HTMLInputElement>) => setTime(event.target.value)} placeholder="09:00" error={errors.time} />
             <Field label="Fin opcional" value={endTime} onChange={(event: ChangeEvent<HTMLInputElement>) => setEndTime(event.target.value)} placeholder="12:00" error={errors.endTime} />
           </div>
-          <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, la actividad ocupa solo su hora. Si agregás fin, se muestra como una actividad larga con flag de duración.</p>
+          <p className="mt-2 text-xs leading-5 text-monkey-muted">Si dejás el fin vacío, tendrá 30 minutos para completarse. Si agregás fin, se respeta esa ventana.</p>
         </div>
 
         <ActivityTypeSelect value={activityTypeKey} onChange={setActivityTypeKey} />

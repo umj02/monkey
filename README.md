@@ -703,3 +703,51 @@ Pruebas UX:
 3. Entrar a Retos y bananas y validar textos más cortos.
 4. Revisar Analytics y Medallas para confirmar que no se muestran textos técnicos.
 5. Confirmar que retos/bananas siguen reclamando y mostrando historial correctamente.
+
+## v2.28.1.12 — Today Time Windows + Expired Tasks UX
+
+Base: `v2.28.1.11 — Friendly UX Copy + Auth Flow Reset QA`.
+
+Objetivo: hacer que Hoy trabaje con ventanas de cumplimiento claras, sin tocar Supabase, dependencias, Vercel, lockfiles ni migraciones.
+
+Cambios principales:
+
+- Hoy ahora calcula una ventana de cumplimiento para actividades de calendario.
+- Si una actividad tiene `endTime`, vence a esa hora.
+- Si una actividad no tiene `endTime`, vence 30 minutos después de la hora de inicio.
+- Las actividades vencidas en Hoy se muestran en gris con el texto `No se completó`.
+- Las actividades vencidas ya no permiten check desde Hoy.
+- El formulario rápido de Hoy ahora incluye `Inicio` y `Fin opcional`.
+- Si `Fin opcional` queda vacío, la app usa la ventana default de 30 minutos.
+- Retos vencidos por ventana de tiempo se marcan como `missed` para proteger bananas y analítica.
+- Calendario mantiene `Fin opcional`, pero actualiza el default visual/lógico a 30 minutos.
+
+No se modifica:
+
+- `package.json`
+- `package-lock.json`
+- `next.config.mjs`
+- `tsconfig.json`
+- `vercel.json`
+- dependencias
+- migraciones Supabase
+- RLS/policies
+- variables de Vercel
+
+Validación esperada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas UX:
+
+1. Crear una tarea en Hoy a la hora actual sin fin; debe mostrar una ventana de 30 minutos.
+2. Crear una tarea en Hoy con fin opcional; debe respetar esa hora final.
+3. Pasada la ventana, la tarea debe verse gris y decir `No se completó`.
+4. Pasada la ventana, el check debe quedar bloqueado desde Hoy.
+5. Una tarea vencida normal debe poder reprogramarse desde Calendario.
+6. Un check de reto vencido debe contar como no cumplido y no regalar bananas.

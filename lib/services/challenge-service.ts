@@ -282,6 +282,7 @@ export async function syncChallengeTaskCompletionRemote(input: {
   challengeTaskId: string;
   calendarEventId?: string | null;
   done: boolean;
+  missed?: boolean;
 }): Promise<boolean> {
   const supabase = createOptionalClient() as any;
   const userId = await getUserId();
@@ -297,7 +298,7 @@ export async function syncChallengeTaskCompletionRemote(input: {
 
   const currentToday = todayKey();
   if (input.done && compareDateKeys(taskRow.scheduled_date, currentToday) > 0) return false;
-  const nextStatus = input.done ? "checked" : (compareDateKeys(taskRow.scheduled_date, currentToday) < 0 ? "missed" : "pending");
+  const nextStatus = input.done ? "checked" : (input.missed || compareDateKeys(taskRow.scheduled_date, currentToday) < 0 ? "missed" : "pending");
   const checkedAt = input.done ? nowIso() : null;
   const { error: taskError } = await supabase
     .from("challenge_tasks")

@@ -15,7 +15,7 @@ function timeToMinutes(value: string) {
 
 function eventEndMinutes(event: CalendarEvent) {
   if (event.endTime && /^([01]\d|2[0-3]):[0-5]\d$/.test(event.endTime)) return timeToMinutes(event.endTime);
-  return timeToMinutes(event.time) + 60;
+  return timeToMinutes(event.time) + 30;
 }
 
 function todayDateKey() {
