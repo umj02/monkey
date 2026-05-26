@@ -26,6 +26,7 @@ import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent, isChallengeTaskDone } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, compareDateKeys, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { calendarReactivationKey, useCalendarReactivations } from "@/hooks/use-calendar-reactivations";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
 
 const blockColors: TaskColor[] = ["green", "blue", "orange", "purple", "pink", "yellow"];
@@ -161,6 +162,7 @@ function CalendarTodayCard({
   expired,
   onToggle,
   onEdit,
+  onExpiredOpen,
   onToggleReminder,
 }: {
   event: CalendarEvent;
@@ -172,17 +174,21 @@ function CalendarTodayCard({
   expired?: boolean;
   onToggle: (event: CalendarEvent) => void;
   onEdit: (event: CalendarEvent) => void;
+  onExpiredOpen: (event: CalendarEvent) => void;
   onToggleReminder: (event: CalendarEvent) => void;
 }) {
   const style = calendarStyleMap[event.color] ?? calendarStyleMap.blue;
   return (
     <article
       className={cn("animate-slideUp rounded-card border p-4 text-left shadow-sm transition active:scale-[.995]", expired ? "border-gray-200 bg-gray-100 text-gray-500 opacity-85" : style.card, isCompleting && "pointer-events-none animate-completeOut")}
-      onClick={() => onEdit(event)}
+      onClick={() => (expired ? onExpiredOpen(event) : onEdit(event))}
       role="button"
       tabIndex={0}
       onKeyDown={(keyboardEvent) => {
-        if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") onEdit(event);
+        if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+          if (expired) onExpiredOpen(event);
+          else onEdit(event);
+        }
       }}
     >
       <div className="grid min-w-0 grid-cols-[54px_minmax(0,1fr)] gap-1">
@@ -217,7 +223,8 @@ function CalendarTodayCard({
               type="button"
               onClick={(clickEvent) => {
                 clickEvent.stopPropagation();
-                if (!expired) onToggle(event);
+                if (expired) onExpiredOpen(event);
+                else onToggle(event);
               }}
               disabled={Boolean(expired)}
               className={cn(
@@ -243,6 +250,7 @@ export default function TodayPage() {
   const { overrides, saveOverride } = useCalendarOverrides();
   const { activityItems } = useCategoryPreferences();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders } = useReminders();
+  const { getPenaltyPercent } = useCalendarReactivations();
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -258,6 +266,8 @@ export default function TodayPage() {
   const [pendingRecurringEvent, setPendingRecurringEvent] = useState<CalendarEvent | null>(null);
   const [errors, setErrors] = useState<{ title?: string; time?: string; endTime?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const [guardModal, setGuardModal] = useState<{ title: string; body: string } | null>(null);
+  const [expiredTaskModal, setExpiredTaskModal] = useState<CalendarEvent | null>(null);
   const [completingCalendarKeys, setCompletingCalendarKeys] = useState<Set<string>>(() => new Set());
   const [undoCompleted, setUndoCompleted] = useState<{ key: string; event: CalendarEvent } | null>(null);
   const [bananaClaimModal, setBananaClaimModal] = useState<{ title: string; body: string; bananas: number } | null>(null);
@@ -309,8 +319,10 @@ export default function TodayPage() {
     const total = taskList.length + calendarTodayEvents.length;
     if (total === 0) return percent;
     const done = taskList.filter((task) => task.done).length + calendarTodayEvents.filter((event) => getCalendarEventDone(event, todayDateKey, completionMap)).length;
-    return Math.round((done / total) * 100);
-  }, [visibleBlocks, calendarTodayEvents, completionMap, todayDateKey, percent]);
+    const rawPercent = Math.round((done / total) * 100);
+    const reactivationPenalty = calendarTodayEvents.reduce((sum, event) => sum + getPenaltyPercent(calendarReactivationKey(event, todayDateKey)), 0);
+    return Math.max(0, rawPercent - reactivationPenalty);
+  }, [visibleBlocks, calendarTodayEvents, completionMap, todayDateKey, percent, getPenaltyPercent]);
 
   const agendaItems = useMemo(() => {
     const calendarItems = calendarTodayEvents
@@ -352,6 +364,13 @@ export default function TodayPage() {
     const cleanEndTime = endTime.trim();
     if (cleanEndTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el fin vacío.";
     if (!nextErrors.time && !nextErrors.endTime && cleanEndTime && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) nextErrors.endTime = "El fin debe ser posterior al inicio.";
+    if (!nextErrors.time && timeToMinutes(time) < nowMinutes(new Date())) {
+      setGuardModal({
+        title: "Ups, ya pasó el tiempo",
+        body: "Intentá usar la hora actual o una posterior.",
+      });
+      nextErrors.time = "Usá la hora actual o una posterior.";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -421,7 +440,7 @@ export default function TodayPage() {
   function openNewTask() {
     resetForm();
     const now = new Date();
-    setTime(`${String(now.getHours()).padStart(2, "0")}:00`);
+    setTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
     setEndTime("");
     setFormOpen(true);
   }
@@ -631,6 +650,32 @@ export default function TodayPage() {
           </div>
         </div>
       ) : null}
+
+      {guardModal ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 px-5 backdrop-blur-[2px]">
+          <div className="w-full max-w-[340px] animate-pop rounded-[28px] bg-white p-5 text-center shadow-float">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-orange-50 text-xl">⏰</div>
+            <h3 className="mt-3 text-lg font-black text-monkey-ink">{guardModal.title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">{guardModal.body}</p>
+            <button type="button" onClick={() => setGuardModal(null)} className="mt-4 h-11 w-full rounded-full bg-monkey-green text-sm font-black text-white transition active:scale-95">Entendido</button>
+          </div>
+        </div>
+      ) : null}
+
+      {expiredTaskModal ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 px-5 backdrop-blur-[2px]">
+          <div className="w-full max-w-[350px] animate-pop rounded-[28px] bg-white p-5 text-center shadow-float">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-gray-100 text-xl">🗓️</div>
+            <h3 className="mt-3 text-lg font-black text-monkey-ink">Editar en Calendario</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">Esta tarea ya pasó. Para reactivarla, reprogramala desde Calendario.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setExpiredTaskModal(null)} className="h-11 rounded-full bg-gray-100 text-sm font-black text-monkey-muted transition active:scale-95">Cerrar</button>
+              <Link href="/calendar" className="grid h-11 place-items-center rounded-full bg-monkey-green text-sm font-black text-white transition active:scale-95">Ir a Calendario</Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {bananaClaimModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-5 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="w-full max-w-sm rounded-[32px] bg-white p-5 text-center shadow-card">
@@ -683,6 +728,7 @@ export default function TodayPage() {
               expired={!getCalendarEventDone(item.event, todayDateKey, completionMap) && isEventExpiredForDate(item.event, todayDateKey, clockNow)}
               onToggle={toggleCalendarEvent}
               onEdit={requestCalendarEventEditor}
+              onExpiredOpen={setExpiredTaskModal}
               onToggleReminder={toggleCalendarReminder}
             />
           ))}

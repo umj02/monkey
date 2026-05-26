@@ -36,6 +36,7 @@ import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurr
 import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
+import { calendarReactivationKey, useCalendarReactivations } from "@/hooks/use-calendar-reactivations";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -72,6 +73,7 @@ type MonthCell = {
 
 type CalendarFormErrors = {
   title?: string;
+  date?: string;
   time?: string;
   endTime?: string;
 };
@@ -305,6 +307,18 @@ function proposedInterval(startTime: string, endTimeValue?: string | null) {
   return { start, end, startHour: Math.floor(start / 60) * 60 };
 }
 
+function nowMinutes(date = new Date()) {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function isEventExpiredOnDate(event: CalendarEvent, dateKey: string, now = new Date()) {
+  const occurrenceDate = calendarOccurrenceDate(event, dateKey);
+  const todayKey = toDateKey(now);
+  if (compareDateKeys(occurrenceDate, todayKey) < 0) return true;
+  if (compareDateKeys(occurrenceDate, todayKey) > 0) return false;
+  return nowMinutes(now) > eventEndMinutes(event);
+}
+
 function findScheduleConflict(events: CalendarEvent[], proposedStart: string, proposedEnd: string | null, editingId?: string): CalendarEvent | null {
   // v2.13.6: una actividad larga funciona como bloque principal, no como bloqueo duro.
   // Permitimos actividades internas (ej. 07:00–17:00 + una actividad a las 09:00)
@@ -415,6 +429,7 @@ export default function CalendarPage() {
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const [eventDate, setEventDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [endTime, setEndTime] = useState("");
   const [activityTypeKey, setActivityTypeKey] = useState("study");
@@ -424,6 +439,8 @@ export default function CalendarPage() {
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [errors, setErrors] = useState<CalendarFormErrors>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const [guardModal, setGuardModal] = useState<{ title: string; body: string } | null>(null);
+  const { recordReactivation } = useCalendarReactivations();
   const [expandedHourKey, setExpandedHourKey] = useState<string | null>(null);
   const [recurringScope, setRecurringScope] = useState<RecurringScope>("series");
   const [pendingRecurringAction, setPendingRecurringAction] = useState<{ action: RecurringAction; event: CalendarEvent } | null>(null);
@@ -512,6 +529,7 @@ export default function CalendarPage() {
     const meta = categoryFromEvent(event);
     setEditing(event);
     setTitle(stripEmoji(event.title));
+    setEventDate(calendarOccurrenceDate(event, selectedDateKey));
     setTime(event.time);
     setEndTime(event.endTime ?? "");
     setActivityTypeKey(meta.key);
@@ -569,10 +587,26 @@ export default function CalendarPage() {
   async function submitEvent() {
     const nextErrors: CalendarFormErrors = {};
     const cleanTitle = title.trim();
+    const cleanDate = eventDate.trim() || selectedDateKey;
     const cleanEndTime = endTime.trim();
     if (cleanTitle.length < 3) nextErrors.title = "El título debe tener al menos 3 caracteres.";
+    if (!isValidDateKey(cleanDate)) nextErrors.date = "Usá una fecha válida.";
     if (!isValidTime(time)) nextErrors.time = "Usá formato HH:MM entre 00:00 y 23:59.";
     if (cleanEndTime && !isValidTime(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el campo vacío.";
+    if (!nextErrors.date && compareDateKeys(cleanDate, todayKey) < 0) {
+      setGuardModal({
+        title: "Esta fecha ya pasó",
+        body: "Intentá con la fecha actual o una posterior.",
+      });
+      nextErrors.date = "Usá la fecha actual o una posterior.";
+    }
+    if (!nextErrors.date && !nextErrors.time && cleanDate === todayKey && timeToMinutes(time) < nowMinutes(new Date())) {
+      setGuardModal({
+        title: "Ups, ya pasó el tiempo",
+        body: "Intentá usar la hora actual o una posterior.",
+      });
+      nextErrors.time = "Usá la hora actual o una posterior.";
+    }
     if (cleanEndTime && isValidTime(time) && isValidTime(cleanEndTime) && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) {
       nextErrors.endTime = "La hora final debe ser posterior a la hora de inicio.";
     }
@@ -584,7 +618,7 @@ export default function CalendarPage() {
       notify("Usá la fecha final con formato YYYY-MM-DD.", "error");
       return;
     }
-    if (recurrenceUntil && compareDateKeys(recurrenceUntil, editing ? editing.date : selectedDateKey) < 0) {
+    if (recurrenceUntil && compareDateKeys(recurrenceUntil, eventDate || selectedDateKey) < 0) {
       notify("La fecha final debe ser posterior a la fecha inicial.", "error");
       return;
     }
@@ -613,7 +647,7 @@ export default function CalendarPage() {
       color: meta.color,
       iconKey: meta.iconKey,
       activityTypeKey: meta.key,
-      date: editing ? editing.date : selectedDateKey,
+      date: cleanDate,
       recurrenceType,
       recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,
       recurrenceUntil: recurrenceUntil || null,
@@ -621,6 +655,8 @@ export default function CalendarPage() {
       done: editing?.done ?? false,
     } satisfies Omit<CalendarEvent, "id">;
 
+    const wasExpiredBeforeEdit = Boolean(editing && isEventExpiredOnDate(editing, selectedDateKey));
+    const previousReactivationKey = editing ? calendarReactivationKey(editing, selectedDateKey) : null;
     const isRecurringOccurrenceEdit = Boolean(editing && recurringScope === "occurrence" && isRecurringEvent(editing));
     let savedEvent: CalendarEvent;
     if (isRecurringOccurrenceEdit && editing) {
@@ -644,7 +680,11 @@ export default function CalendarPage() {
       savedEvent = editing && targetId ? await updateEvent(targetId, payload) : await createEvent(payload);
     }
 
-    const alertTime = createReminderTime(selectedDateKey, time, alertOption);
+    if (wasExpiredBeforeEdit && previousReactivationKey) {
+      recordReactivation(previousReactivationKey);
+    }
+
+    const alertTime = createReminderTime(cleanDate, time, alertOption);
     let alertSynced = true;
     if (alertTime) {
       const result = await upsertCalendarReminder(calendarOccurrenceBaseId(savedEvent), {
@@ -738,12 +778,13 @@ export default function CalendarPage() {
       <FormSheet
         open={sheetMode === "event"}
         title={editing ? "Editar actividad" : "Nueva actividad"}
-        subtitle={`Se guardará para ${formatShortDate(selectedDate)}. Definí horario, tipo y alerta.`}
+        subtitle={editing ? "Reprogramá la fecha u hora desde Calendario." : `Se guardará para ${formatShortDate(selectedDate)}. Definí horario, tipo y alerta.`}
         onClose={() => setSheetMode("closed")}
         onSubmit={submitEvent}
         submitLabel={editing ? "Guardar cambios" : "Crear actividad"}
       >
         <Field label="Nombre" value={title} onChange={(event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value)} placeholder="Ej: ir al gym" error={errors.title} />
+        <Field label="Fecha" type="date" value={eventDate} onChange={(event: ChangeEvent<HTMLInputElement>) => setEventDate(event.target.value)} error={errors.date} />
 
         <div>
           <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[.08em] text-monkey-muted"><Clock3 className="h-4 w-4" /> Horario</span>
@@ -806,7 +847,7 @@ export default function CalendarPage() {
             notify("Usá la fecha final con formato YYYY-MM-DD.", "error");
             return;
           }
-          if (recurrenceUntil && compareDateKeys(recurrenceUntil, editing ? editing.date : selectedDateKey) < 0) {
+          if (recurrenceUntil && compareDateKeys(recurrenceUntil, eventDate || selectedDateKey) < 0) {
             notify("La fecha final debe ser posterior a la fecha inicial.", "error");
             return;
           }
@@ -950,6 +991,17 @@ export default function CalendarPage() {
         </div>
         <button type="button" onClick={goToday} className="h-12 w-full rounded-pill bg-green-50 text-sm font-black text-monkey-greenDark">Ir a hoy</button>
       </FormSheet>
+
+      {guardModal ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 px-5 backdrop-blur-[2px]">
+          <div className="w-full max-w-[340px] animate-pop rounded-[28px] bg-white p-5 text-center shadow-float">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-orange-50 text-xl">⏰</div>
+            <h3 className="mt-3 text-lg font-black text-monkey-ink">{guardModal.title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-monkey-muted">{guardModal.body}</p>
+            <button type="button" onClick={() => setGuardModal(null)} className="mt-4 h-11 w-full rounded-full bg-monkey-green text-sm font-black text-white transition active:scale-95">Entendido</button>
+          </div>
+        </div>
+      ) : null}
 
       <ConfirmSheet
         open={!!deleteId}

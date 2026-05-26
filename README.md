@@ -751,3 +751,65 @@ Pruebas UX:
 4. Pasada la ventana, el check debe quedar bloqueado desde Hoy.
 5. Una tarea vencida normal debe poder reprogramarse desde Calendario.
 6. Un check de reto vencido debe contar como no cumplido y no regalar bananas.
+
+## v2.28.1.13 — Expired Task Reactivation + Date/Time Guard UX
+
+Base: `v2.28.1.12 — Today Time Windows + Expired Tasks UX`.
+
+Objetivo: proteger Hoy contra tareas vencidas editables, guiar la reprogramación desde Calendario y evitar que se creen actividades con fechas u horas ya pasadas, sin tocar Supabase ni dependencias.
+
+Cambios principales:
+
+- Las actividades vencidas en Hoy siguen en gris y ya no abren edición directa desde Hoy.
+- Al tocar una actividad vencida en Hoy aparece un modal pequeño con la guía `Editar en Calendario`.
+- El modal de vencidas ofrece el CTA `Ir a Calendario` para reprogramar la tarea.
+- Se agrega guardado local de reactivaciones de actividades vencidas.
+- Penalización de cumplimiento por reactivación:
+  - 1 reactivación: `-5%`
+  - 2 reactivaciones: `-10%`
+  - 3 o más reactivaciones: `-30%`
+- El porcentaje de Hoy descuenta las penalizaciones de las actividades reactivadas visibles en el día.
+- Calendario agrega campo `Fecha` al formulario de actividad para permitir reprogramar una vencida a fecha actual o futura.
+- Hoy bloquea crear actividades con hora anterior a la actual del sistema.
+- Calendario bloquea crear o reprogramar actividades en fechas anteriores a hoy.
+- Calendario bloquea crear o reprogramar actividades para hoy con hora anterior a la actual.
+- Se agregan modales pequeños de alerta:
+  - `Esta fecha ya pasó. Intentá con la fecha actual o una posterior.`
+  - `Ups, ya pasó el tiempo. Intentá usar la hora actual o una posterior.`
+
+No se modifica:
+
+- `package.json`
+- `package-lock.json`
+- `next.config.mjs`
+- `tsconfig.json`
+- `vercel.json`
+- dependencias
+- migraciones Supabase
+- RLS/policies
+- variables de Vercel
+
+Archivos tocados:
+
+- `app/today/page.tsx`
+- `app/calendar/page.tsx`
+- `hooks/use-calendar-reactivations.ts`
+- `README.md`
+
+Validación esperada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas UX:
+
+1. Crear una actividad en Hoy con hora anterior a la actual: debe abrir modal pequeño de hora pasada.
+2. Crear una actividad en Calendario con fecha anterior a hoy: debe abrir modal pequeño de fecha pasada.
+3. Crear una actividad en Calendario para hoy con hora anterior a la actual: debe abrir modal pequeño de hora pasada.
+4. Dejar vencer una tarea en Hoy: debe verse gris y no permitir check.
+5. Tocar una tarea vencida en Hoy: debe abrir modal `Editar en Calendario`.
+6. Reprogramar una vencida desde Calendario: debe contar como reactivación y descontar el porcentaje correspondiente cuando aplique.
