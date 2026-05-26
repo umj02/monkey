@@ -83,6 +83,7 @@ export type CalendarEvent = {
   rewardBananas?: number | null;
   reactivationCount?: number;
   reactivationPenalty?: number;
+  reactivationPenaltyDate?: string | null;
   expiredAt?: string | null;
   lastReactivatedAt?: string | null;
 };

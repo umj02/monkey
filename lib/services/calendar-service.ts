@@ -26,6 +26,7 @@ export function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
     rewardBananas: input.rewardBananas ?? null,
     reactivationCount: input.reactivationCount ?? 0,
     reactivationPenalty: input.reactivationPenalty ?? 0,
+    reactivationPenaltyDate: input.reactivationPenaltyDate ?? null,
     expiredAt: input.expiredAt ?? null,
     lastReactivatedAt: input.lastReactivatedAt ?? null,
   };

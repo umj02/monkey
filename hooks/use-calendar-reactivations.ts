@@ -24,16 +24,19 @@ export function eventReactivationCount(event: CalendarEvent) {
   return Math.max(0, event.reactivationCount ?? 0);
 }
 
-export function eventReactivationPenalty(event: CalendarEvent) {
+export function eventReactivationPenalty(event: CalendarEvent, scopeDate?: string) {
+  const penaltyDate = event.reactivationPenaltyDate ?? event.date ?? null;
+  if (scopeDate && penaltyDate && penaltyDate !== scopeDate) return 0;
   return Math.max(0, event.reactivationPenalty ?? reactivationPenaltyPercent(eventReactivationCount(event)));
 }
 
-export function withReactivationPenalty(event: CalendarEvent, expiredAt?: string): CalendarEvent {
+export function withReactivationPenalty(event: CalendarEvent, expiredAt?: string, penaltyDate?: string): CalendarEvent {
   const nextCount = eventReactivationCount(event) + 1;
   return {
     ...event,
     reactivationCount: nextCount,
     reactivationPenalty: reactivationPenaltyPercent(nextCount),
+    reactivationPenaltyDate: penaltyDate ?? event.reactivationPenaltyDate ?? event.date ?? null,
     expiredAt: event.expiredAt ?? expiredAt ?? new Date().toISOString(),
     lastReactivatedAt: new Date().toISOString(),
   };
@@ -46,9 +49,9 @@ export function useCalendarReactivations() {
     return Math.max(eventReactivationCount(event ?? ({} as CalendarEvent)), counts[key] ?? 0);
   }, [counts]);
 
-  const getPenaltyPercent = useCallback((key: string, event?: CalendarEvent) => {
+  const getPenaltyPercent = useCallback((key: string, event?: CalendarEvent, scopeDate?: string) => {
     const localPenalty = reactivationPenaltyPercent(counts[key] ?? 0);
-    const remotePenalty = event ? eventReactivationPenalty(event) : 0;
+    const remotePenalty = event ? eventReactivationPenalty(event, scopeDate) : 0;
     return Math.max(localPenalty, remotePenalty);
   }, [counts]);
 

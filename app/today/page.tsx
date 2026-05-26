@@ -325,7 +325,7 @@ export default function TodayPage() {
     if (total === 0) return percent;
     const done = taskList.filter((task) => task.done).length + calendarTodayEvents.filter((event) => getCalendarEventDone(event, todayDateKey, completionMap)).length;
     const rawPercent = Math.round((done / total) * 100);
-    const reactivationPenalty = calendarTodayEvents.reduce((sum, event) => sum + getPenaltyPercent(calendarReactivationKey(event, todayDateKey), event), 0);
+    const reactivationPenalty = calendarTodayEvents.reduce((sum, event) => sum + getPenaltyPercent(calendarReactivationKey(event, todayDateKey), event, todayDateKey), 0);
     return Math.max(0, rawPercent - reactivationPenalty);
   }, [visibleBlocks, calendarTodayEvents, completionMap, todayDateKey, percent, getPenaltyPercent]);
 

@@ -650,6 +650,7 @@ export default function CalendarPage() {
     const previousReactivationKey = editing ? calendarReactivationKey(editing, selectedDateKey) : null;
     const nextReactivationCount = wasExpiredBeforeEdit ? (editing?.reactivationCount ?? 0) + 1 : editing?.reactivationCount ?? 0;
     const nextReactivationPenalty = wasExpiredBeforeEdit ? reactivationPenaltyPercent(nextReactivationCount) : editing?.reactivationPenalty ?? 0;
+    const nextReactivationPenaltyDate = wasExpiredBeforeEdit && editing ? calendarOccurrenceDate(editing, selectedDateKey) : editing?.reactivationPenaltyDate ?? null;
     const reactivatedAt = wasExpiredBeforeEdit ? new Date().toISOString() : editing?.lastReactivatedAt ?? null;
 
     const payload = {
@@ -673,6 +674,7 @@ export default function CalendarPage() {
       rewardBananas: editing?.rewardBananas ?? null,
       reactivationCount: nextReactivationCount,
       reactivationPenalty: nextReactivationPenalty,
+      reactivationPenaltyDate: nextReactivationPenaltyDate,
       expiredAt: wasExpiredBeforeEdit ? editing?.expiredAt ?? new Date().toISOString() : editing?.expiredAt ?? null,
       lastReactivatedAt: reactivatedAt,
     } satisfies Omit<CalendarEvent, "id">;

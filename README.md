@@ -890,3 +890,11 @@ supabase/migrations/0018_v228115_calendar_reactivation_penalties.sql
 - No se tocó Vercel config.
 - No se cambiaron policies RLS.
 - No se alteró la lógica de autenticación.
+
+## v2.28.1.16 — Same-Day Penalty Scope Fix
+
+- Adds `reactivation_penalty_date` to `calendar_events`.
+- Reactivation penalties only affect the day where the task expired.
+- Reprogramming an expired task to tomorrow no longer penalizes tomorrow's Hero progress.
+- Same-day reactivation still applies the corresponding penalty for that day.
+- No dependency or Vercel config changes.

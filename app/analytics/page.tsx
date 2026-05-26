@@ -194,7 +194,7 @@ export default function AnalyticsPage() {
       const total = blockTasks.length + dayEvents.length;
       const done = blockTasks.filter((task) => task.done).length + dayEvents.filter(({ event }) => getCalendarEventDone(event, dateKey, completionMap)).length;
       const rawCompletion = percent(done, total);
-      const penalty = dayEvents.reduce((sum, { event }) => sum + eventReactivationPenalty(event), 0);
+      const penalty = dayEvents.reduce((sum, { event }) => sum + eventReactivationPenalty(event, dateKey), 0);
       return { dateKey, total, done, penalty, completion: Math.max(0, rawCompletion - penalty) };
     });
   }, [blocks, calendarOccurrences, completionMap, range.days, todayKey]);
@@ -208,7 +208,7 @@ export default function AnalyticsPage() {
     const done = taskDone + calendarDone;
     const activeDays = dayMetrics.filter((day) => day.total > 0 || walletTransactionsInRange.some((tx) => tx.date === day.dateKey)).length;
     const rawCompletion = percent(done, total);
-    const reactivationPenalty = calendarOccurrences.reduce((sum, { event }) => sum + eventReactivationPenalty(event), 0);
+    const reactivationPenalty = calendarOccurrences.reduce((sum, { event, dateKey }) => sum + eventReactivationPenalty(event, dateKey), 0);
     return { taskTotal, taskDone, calendarTotal, calendarDone, total, done, completion: Math.max(0, rawCompletion - reactivationPenalty), rawCompletion, reactivationPenalty, activeDays };
   }, [calendarOccurrences, completionMap, dayMetrics, taskBlocksInRange, walletTransactionsInRange]);
 
