@@ -813,3 +813,49 @@ Pruebas UX:
 4. Dejar vencer una tarea en Hoy: debe verse gris y no permitir check.
 5. Tocar una tarea vencida en Hoy: debe abrir modal `Editar en Calendario`.
 6. Reprogramar una vencida desde Calendario: debe contar como reactivación y descontar el porcentaje correspondiente cuando aplique.
+
+## v2.28.1.14 — Minute-Safe Time Guard + Edit Start Time Flex
+
+Base: `v2.28.1.13 — Expired Task Reactivation + Date/Time Guard UX`.
+
+Objetivo: corregir el guardado de horas para que el minuto actual no choque por segundos/retraso de interfaz y permitir conservar la hora inicial original al editar una tarea.
+
+Cambios principales:
+
+- La validación de hora se mantiene a nivel de minuto (`HH:mm`), no de segundos.
+- En Hoy y Calendario, si el usuario conserva la hora inicial original al editar, no se bloquea aunque esa hora ya haya pasado.
+- Al crear una tarea nueva, se siguen bloqueando horas realmente anteriores a la actual.
+- El modal de hora pasada ahora guía mejor: `Podés usar la hora actual o elegir un minuto después.`
+- Se mantiene intacta la lógica de tareas vencidas, reactivaciones y penalizaciones de v2.28.1.13.
+
+No se modifica:
+
+- Supabase
+- migraciones
+- `package.json`
+- `package-lock.json`
+- dependencias
+- configuración de Vercel
+
+Archivos tocados:
+
+- `app/today/page.tsx`
+- `app/calendar/page.tsx`
+- `README.md`
+
+Validación esperada:
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas UX:
+
+1. Si son las 07:34, crear una tarea a las 07:34 debe permitirse.
+2. Si son las 07:34, crear una tarea a las 07:33 debe mostrar el modal de hora pasada.
+3. Editar una tarea existente y conservar su hora inicial original debe permitirse.
+4. Editar solo la hora final debe permitirse si el fin queda después del inicio.
+5. Cambiar manualmente la hora inicial a una hora pasada distinta debe bloquearse.

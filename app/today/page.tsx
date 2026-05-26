@@ -119,6 +119,11 @@ function nowMinutes(date = new Date()) {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function isPastStartTimeForToday(timeValue: string, originalTime?: string | null) {
+  if (originalTime && timeValue === originalTime) return false;
+  return timeToMinutes(timeValue) < nowMinutes(new Date());
+}
+
 function isEventExpiredForDate(event: CalendarEvent, dateKey: string, now = new Date()) {
   const occurrenceDate = calendarOccurrenceDate(event, dateKey);
   const todayKey = toDateKey(now);
@@ -364,10 +369,11 @@ export default function TodayPage() {
     const cleanEndTime = endTime.trim();
     if (cleanEndTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el fin vacío.";
     if (!nextErrors.time && !nextErrors.endTime && cleanEndTime && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) nextErrors.endTime = "El fin debe ser posterior al inicio.";
-    if (!nextErrors.time && timeToMinutes(time) < nowMinutes(new Date())) {
+    const preservedStartTime = editingCalendarEvent?.time ?? null;
+    if (!nextErrors.time && isPastStartTimeForToday(time, preservedStartTime)) {
       setGuardModal({
         title: "Ups, ya pasó el tiempo",
-        body: "Intentá usar la hora actual o una posterior.",
+        body: "Podés usar la hora actual o elegir un minuto después.",
       });
       nextErrors.time = "Usá la hora actual o una posterior.";
     }

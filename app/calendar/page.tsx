@@ -311,6 +311,11 @@ function nowMinutes(date = new Date()) {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function isPastStartTimeForToday(timeValue: string, originalTime?: string | null) {
+  if (originalTime && timeValue === originalTime) return false;
+  return timeToMinutes(timeValue) < nowMinutes(new Date());
+}
+
 function isEventExpiredOnDate(event: CalendarEvent, dateKey: string, now = new Date()) {
   const occurrenceDate = calendarOccurrenceDate(event, dateKey);
   const todayKey = toDateKey(now);
@@ -600,10 +605,11 @@ export default function CalendarPage() {
       });
       nextErrors.date = "Usá la fecha actual o una posterior.";
     }
-    if (!nextErrors.date && !nextErrors.time && cleanDate === todayKey && timeToMinutes(time) < nowMinutes(new Date())) {
+    const preservedStartTime = editing?.time ?? null;
+    if (!nextErrors.date && !nextErrors.time && cleanDate === todayKey && isPastStartTimeForToday(time, preservedStartTime)) {
       setGuardModal({
         title: "Ups, ya pasó el tiempo",
-        body: "Intentá usar la hora actual o una posterior.",
+        body: "Podés usar la hora actual o elegir un minuto después.",
       });
       nextErrors.time = "Usá la hora actual o una posterior.";
     }
