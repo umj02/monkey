@@ -1009,3 +1009,11 @@ Pruebas manuales clave:
 - El estado de sincronización de Hoy evita mostrar “Revisá la conexión” durante cargas normales.
 
 Sin cambios en Supabase, dependencias ni configuración de Vercel.
+
+
+## v2.28.1.21 — Favicon + Supabase Column Hotfix
+
+- Agrega `public/favicon.ico` para eliminar el 404 del navegador.
+- Declara `icons` en `app/layout.tsx`.
+- Agrega migración idempotente `0023_v228121_favicon_supabase_column_hotfix.sql` para asegurar `calendar_events.reactivation_penalty_date`.
+- No cambia lógica de negocio, dependencias, RLS ni configuración de Vercel.

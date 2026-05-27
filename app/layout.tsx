@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "Monkey Checks",
   description: "Organizá tu día, tus recordatorios y tu dinero.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/images/monkey-face.png",
+  },
   appleWebApp: {
     capable: true,
     title: "Monkey Checks",
