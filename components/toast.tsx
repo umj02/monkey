@@ -1,10 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
 import { CheckCircle2, Info, X } from "lucide-react";
+import { playMonkeySound } from "@/lib/sound/sound-events";
 
 export type ToastState = { message: string; type?: "success" | "info" | "error" } | null;
 
 export function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
+  useEffect(() => {
+    if (!toast) return;
+    if (toast.type === "error") playMonkeySound("error");
+    else if (toast.type === "success") playMonkeySound("confirmation");
+    else playMonkeySound("notification");
+  }, [toast?.message, toast?.type]);
+
   if (!toast) return null;
   const Icon = toast.type === "success" ? CheckCircle2 : Info;
   return (

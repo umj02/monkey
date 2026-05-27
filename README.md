@@ -898,3 +898,50 @@ supabase/migrations/0018_v228115_calendar_reactivation_penalties.sql
 - Reprogramming an expired task to tomorrow no longer penalizes tomorrow's Hero progress.
 - Same-day reactivation still applies the corresponding penalty for that day.
 - No dependency or Vercel config changes.
+
+## v2.28.1.17 — Sound System UX Controls + Audio Events
+
+Esta versión integra la carpeta de audios MP3 de Monkey Checks como un sistema centralizado y controlable por el usuario.
+
+### Qué incluye
+
+- Nueva carpeta limpia: `public/assets/sounds/`.
+- Se integran 9 audios MP3, sin `__MACOSX` ni `.DS_Store`.
+- Nuevo proveedor global: `components/sound-system-provider.tsx`.
+- Nuevo dispatcher central: `lib/sound/sound-events.ts`.
+- Nuevas preferencias: `hooks/use-sound-settings.ts` y `lib/sound/sound-settings.ts`.
+- Controles en Configuración:
+  - Sonidos activos
+  - Música de inicio
+  - Música ambiente
+  - Efectos de acciones
+  - Alertas
+  - Recompensas y logros
+  - Notificaciones del sistema
+  - Volumen general
+
+### Mapeo de audios
+
+- `alertas-trofeos-medallas.mp3`: logros, medallas y trofeos.
+- `error-action.mp3`: errores y acciones inválidas.
+- `intromusic_home_login_register.mp3`: `/`, `/login`, `/register`, `/welcome`.
+- `modal-bananas-ganadas.mp3`: bananas ganadas o recompensas de retos.
+- `modal-confirmacion.mp3`: confirmaciones y acciones exitosas.
+- `musica-ambientacion.mp3`: navegación dentro de la app.
+- `Alertas.mp3`: alertas del usuario.
+- `tarea-hoy-complete.mp3`: tareas de Hoy completadas.
+- `notificaciones.mp3`: notificaciones del sistema.
+
+### Reglas UX
+
+- El navegador solo permite audio después de la primera interacción del usuario; el sistema respeta esa regla.
+- La música de inicio se apaga con fade al salir de inicio/login/register/welcome.
+- La música ambiente se activa dentro de la app y se apaga al volver al inicio/cerrar sesión.
+- El usuario puede apagar por separado música, efectos, alertas, recompensas y notificaciones.
+
+### Qué no cambia
+
+- No se toca Supabase.
+- No se agregan migraciones.
+- No se cambian dependencias.
+- No se cambia configuración de Vercel.

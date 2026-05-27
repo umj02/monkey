@@ -14,6 +14,7 @@ import { buildAchievements, type Achievement, type AchievementTier } from "@/lib
 import { toDateKey } from "@/lib/calendar/calendar-utils";
 import { getRewardCelebrationArt, getRewardMedalIcon } from "@/lib/reward-media";
 import { cn } from "@/lib/utils";
+import { playMonkeySound } from "@/lib/sound/sound-events";
 
 const hiddenRewardRoutes = new Set(["/achievements", "/welcome", "/login", "/register", "/auth/confirm"]);
 
@@ -60,6 +61,7 @@ function AchievementRewardWatcher() {
   useEffect(() => {
     if (!recentAchievements.length) return;
     setVisible(true);
+    playMonkeySound("achievement");
     const timer = window.setTimeout(() => {
       setVisible(false);
       clearRecentUnlocks();

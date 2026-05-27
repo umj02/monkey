@@ -25,6 +25,7 @@ import { useChallenges } from "@/hooks/use-challenges";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent, isChallengeTaskDone } from "@/lib/challenges";
 import { cn } from "@/lib/utils";
+import { playMonkeySound } from "@/lib/sound/sound-events";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, compareDateKeys, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
 import { calendarReactivationKey, useCalendarReactivations } from "@/hooks/use-calendar-reactivations";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
@@ -594,6 +595,7 @@ export default function TodayPage() {
         done: nextDone,
       });
       if (nextDone && dayResult?.completedDay) {
+        playMonkeySound("bananaReward");
         setBananaClaimModal({
           title: "Día completado",
           body: `Completaste los ${dayResult.total} check${dayResult.total === 1 ? "" : "s"} de hoy. Sumaste ${dayResult.earnedBananas} banana${dayResult.earnedBananas === 1 ? "" : "s"}; cuando el reto cierre, podrás cobrarlas desde Retos y bananas.`,
@@ -601,6 +603,7 @@ export default function TodayPage() {
         });
       }
     }
+    if (nextDone) playMonkeySound(isChallenge ? "todayTaskComplete" : "todayTaskComplete");
     showToast(toastMessage);
   }
 

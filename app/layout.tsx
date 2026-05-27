@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SoundSystemProvider } from "@/components/sound-system-provider";
 
 export const metadata: Metadata = {
   title: "Monkey Checks",
@@ -22,7 +23,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body><SoundSystemProvider>{children}</SoundSystemProvider></body>
     </html>
   );
 }

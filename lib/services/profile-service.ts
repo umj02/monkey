@@ -1,8 +1,9 @@
 import { createOptionalClient } from "@/lib/supabase/client";
 import type { Profile, Settings } from "@/types";
+import { DEFAULT_SOUND_CONTROLS } from "@/lib/sound/sound-settings";
 
 export const initialProfile: Profile = { name: "Juan Pérez", email: "juanperez@email.com", hasCompletedOnboarding: true };
-export const initialSettings: Settings = { darkMode: false, sounds: true, sync: true, theme: "colorful" };
+export const initialSettings: Settings = { darkMode: false, sounds: true, sync: true, theme: "colorful", soundControls: DEFAULT_SOUND_CONTROLS };
 
 type ProfileRow = {
   display_name: string | null;

@@ -116,11 +116,23 @@ export type Profile = {
   hasCompletedOnboarding: boolean;
 };
 
+export type SoundControls = {
+  master: boolean;
+  introMusic: boolean;
+  ambientMusic: boolean;
+  actionEffects: boolean;
+  alerts: boolean;
+  rewards: boolean;
+  systemNotifications: boolean;
+  volume: number;
+};
+
 export type Settings = {
   darkMode: boolean;
   sounds: boolean;
   sync: boolean;
   theme: "colorful" | "soft";
+  soundControls?: SoundControls;
 };
 
 export type AuthSession = {
