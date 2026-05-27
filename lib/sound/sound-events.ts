@@ -5,7 +5,8 @@ export type MonkeySoundEvent =
   | "confirmation"
   | "alert"
   | "todayTaskComplete"
-  | "notification";
+  | "notification"
+  | "alarm";
 
 export const MONKEY_SOUND_EVENT = "monkey:sound";
 

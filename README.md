@@ -945,3 +945,15 @@ Esta versión integra la carpeta de audios MP3 de Monkey Checks como un sistema 
 - No se agregan migraciones.
 - No se cambian dependencias.
 - No se cambia configuración de Vercel.
+
+## v2.28.1.18 — Task Reactivation Rules + Sound Controls Fix
+
+- Corrige reglas de negocio entre tareas vencidas y tareas completadas por error.
+- Una tarea vencida por tiempo sigue bloqueada en Hoy y solo puede reprogramarse desde Calendario.
+- Una tarea completada por error puede reactivarse desde Calendario; al guardarla vuelve a quedar pendiente para Hoy o para la fecha elegida.
+- Refuerza que la penalización solo aplique cuando la tarea venció por tiempo, no cuando estaba completada.
+- Corrige sincronización de controles de sonido entre Configuración y el proveedor global de audio.
+- Agrega silencio rápido global con acceso directo a Configuración > Sonidos.
+- Agrega `alarma.mp3` para modales/recordatorios de alarma.
+- Mantiene `modal-confirmacion.mp3` y agrega alias `confirmacion.mp3` para confirmaciones.
+- No toca Supabase, migraciones, dependencias ni configuración de Vercel.

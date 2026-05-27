@@ -41,7 +41,7 @@ export default function SettingsPage() {
               <Link href="/weekly-summary" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-monkey-green" /> Resumen semanal</span><span className="text-monkey-muted">Reporte ›</span></Link>
               <Link href="/guardian-share" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-monkey-green" /> Vista encargado</span><span className="text-monkey-muted">Compartir ›</span></Link>
               <Link href="/welcome?review=1" className="flex h-14 w-full items-center justify-between border-b border-gray-100 px-4 text-sm font-semibold"><span>Ver guía de uso</span><span className="text-monkey-muted">Aprender ›</span></Link>
-              <div className="border-b border-gray-100 px-4 py-4">
+              <div id="sounds" className="scroll-mt-6 border-b border-gray-100 px-4 py-4">
                 <div className="flex items-center justify-between gap-3 text-sm font-semibold">
                   <span className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-monkey-purple" /> Sonidos</span>
                   <Toggle on={soundControls.master} onClick={() => updateSoundControls({ master: !soundControls.master })} />
@@ -54,6 +54,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span className="flex items-center gap-2"><Bell className="h-4 w-4 text-monkey-pink" /> Alertas</span><Toggle on={soundControls.alerts} onClick={() => updateSoundControls({ alerts: !soundControls.alerts })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Recompensas y logros</span><Toggle on={soundControls.rewards} onClick={() => updateSoundControls({ rewards: !soundControls.rewards })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Notificaciones del sistema</span><Toggle on={soundControls.systemNotifications} onClick={() => updateSoundControls({ systemNotifications: !soundControls.systemNotifications })} /></div>
+                  <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Silencio rápido</span><Toggle on={soundControls.quickMute} onClick={() => updateSoundControls({ quickMute: !soundControls.quickMute })} /></div>
                   <label className="block text-xs font-black text-monkey-muted">
                     Volumen general
                     <input type="range" min="0" max="1" step="0.05" value={soundControls.volume} onChange={(event) => updateSoundControls({ volume: Number(event.target.value) })} className="mt-2 w-full accent-green-500" />

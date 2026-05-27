@@ -37,6 +37,7 @@ import { useCategoryPreferences } from "@/hooks/use-category-preferences";
 import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
 import { calendarReactivationKey, useCalendarReactivations, reactivationPenaltyPercent } from "@/hooks/use-calendar-reactivations";
+import { playMonkeySound } from "@/lib/sound/sound-events";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -425,7 +426,7 @@ export default function CalendarPage() {
   const { events, syncing, syncStatus, lastError, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { challenges } = useChallenges();
   const { overrides, saveOverride } = useCalendarOverrides();
-  const { completionMap } = useCalendarCompletions();
+  const { completionMap, setCompletion } = useCalendarCompletions();
   const { activityItems } = useCategoryPreferences();
   const { items: reminders, upsertCalendarReminder, deleteCalendarEventReminders, lastError: reminderSyncError } = useReminders();
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
@@ -599,6 +600,7 @@ export default function CalendarPage() {
     if (!isValidTime(time)) nextErrors.time = "Usá formato HH:MM entre 00:00 y 23:59.";
     if (cleanEndTime && !isValidTime(cleanEndTime)) nextErrors.endTime = "Usá formato HH:MM o dejá el campo vacío.";
     if (!nextErrors.date && compareDateKeys(cleanDate, todayKey) < 0) {
+      playMonkeySound("error");
       setGuardModal({
         title: "Esta fecha ya pasó",
         body: "Intentá con la fecha actual o una posterior.",
@@ -607,6 +609,7 @@ export default function CalendarPage() {
     }
     const preservedStartTime = editing?.time ?? null;
     if (!nextErrors.date && !nextErrors.time && cleanDate === todayKey && isPastStartTimeForToday(time, preservedStartTime)) {
+      playMonkeySound("error");
       setGuardModal({
         title: "Ups, ya pasó el tiempo",
         body: "Podés usar la hora actual o elegir un minuto después.",
@@ -646,7 +649,8 @@ export default function CalendarPage() {
     }
 
     const meta = resolveActivityCategoryMeta({ key: activityTypeKey }, activityItems);
-    const wasExpiredBeforeEdit = Boolean(editing && isEventExpiredOnDate(editing, selectedDateKey));
+    const wasDoneBeforeEdit = Boolean(editing && getCalendarEventDone(editing, selectedDateKey, completionMap));
+    const wasExpiredBeforeEdit = Boolean(editing && !wasDoneBeforeEdit && isEventExpiredOnDate(editing, selectedDateKey));
     const previousReactivationKey = editing ? calendarReactivationKey(editing, selectedDateKey) : null;
     const nextReactivationCount = wasExpiredBeforeEdit ? (editing?.reactivationCount ?? 0) + 1 : editing?.reactivationCount ?? 0;
     const nextReactivationPenalty = wasExpiredBeforeEdit ? reactivationPenaltyPercent(nextReactivationCount) : editing?.reactivationPenalty ?? 0;
@@ -665,7 +669,7 @@ export default function CalendarPage() {
       recurrenceDays: recurrenceType === "custom_days" ? recurrenceDays : null,
       recurrenceUntil: recurrenceUntil || null,
       recurrenceGroupId: editing?.recurrenceGroupId ?? null,
-      done: editing?.done ?? false,
+      done: wasDoneBeforeEdit && !wasExpiredBeforeEdit ? false : editing?.done ?? false,
       source: editing?.source ?? "normal",
       challengeId: editing?.challengeId ?? null,
       challengeTaskId: editing?.challengeTaskId ?? null,
@@ -703,6 +707,12 @@ export default function CalendarPage() {
 
     if (wasExpiredBeforeEdit && previousReactivationKey) {
       recordReactivation(previousReactivationKey);
+    }
+
+    if (editing && wasDoneBeforeEdit && !wasExpiredBeforeEdit) {
+      const previousDate = calendarOccurrenceDate(editing, selectedDateKey);
+      await setCompletion(calendarOccurrenceBaseId(editing), previousDate, false);
+      if (cleanDate !== previousDate) await setCompletion(calendarOccurrenceBaseId(savedEvent), cleanDate, false);
     }
 
     const alertTime = createReminderTime(cleanDate, time, alertOption);

@@ -124,6 +124,7 @@ export type SoundControls = {
   alerts: boolean;
   rewards: boolean;
   systemNotifications: boolean;
+  quickMute: boolean;
   volume: number;
 };
 

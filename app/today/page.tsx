@@ -372,6 +372,7 @@ export default function TodayPage() {
     if (!nextErrors.time && !nextErrors.endTime && cleanEndTime && timeToMinutes(cleanEndTime) <= timeToMinutes(time)) nextErrors.endTime = "El fin debe ser posterior al inicio.";
     const preservedStartTime = editingCalendarEvent?.time ?? null;
     if (!nextErrors.time && isPastStartTimeForToday(time, preservedStartTime)) {
+      playMonkeySound("error");
       setGuardModal({
         title: "Ups, ya pasó el tiempo",
         body: "Podés usar la hora actual o elegir un minuto después.",
@@ -462,6 +463,11 @@ export default function TodayPage() {
       return;
     }
     openCalendarEventEditor(event, "series");
+  }
+
+  function openExpiredCalendarModal(event: CalendarEvent) {
+    playMonkeySound("confirmation");
+    setExpiredTaskModal(event);
   }
 
   function openCalendarEventEditor(event: CalendarEvent, scope: "series" | "occurrence" = "series") {
@@ -737,7 +743,7 @@ export default function TodayPage() {
               expired={!getCalendarEventDone(item.event, todayDateKey, completionMap) && isEventExpiredForDate(item.event, todayDateKey, clockNow)}
               onToggle={toggleCalendarEvent}
               onEdit={requestCalendarEventEditor}
-              onExpiredOpen={setExpiredTaskModal}
+              onExpiredOpen={openExpiredCalendarModal}
               onToggleReminder={toggleCalendarReminder}
             />
           ))}

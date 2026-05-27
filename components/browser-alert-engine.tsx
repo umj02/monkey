@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { fetchCalendarEvents, fetchReminders, fetchTaskReminderItems } from "@/lib/services/supabase-data-service";
 import { LottieAlertIcon } from "@/components/lottie-alert-icon";
 import { subscribeToBackgroundPush, getPushAvailability, type PushSubscriptionState } from "@/lib/push/client";
+import { playMonkeySound } from "@/lib/sound/sound-events";
 import type { CalendarEvent, Reminder, ReminderPanelItem } from "@/types";
 
 type AlertItem = {
@@ -125,6 +126,7 @@ export function BrowserAlertEngine() {
 
   const notify = useCallback((item: AlertItem) => {
     setActiveAlert(item);
+    playMonkeySound("alarm");
     if (canUseNotifications && Notification.permission === "granted") {
       try {
         new Notification("Monkey Checks", {

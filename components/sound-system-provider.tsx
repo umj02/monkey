@@ -13,6 +13,7 @@ const SOUND_FILES: Record<MonkeySoundEvent | "introMusic" | "ambientMusic", stri
   alert: "/assets/sounds/Alertas.mp3",
   todayTaskComplete: "/assets/sounds/tarea-hoy-complete.mp3",
   notification: "/assets/sounds/notificaciones.mp3",
+  alarm: "/assets/sounds/alarma.mp3",
   introMusic: "/assets/sounds/intromusic_home_login_register.mp3",
   ambientMusic: "/assets/sounds/musica-ambientacion.mp3",
 };
@@ -78,9 +79,9 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
   }
 
   function canPlayEffect(event: MonkeySoundEvent) {
-    if (!soundControls.master || !unlockedRef.current) return false;
+    if (!soundControls.master || soundControls.quickMute || !unlockedRef.current) return false;
     if (event === "achievement" || event === "bananaReward") return soundControls.rewards;
-    if (event === "alert") return soundControls.alerts;
+    if (event === "alert" || event === "alarm") return soundControls.alerts;
     if (event === "notification") return soundControls.systemNotifications;
     return soundControls.actionEffects;
   }
@@ -99,7 +100,7 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
     };
     window.addEventListener(MONKEY_SOUND_EVENT, handler);
     return () => window.removeEventListener(MONKEY_SOUND_EVENT, handler);
-  }, [soundControls.master, soundControls.actionEffects, soundControls.alerts, soundControls.rewards, soundControls.systemNotifications, volume]);
+  }, [soundControls.master, soundControls.quickMute, soundControls.actionEffects, soundControls.alerts, soundControls.rewards, soundControls.systemNotifications, volume]);
 
   function getLoopAudio(kind: "introMusic" | "ambientMusic") {
     if (typeof window === "undefined") return null;
@@ -133,8 +134,8 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     const intro = getLoopAudio("introMusic");
     const ambient = getLoopAudio("ambientMusic");
-    const useIntro = soundControls.master && soundControls.introMusic && shouldUseIntroMusic(pathname);
-    const useAmbient = soundControls.master && soundControls.ambientMusic && shouldUseAmbientMusic(pathname);
+    const useIntro = soundControls.master && !soundControls.quickMute && soundControls.introMusic && shouldUseIntroMusic(pathname);
+    const useAmbient = soundControls.master && !soundControls.quickMute && soundControls.ambientMusic && shouldUseAmbientMusic(pathname);
 
     if (!unlockedRef.current) {
       safePause(intro);
@@ -157,7 +158,7 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
     }
 
     return () => undefined;
-  }, [pathname, soundControls.master, soundControls.introMusic, soundControls.ambientMusic, volume, audioUnlocked]);
+  }, [pathname, soundControls.master, soundControls.quickMute, soundControls.introMusic, soundControls.ambientMusic, volume, audioUnlocked]);
 
   useEffect(() => {
     return () => {

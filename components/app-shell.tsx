@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { BrowserAlertEngine } from "@/components/browser-alert-engine";
 import { AchievementRewardEngine } from "@/components/achievement-reward-engine";
+import { SoundQuickControls } from "@/components/sound-quick-controls";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -67,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="app-screen pb-[calc(96px+var(--safe-bottom))]">
       {children}
+      <SoundQuickControls />
       <BrowserAlertEngine />
       <AchievementRewardEngine />
       <BottomNav />
