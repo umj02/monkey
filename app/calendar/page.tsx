@@ -995,7 +995,7 @@ export default function CalendarPage() {
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
           <p className="mt-2 text-xs leading-5 text-monkey-muted">
-            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Actualizando calendario..." : syncStatus === "saving" || lastSaveMode === "pending" ? "Guardando en tu cuenta..." : lastSaveMode === "local" ? "Guardado local · revisá conexión." : syncStatus === "synced" ? "Guardado en tu cuenta." : "Calendario listo."}
+            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Actualizando calendario..." : syncStatus === "saving" || lastSaveMode === "pending" ? "Guardando en tu cuenta..." : syncStatus === "error" && lastSaveMode === "local" ? "Guardado local · revisá conexión." : syncStatus === "local" && lastSaveMode === "local" ? "Guardado local." : syncStatus === "synced" || lastSaveMode === "remote" ? "Guardado en tu cuenta." : "Calendario listo."}
           </p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">

@@ -736,7 +736,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError || calendarLastSaveMode === "local" ? "Guardado local · revisá conexión" : "Guardado en tu cuenta"}
+              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError ? "No pudimos sincronizar. Revisá conexión." : calendarSyncStatus === "error" && calendarLastSaveMode === "local" ? "Guardado local · revisá conexión" : calendarSyncStatus === "local" && calendarLastSaveMode === "local" ? "Guardado local" : "Guardado en tu cuenta"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

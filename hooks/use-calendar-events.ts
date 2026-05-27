@@ -30,7 +30,7 @@ export function useCalendarEvents() {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
-  const [lastSaveMode, setLastSaveMode] = useState<SaveMode>(mode === "supabase" ? "remote" : "local");
+  const [lastSaveMode, setLastSaveMode] = useState<SaveMode>("pending");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   async function refreshEvents() {
@@ -71,12 +71,13 @@ export function useCalendarEvents() {
 
   async function createEvent(input: CalendarEventInput): Promise<CalendarEvent> {
     const event = createCalendarEvent(input);
+    const shouldSaveRemote = Boolean(session && mode === "supabase");
+    setSyncStatus(shouldSaveRemote ? "saving" : "local");
+    setLastSaveMode(shouldSaveRemote ? "pending" : "local");
+    setLastError(null);
     setEvents((list) => sortCalendarEvents([...list, event]));
-    setLastSaveMode(session && mode === "supabase" ? "pending" : "local");
 
-    if (session && mode === "supabase") {
-      setSyncStatus("saving");
-      setLastError(null);
+    if (shouldSaveRemote) {
       const remote = await upsertCalendarEvent(event);
       if (remote) {
         setEvents((list) =>
@@ -99,14 +100,15 @@ export function useCalendarEvents() {
 
   async function updateEvent(id: string, input: CalendarEventInput): Promise<CalendarEvent> {
     const event = { id, ...input, title: input.title.trim() };
+    const shouldSaveRemote = Boolean(session && mode === "supabase");
+    setSyncStatus(shouldSaveRemote ? "saving" : "local");
+    setLastSaveMode(shouldSaveRemote ? "pending" : "local");
+    setLastError(null);
     setEvents((list) =>
       sortCalendarEvents(list.map((item) => (item.id === id ? event : item))),
     );
-    setLastSaveMode(session && mode === "supabase" ? "pending" : "local");
 
-    if (session && mode === "supabase") {
-      setSyncStatus("saving");
-      setLastError(null);
+    if (shouldSaveRemote) {
       const remote = await upsertCalendarEvent(event);
       if (remote) {
         setEvents((list) => sortCalendarEvents(list.map((item) => (item.id === id ? remote : item))));
