@@ -18,8 +18,7 @@ const SOUND_FILES: Record<MonkeySoundEvent | "introMusic" | "ambientMusic", stri
   ambientMusic: "/assets/sounds/musica-ambientacion.mp3",
 };
 
-const INTRO_ROUTES = new Set(["/", "/login", "/register", "/welcome"]);
-const APP_SILENT_ROUTES = new Set(["/auth/confirm"]);
+const PUBLIC_SOUND_ROUTES = new Set(["/", "/login", "/register", "/welcome", "/auth/confirm"]);
 const FADE_INTERVAL_MS = 80;
 const FADE_STEP = 0.08;
 const SOUND_TAB_OWNER_KEY = "monkey.sound.activeTab.v1";
@@ -31,15 +30,13 @@ type SoundTabOwner = {
   updatedAt: number;
 };
 
-function shouldUseIntroMusic(pathname: string | null) {
-  if (!pathname) return false;
-  return INTRO_ROUTES.has(pathname);
+function shouldUseIntroMusic(_pathname: string | null) {
+  return false;
 }
 
 function shouldUseAmbientMusic(pathname: string | null) {
   if (!pathname) return false;
-  if (shouldUseIntroMusic(pathname)) return false;
-  if (APP_SILENT_ROUTES.has(pathname)) return false;
+  if (PUBLIC_SOUND_ROUTES.has(pathname)) return false;
   return true;
 }
 
@@ -90,7 +87,8 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
   const effectsRef = useRef<Partial<Record<MonkeySoundEvent, HTMLAudioElement>>>({});
   const introRef = useRef<HTMLAudioElement | null>(null);
   const ambientRef = useRef<HTMLAudioElement | null>(null);
-  const fadeTimerRef = useRef<number | null>(null);
+  const introFadeTimerRef = useRef<number | null>(null);
+  const ambientFadeTimerRef = useRef<number | null>(null);
 
   const volume = useMemo(() => Math.min(1, Math.max(0, soundControls.volume)), [soundControls.volume]);
 
@@ -234,21 +232,37 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
     return ref.current;
   }
 
-  function fadeTo(audio: HTMLAudioElement | null, targetVolume: number, onDone?: () => void) {
+  function fadeTo(kind: "intro" | "ambient", audio: HTMLAudioElement | null, targetVolume: number, onDone?: () => void) {
     if (!audio || typeof window === "undefined") return;
-    if (fadeTimerRef.current) window.clearInterval(fadeTimerRef.current);
-    fadeTimerRef.current = window.setInterval(() => {
+    const timerRef = kind === "intro" ? introFadeTimerRef : ambientFadeTimerRef;
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = window.setInterval(() => {
       const direction = audio.volume < targetVolume ? 1 : -1;
       const next = audio.volume + FADE_STEP * direction;
       audio.volume = direction > 0 ? Math.min(targetVolume, next) : Math.max(targetVolume, next);
       if (Math.abs(audio.volume - targetVolume) < 0.01) {
         audio.volume = targetVolume;
-        if (fadeTimerRef.current) window.clearInterval(fadeTimerRef.current);
-        fadeTimerRef.current = null;
+        if (timerRef.current) window.clearInterval(timerRef.current);
+        timerRef.current = null;
         onDone?.();
       }
     }, FADE_INTERVAL_MS);
   }
+
+  function stopLoop(kind: "intro" | "ambient", audio: HTMLAudioElement | null) {
+    fadeTo(kind, audio, 0, () => safePause(audio));
+  }
+
+  useEffect(() => {
+    Object.values(effectsRef.current).forEach((audio) => {
+      if (audio) audio.volume = volume;
+    });
+    if (introRef.current) introRef.current.volume = Math.min(introRef.current.volume, volume);
+    if (ambientRef.current) ambientRef.current.volume = Math.min(ambientRef.current.volume, volume * 0.6);
+    if (!soundControls.master || soundControls.quickMute || !soundControls.ambientMusic || !shouldUseAmbientMusic(pathname) || !isActiveSoundTab || !isPageActive()) {
+      pauseAllAudio();
+    }
+  }, [pathname, pauseAllAudio, soundControls.master, soundControls.quickMute, soundControls.ambientMusic, volume, isActiveSoundTab]);
 
   useEffect(() => {
     const intro = getLoopAudio("introMusic");
@@ -258,23 +272,23 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
     const useAmbient = canPlayLoop && soundControls.ambientMusic && shouldUseAmbientMusic(pathname);
 
     if (!canPlayLoop) {
-      fadeTo(intro, 0, () => safePause(intro));
-      fadeTo(ambient, 0, () => safePause(ambient));
+      stopLoop("intro", intro);
+      stopLoop("ambient", ambient);
       return;
     }
 
     if (useIntro && intro) {
       safePause(ambient);
-      intro.play().then(() => fadeTo(intro, volume)).catch(() => undefined);
+      intro.play().then(() => fadeTo("intro", intro, volume)).catch(() => undefined);
     } else if (intro) {
-      fadeTo(intro, 0, () => safePause(intro));
+      stopLoop("intro", intro);
     }
 
     if (useAmbient && ambient) {
       safePause(intro);
-      ambient.play().then(() => fadeTo(ambient, volume * 0.62)).catch(() => undefined);
+      ambient.play().then(() => fadeTo("ambient", ambient, volume * 0.6)).catch(() => undefined);
     } else if (ambient) {
-      fadeTo(ambient, 0, () => safePause(ambient));
+      stopLoop("ambient", ambient);
     }
 
     return () => undefined;
@@ -282,6 +296,8 @@ export function SoundSystemProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     return () => {
+      if (introFadeTimerRef.current) window.clearInterval(introFadeTimerRef.current);
+      if (ambientFadeTimerRef.current) window.clearInterval(ambientFadeTimerRef.current);
       pauseAllAudio();
     };
   }, [pauseAllAudio]);

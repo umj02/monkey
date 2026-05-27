@@ -126,7 +126,7 @@ export function BrowserAlertEngine() {
 
   const notify = useCallback((item: AlertItem) => {
     setActiveAlert(item);
-    playMonkeySound("alarm");
+    playMonkeySound("alert");
     if (canUseNotifications && Notification.permission === "granted") {
       try {
         new Notification("Monkey Checks", {

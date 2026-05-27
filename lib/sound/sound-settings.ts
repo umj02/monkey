@@ -2,14 +2,14 @@ import type { SoundControls } from "@/types";
 
 export const DEFAULT_SOUND_CONTROLS: SoundControls = {
   master: true,
-  introMusic: true,
+  introMusic: false,
   ambientMusic: true,
   actionEffects: true,
   alerts: true,
   rewards: true,
   systemNotifications: true,
   quickMute: false,
-  volume: 0.55,
+  volume: 0.6,
 };
 
 export function normalizeSoundControls(value: Partial<SoundControls> | undefined, legacySounds = true): SoundControls {

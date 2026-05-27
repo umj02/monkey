@@ -282,6 +282,7 @@ export default function TodayPage() {
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [clockNow, setClockNow] = useState(() => new Date());
+  const [optimisticReminderIds, setOptimisticReminderIds] = useState<Set<string>>(() => new Set());
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
 
   useEffect(() => {
@@ -317,8 +318,10 @@ export default function TodayPage() {
   }, [calendarEvents, overrides, todayDateKey, cancelledChallengeIds, completionMap]);
 
   const reminderEventIds = useMemo(() => {
-    return new Set(reminders.filter((item) => item.enabled && item.calendarEventId).map((item) => item.calendarEventId as string));
-  }, [reminders]);
+    const ids = new Set(reminders.filter((item) => item.enabled && item.calendarEventId).map((item) => item.calendarEventId as string));
+    optimisticReminderIds.forEach((id) => ids.add(id));
+    return ids;
+  }, [reminders, optimisticReminderIds]);
 
   const combinedPercent = useMemo(() => {
     const taskList = visibleBlocks.flatMap((block) => block.tasks);
@@ -487,16 +490,32 @@ export default function TodayPage() {
     const baseId = calendarOccurrenceBaseId(event);
     const hasReminder = reminderEventIds.has(baseId);
     if (hasReminder) {
+      setOptimisticReminderIds((current) => {
+        const next = new Set(current);
+        next.delete(baseId);
+        return next;
+      });
       const ok = await deleteCalendarEventReminders(baseId);
+      if (!ok) {
+        setOptimisticReminderIds((current) => new Set(current).add(baseId));
+      }
       showToast(ok ? "Alarma apagada" : "No se pudo apagar la alarma", ok ? "success" : "error");
       return;
     }
+    setOptimisticReminderIds((current) => new Set(current).add(baseId));
     const result = await upsertCalendarReminder(baseId, {
       title: `Alerta: ${stripEmoji(event.title)}`,
       time: event.time,
       repeat: (event.recurrenceType === "daily" ? "daily" : "custom") as Reminder["repeat"],
       calendarEventId: baseId,
     });
+    if (!result.ok) {
+      setOptimisticReminderIds((current) => {
+        const next = new Set(current);
+        next.delete(baseId);
+        return next;
+      });
+    }
     showToast(result.ok ? "Alarma activada" : "No se pudo activar la alarma", result.ok ? "success" : "error");
   }
 
@@ -717,7 +736,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Actualizando…" : calendarError || completionError ? "Revisá la conexión" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" ? "Guardando…" : "Todo al día"}
+              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" ? "Guardando…" : calendarError || completionError ? "Todo al día" : "Todo al día"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

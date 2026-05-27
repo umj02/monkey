@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Award, Banana, BarChart3, Bell, ClipboardList, Music2, ShieldCheck, SlidersHorizontal, Tags, Volume2 } from "lucide-react";
+import { Award, Banana, BarChart3, Bell, ClipboardList, ShieldCheck, SlidersHorizontal, Tags, Volume2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useSettings } from "@/hooks/use-settings";
 import { useSoundSettings } from "@/hooks/use-sound-settings";
@@ -46,17 +46,16 @@ export default function SettingsPage() {
                   <span className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-monkey-purple" /> Sonidos</span>
                   <Toggle on={soundControls.master} onClick={() => updateSoundControls({ master: !soundControls.master })} />
                 </div>
-                <p className="mt-1 text-xs font-bold text-monkey-muted">Controlá música, alertas y efectos de la app.</p>
+                <p className="mt-1 text-xs font-bold text-monkey-muted">Controlá música interna, alertas y efectos de la app.</p>
                 <div className="mt-4 space-y-3 rounded-[20px] bg-gray-50 p-3">
-                  <div className="flex items-center justify-between gap-3 text-xs font-black"><span className="flex items-center gap-2"><Music2 className="h-4 w-4 text-monkey-green" /> Música de inicio</span><Toggle on={soundControls.introMusic} onClick={() => updateSoundControls({ introMusic: !soundControls.introMusic })} /></div>
-                  <div className="flex items-center justify-between gap-3 text-xs font-black"><span className="flex items-center gap-2"><Music2 className="h-4 w-4 text-monkey-blue" /> Música ambiente</span><Toggle on={soundControls.ambientMusic} onClick={() => updateSoundControls({ ambientMusic: !soundControls.ambientMusic })} /></div>
+                  <div className="flex items-center justify-between gap-3 text-xs font-black"><span className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-monkey-blue" /> Música ambiente</span><Toggle on={soundControls.ambientMusic} onClick={() => updateSoundControls({ ambientMusic: !soundControls.ambientMusic })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Efectos de acciones</span><Toggle on={soundControls.actionEffects} onClick={() => updateSoundControls({ actionEffects: !soundControls.actionEffects })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span className="flex items-center gap-2"><Bell className="h-4 w-4 text-monkey-pink" /> Alertas</span><Toggle on={soundControls.alerts} onClick={() => updateSoundControls({ alerts: !soundControls.alerts })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Recompensas y logros</span><Toggle on={soundControls.rewards} onClick={() => updateSoundControls({ rewards: !soundControls.rewards })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Notificaciones del sistema</span><Toggle on={soundControls.systemNotifications} onClick={() => updateSoundControls({ systemNotifications: !soundControls.systemNotifications })} /></div>
                   <div className="flex items-center justify-between gap-3 text-xs font-black"><span>Silencio rápido</span><Toggle on={soundControls.quickMute} onClick={() => updateSoundControls({ quickMute: !soundControls.quickMute })} /></div>
                   <label className="block text-xs font-black text-monkey-muted">
-                    Volumen general
+                    Volumen general · ambiente al 60%
                     <input type="range" min="0" max="1" step="0.05" value={soundControls.volume} onChange={(event) => updateSoundControls({ volume: Number(event.target.value) })} className="mt-2 w-full accent-green-500" />
                   </label>
                 </div>

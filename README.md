@@ -997,3 +997,15 @@ Pruebas manuales clave:
 - Volver a Monkey Checks: la música debe retomar si los controles están activos.
 - Abrir Monkey en dos pestañas: solo la pestaña enfocada debe sonar.
 - Probar silencio rápido y controles en Configuración > Sonidos sin recargar.
+
+## v2.28.1.20 — Sound Alerts + Ambient Controls QA
+
+- Desactiva la música de intro/login/register/welcome.
+- La música ambiente solo suena dentro de pantallas autenticadas de la app.
+- La música ambiente usa 60% del volumen general.
+- Los controles de sonido reaccionan en vivo y pausan audio al apagar/silenciar.
+- Las alertas internas de recordatorio usan el sonido de alerta.
+- El botón de alarma en Hoy tiene actualización optimista para reflejar estado inmediato.
+- El estado de sincronización de Hoy evita mostrar “Revisá la conexión” durante cargas normales.
+
+Sin cambios en Supabase, dependencias ni configuración de Vercel.
