@@ -5,7 +5,7 @@ export function CalendarDaySummary({
 }: {
   label: string;
   count: number;
-  syncStatus: "idle" | "loading" | "saving" | "synced" | "error";
+  syncStatus: "idle" | "loading" | "saving" | "synced" | "local" | "error";
 }) {
   const statusLabel =
     syncStatus === "saving"
@@ -13,7 +13,9 @@ export function CalendarDaySummary({
       : syncStatus === "loading"
         ? "Cargando"
         : syncStatus === "synced"
-          ? "Todo al día"
+          ? "En cuenta"
+          : syncStatus === "local"
+            ? "Local"
           : syncStatus === "error"
             ? "Revisar"
             : null;

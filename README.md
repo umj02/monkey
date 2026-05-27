@@ -1023,3 +1023,10 @@ Sin cambios en Supabase, dependencias ni configuración de Vercel.
 - Corrige regresión donde la app podía tener cookie real de Supabase, pero la capa de datos devolvía `userId = null` y terminaba guardando en `localStorage`.
 - `getUserId()` ahora lee primero `supabase.auth.getSession()` para sesiones manejadas por `@supabase/ssr` y usa `getUser()` como fallback.
 - No toca migraciones, Supabase schema, dependencias ni Vercel.
+
+## v2.28.1.23 — Manifest Public Asset + Remote Save Status QA
+
+- Mantiene `public/manifest.webmanifest`, pero evita cargarlo automáticamente desde metadata para que previews protegidos de Vercel no generen 401 en consola.
+- Agrega estado visible de guardado remoto/local en Hoy y Calendario.
+- Agrega logs de error específicos para `calendar_events` cuando Supabase falle al leer/guardar.
+- No toca Supabase, migraciones, dependencias ni configuración de Vercel.

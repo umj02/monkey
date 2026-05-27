@@ -250,7 +250,7 @@ function CalendarTodayCard({
 
 export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
-  const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError } = useCalendarEvents();
+  const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError, lastSaveMode: calendarLastSaveMode } = useCalendarEvents();
   const { challenges, syncChallengeTaskFromCalendarEvent } = useChallenges();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const { overrides, saveOverride } = useCalendarOverrides();
@@ -736,7 +736,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" ? "Guardando…" : calendarError || completionError ? "Todo al día" : "Todo al día"}
+              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError || calendarLastSaveMode === "local" ? "Guardado local · revisá conexión" : "Guardado en tu cuenta"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

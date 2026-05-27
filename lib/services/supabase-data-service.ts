@@ -154,6 +154,11 @@ function normalizeTitle(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function logCalendarRemoteError(action: string, error: unknown) {
+  if (typeof console === "undefined") return;
+  console.error(`[Monkey Checks] calendar_events ${action} failed`, error);
+}
+
 export async function getUserId(): Promise<string | null> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return null;
@@ -541,7 +546,10 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[] | null> {
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
 
-  if (error) return null;
+  if (error) {
+    logCalendarRemoteError("fetch", error);
+    return null;
+  }
 
   const events: CalendarEventRow[] = data ?? [];
   return events.map(
@@ -615,7 +623,10 @@ export async function upsertCalendarEvent(
       .upsert(payload, { onConflict: "id" })
       .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas,reactivation_count,reactivation_penalty,reactivation_penalty_date,expired_at,last_reactivated_at")
       .single();
-    if (error) return null;
+    if (error) {
+      logCalendarRemoteError("upsert", error);
+      return null;
+    }
     return {
       id: data.id,
       date: data.event_date,
@@ -661,7 +672,10 @@ export async function upsertCalendarEvent(
       .eq("id", existing.id)
       .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas,reactivation_count,reactivation_penalty,reactivation_penalty_date,expired_at,last_reactivated_at")
       .single();
-    if (error) return null;
+    if (error) {
+      logCalendarRemoteError("update", error);
+      return null;
+    }
     return {
       id: data.id,
       date: data.event_date,
@@ -696,7 +710,10 @@ export async function upsertCalendarEvent(
     .select("id,event_date,start_time,end_time,title,icon_key,activity_type_key,color,recurrence_type,recurrence_days,recurrence_until,recurrence_group_id,done,source,challenge_id,challenge_task_id,is_locked,verification_status,reward_bananas,reactivation_count,reactivation_penalty,reactivation_penalty_date,expired_at,last_reactivated_at")
     .single();
 
-  if (error) return null;
+  if (error) {
+    logCalendarRemoteError("insert", error);
+    return null;
+  }
   return {
     id: data.id,
     date: data.event_date,

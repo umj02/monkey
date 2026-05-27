@@ -17,7 +17,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import type { CalendarEvent } from "@/types";
 
-export type SyncStatus = "idle" | "loading" | "saving" | "synced" | "error";
+export type SyncStatus = "idle" | "loading" | "saving" | "synced" | "local" | "error";
+export type SaveMode = "remote" | "local" | "pending";
 
 export function useCalendarEvents() {
   const { session, mode } = useAuth();
@@ -29,6 +30,8 @@ export function useCalendarEvents() {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastSaveMode, setLastSaveMode] = useState<SaveMode>(mode === "supabase" ? "remote" : "local");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   async function refreshEvents() {
     if (!session || mode !== "supabase") return false;
@@ -40,6 +43,7 @@ export function useCalendarEvents() {
       if (remote) {
         setEvents(remote);
         setSyncStatus("synced");
+        setLastSaveMode("remote");
         return true;
       }
       setSyncStatus("error");
@@ -68,6 +72,7 @@ export function useCalendarEvents() {
   async function createEvent(input: CalendarEventInput): Promise<CalendarEvent> {
     const event = createCalendarEvent(input);
     setEvents((list) => sortCalendarEvents([...list, event]));
+    setLastSaveMode(session && mode === "supabase" ? "pending" : "local");
 
     if (session && mode === "supabase") {
       setSyncStatus("saving");
@@ -80,10 +85,13 @@ export function useCalendarEvents() {
           ),
         );
         setSyncStatus("synced");
+        setLastSaveMode("remote");
+        setLastSavedAt(new Date().toISOString());
         return remote;
       }
       setSyncStatus("error");
-      setLastError("La actividad se guardó temporalmente, pero no se pudo sincronizar con tu cuenta.");
+      setLastSaveMode("local");
+      setLastError("Guardado solo en este dispositivo. Revisá la conexión de tu cuenta.");
     }
 
     return event;
@@ -94,6 +102,7 @@ export function useCalendarEvents() {
     setEvents((list) =>
       sortCalendarEvents(list.map((item) => (item.id === id ? event : item))),
     );
+    setLastSaveMode(session && mode === "supabase" ? "pending" : "local");
 
     if (session && mode === "supabase") {
       setSyncStatus("saving");
@@ -102,10 +111,13 @@ export function useCalendarEvents() {
       if (remote) {
         setEvents((list) => sortCalendarEvents(list.map((item) => (item.id === id ? remote : item))));
         setSyncStatus("synced");
+        setLastSaveMode("remote");
+        setLastSavedAt(new Date().toISOString());
         return remote;
       }
       setSyncStatus("error");
-      setLastError("La actividad se guardó temporalmente, pero no se pudo sincronizar con tu cuenta.");
+      setLastSaveMode("local");
+      setLastError("Guardado solo en este dispositivo. Revisá la conexión de tu cuenta.");
     }
 
     return event;
@@ -121,10 +133,13 @@ export function useCalendarEvents() {
       try {
         await deleteCalendarEventRemote(id);
         setSyncStatus("synced");
+        setLastSaveMode("remote");
+        setLastSavedAt(new Date().toISOString());
       } catch {
         setEvents(previous);
         setSyncStatus("error");
-        setLastError("No se pudo eliminar la actividad.");
+        setLastSaveMode("local");
+        setLastError("No se pudo eliminar en tu cuenta. Restauramos la actividad aquí.");
       }
     }
   }
@@ -136,6 +151,8 @@ export function useCalendarEvents() {
     syncing,
     syncStatus,
     lastError,
+    lastSaveMode,
+    lastSavedAt,
     createEvent,
     updateEvent,
     deleteEvent,
