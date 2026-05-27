@@ -957,3 +957,43 @@ Esta versión integra la carpeta de audios MP3 de Monkey Checks como un sistema 
 - Agrega `alarma.mp3` para modales/recordatorios de alarma.
 - Mantiene `modal-confirmacion.mp3` y agrega alias `confirmacion.mp3` para confirmaciones.
 - No toca Supabase, migraciones, dependencias ni configuración de Vercel.
+
+## v2.28.1.19 — Full Stability Cleanup + Sound Lifecycle QA
+
+Esta versión estabiliza el ciclo de vida del audio antes de iniciar Parent.
+
+### Qué incluye
+
+- La música y efectos ahora respetan la pestaña activa del navegador.
+- Si el usuario cambia de pestaña, minimiza o deja de enfocar Monkey Checks, la música se pausa.
+- Al volver a Monkey Checks, la música se retoma solo si esa pestaña queda activa.
+- Evita doble música cuando Monkey Checks está abierto en varias pestañas usando un dueño activo por `localStorage`.
+- Los efectos de sonido solo se disparan si la pestaña está visible, enfocada y autorizada como pestaña activa.
+- Los controles de sonido siguen funcionando en vivo sin recargar la app.
+- Mantiene fade suave entre música de intro y música ambiente.
+
+### Qué no cambia
+
+- No se toca Supabase.
+- No se agregan migraciones.
+- No se cambian dependencias.
+- No se toca configuración de Vercel.
+- No se cambian reglas de negocio de tareas, penalizaciones o Parent.
+
+### QA recomendado
+
+```bash
+npm install
+npm run validate:assets
+npm run typecheck
+npm run build
+```
+
+Pruebas manuales clave:
+
+- Entrar a `/`, `/login` o `/register`, hacer un click y confirmar música de inicio.
+- Entrar a `/today` y confirmar que la música de inicio se apaga y entra ambiente.
+- Cambiar a otra pestaña del navegador: la música debe pausarse.
+- Volver a Monkey Checks: la música debe retomar si los controles están activos.
+- Abrir Monkey en dos pestañas: solo la pestaña enfocada debe sonar.
+- Probar silencio rápido y controles en Configuración > Sonidos sin recargar.
