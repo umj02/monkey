@@ -157,9 +157,26 @@ function normalizeTitle(value: string) {
 export async function getUserId(): Promise<string | null> {
   const supabase = createOptionalClient() as any;
   if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error) return null;
-  return data.user?.id ?? null;
+
+  // v2.28.1.22 — Session bridge fix:
+  // The app uses @supabase/ssr, so the real auth session can live in
+  // Supabase cookies instead of the old localStorage auth keys.
+  // Always read the active session first, then verify the user as fallback.
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const sessionUserId = sessionData?.session?.user?.id;
+    if (sessionUserId) return sessionUserId;
+  } catch {
+    // Continue to getUser fallback.
+  }
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return null;
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchTimeBlocks(): Promise<TimeBlock[] | null> {

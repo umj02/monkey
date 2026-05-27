@@ -1017,3 +1017,9 @@ Sin cambios en Supabase, dependencias ni configuración de Vercel.
 - Declara `icons` en `app/layout.tsx`.
 - Agrega migración idempotente `0023_v228121_favicon_supabase_column_hotfix.sql` para asegurar `calendar_events.reactivation_penalty_date`.
 - No cambia lógica de negocio, dependencias, RLS ni configuración de Vercel.
+
+## v2.28.1.22 — Supabase Session Bridge + Persistence Regression Fix
+
+- Corrige regresión donde la app podía tener cookie real de Supabase, pero la capa de datos devolvía `userId = null` y terminaba guardando en `localStorage`.
+- `getUserId()` ahora lee primero `supabase.auth.getSession()` para sesiones manejadas por `@supabase/ssr` y usa `getUser()` como fallback.
+- No toca migraciones, Supabase schema, dependencias ni Vercel.
