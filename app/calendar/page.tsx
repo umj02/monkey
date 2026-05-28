@@ -423,7 +423,7 @@ function ActivityTypeSelect({
 }
 
 export default function CalendarPage() {
-  const { events, syncing, syncStatus, lastError, lastSaveMode, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
+  const { events, syncing, syncStatus, lastError, lastSaveMode, eventSaveState, createEvent, updateEvent, deleteEvent } = useCalendarEvents();
   const { challenges } = useChallenges();
   const { overrides, saveOverride } = useCalendarOverrides();
   const { completionMap, setCompletion } = useCalendarCompletions();
@@ -453,6 +453,8 @@ export default function CalendarPage() {
 
   const selectedDateKey = toDateKey(selectedDate);
   const todayKey = toDateKey(new Date());
+  const pendingRemoteSaves = events.filter((event) => eventSaveState[event.id] === "saving").length;
+  const localOnlySaves = events.filter((event) => eventSaveState[event.id] === "local" || eventSaveState[event.id] === "error").length;
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
   const visibleMonth = monthNames[selectedDate.getMonth()];
   const visibleYear = selectedDate.getFullYear();
@@ -995,7 +997,7 @@ export default function CalendarPage() {
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
           <p className="mt-2 text-xs leading-5 text-monkey-muted">
-            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : syncing ? "Actualizando calendario..." : syncStatus === "saving" || lastSaveMode === "pending" ? "Guardando en tu cuenta..." : syncStatus === "error" && lastSaveMode === "local" ? "Guardado local · revisá conexión." : syncStatus === "local" && lastSaveMode === "local" ? "Guardado local." : syncStatus === "synced" || lastSaveMode === "remote" ? "Guardado en tu cuenta." : "Calendario listo."}
+            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : pendingRemoteSaves > 0 || syncing || syncStatus === "saving" || lastSaveMode === "pending" ? "Guardando en tu cuenta..." : localOnlySaves > 0 && syncStatus === "error" ? "Hay cambios locales pendientes. Revisá conexión." : syncStatus === "synced" || lastSaveMode === "remote" ? "Guardado en tu cuenta." : "Calendario listo."}
           </p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">

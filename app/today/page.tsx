@@ -250,7 +250,7 @@ function CalendarTodayCard({
 
 export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
-  const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError, lastSaveMode: calendarLastSaveMode } = useCalendarEvents();
+  const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError, lastSaveMode: calendarLastSaveMode, eventSaveState: calendarEventSaveState } = useCalendarEvents();
   const { challenges, syncChallengeTaskFromCalendarEvent } = useChallenges();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const { overrides, saveOverride } = useCalendarOverrides();
@@ -281,6 +281,8 @@ export default function TodayPage() {
   const [rewardsIntroClosing, setRewardsIntroClosing] = useState(false);
   const todayLabel = useMemo(() => formatTodayDate(), []);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
+  const pendingRemoteCalendarSaves = calendarEvents.filter((event) => calendarEventSaveState[event.id] === "saving").length;
+  const localOnlyCalendarSaves = calendarEvents.filter((event) => calendarEventSaveState[event.id] === "local" || calendarEventSaveState[event.id] === "error").length;
   const [clockNow, setClockNow] = useState(() => new Date());
   const [optimisticReminderIds, setOptimisticReminderIds] = useState<Set<string>>(() => new Set());
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
@@ -736,7 +738,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError ? "No pudimos sincronizar. Revisá conexión." : calendarSyncStatus === "error" && calendarLastSaveMode === "local" ? "Guardado local · revisá conexión" : calendarSyncStatus === "local" && calendarLastSaveMode === "local" ? "Guardado local" : "Guardado en tu cuenta"}
+              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : pendingRemoteCalendarSaves > 0 || calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError ? "No pudimos sincronizar. Revisá conexión." : localOnlyCalendarSaves > 0 && calendarSyncStatus === "error" ? "Hay cambios locales pendientes" : "Guardado en tu cuenta"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

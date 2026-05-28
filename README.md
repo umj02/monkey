@@ -1030,3 +1030,21 @@ Sin cambios en Supabase, dependencias ni configuración de Vercel.
 - Agrega estado visible de guardado remoto/local en Hoy y Calendario.
 - Agrega logs de error específicos para `calendar_events` cuando Supabase falle al leer/guardar.
 - No toca Supabase, migraciones, dependencias ni configuración de Vercel.
+
+## v2.28.1.25 — Per-Event Sync Truth + Save Timing Fix
+
+Base: v2.28.1.24 — Save Status Pending State UX Fix.
+
+Objetivo: corregir la confusión de estados `Local` / `Guardado en tu cuenta` cuando Supabase sí está guardando, pero la UI todavía muestra un fallback local o un estado global desactualizado.
+
+Cambios:
+- `useCalendarEvents` ahora maneja estado por evento: `saving`, `remote`, `local`, `error`.
+- Crear/editar eventos usa `mode === "supabase"` como intención de guardado remoto, evitando caer a local si la sesión Supabase tarda unos milisegundos en hidratarse desde cookies.
+- Después de crear/editar remoto, se refresca el calendario desde Supabase para traer IDs y payload canónico.
+- Calendar y Today ya no muestran `Guardado local` por estado global mientras hay guardados remotos pendientes.
+- `Guardado local` queda reservado para fallo real de Supabase.
+
+No se tocó:
+- Supabase schema / migraciones.
+- Dependencias.
+- Configuración de Vercel.
