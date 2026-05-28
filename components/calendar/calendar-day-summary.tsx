@@ -1,24 +1,15 @@
+import { calendarRemoteShortLabel, type CalendarSaveLabelContext } from "@/lib/calendar/sync-status";
+
 export function CalendarDaySummary({
   label,
   count,
-  syncStatus,
+  saveStatus,
 }: {
   label: string;
   count: number;
-  syncStatus: "idle" | "loading" | "saving" | "synced" | "local" | "error";
+  saveStatus: CalendarSaveLabelContext;
 }) {
-  const statusLabel =
-    syncStatus === "saving"
-      ? "Guardando"
-      : syncStatus === "loading"
-        ? "Cargando"
-        : syncStatus === "synced"
-          ? "En cuenta"
-          : syncStatus === "local"
-            ? "Local"
-          : syncStatus === "error"
-            ? "Revisar"
-            : null;
+  const statusLabel = calendarRemoteShortLabel(saveStatus);
 
   return (
     <div className="mt-5 flex items-center justify-between rounded-[20px] bg-white px-4 py-3 shadow-sm">

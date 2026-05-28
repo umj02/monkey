@@ -27,6 +27,7 @@ import { isChallengeCalendarEvent, isChallengeTaskDone } from "@/lib/challenges"
 import { cn } from "@/lib/utils";
 import { playMonkeySound } from "@/lib/sound/sound-events";
 import { applyCalendarOverridesForDate, calendarOccurrenceBaseId, calendarOccurrenceDate, compareDateKeys, getCalendarEventDone, isRecurringEvent } from "@/lib/calendar/calendar-utils";
+import { calendarRemoteSaveLabel, countLocalOnlySaves, countPendingRemoteSaves } from "@/lib/calendar/sync-status";
 import { calendarReactivationKey, useCalendarReactivations } from "@/hooks/use-calendar-reactivations";
 import type { CalendarEvent, Reminder, Task, TaskColor, TimeBlock } from "@/types";
 
@@ -251,6 +252,16 @@ function CalendarTodayCard({
 export default function TodayPage() {
   const { blocks, percent, syncing: tasksSyncing, toggleTask, editTask, updateTaskReminder, deleteTask, refreshTasks } = useTasks();
   const { events: calendarEvents, createEvent, updateEvent, refreshEvents, syncing: calendarSyncing, syncStatus: calendarSyncStatus, lastError: calendarError, lastSaveMode: calendarLastSaveMode, eventSaveState: calendarEventSaveState } = useCalendarEvents();
+  const pendingRemoteSaves = countPendingRemoteSaves(calendarEventSaveState);
+  const localOnlySaves = countLocalOnlySaves(calendarEventSaveState);
+  const calendarSaveStatusLabel = calendarRemoteSaveLabel({
+    syncing: calendarSyncing,
+    syncStatus: calendarSyncStatus,
+    lastSaveMode: calendarLastSaveMode,
+    lastError: calendarError,
+    pendingRemoteSaves,
+    localOnlySaves,
+  });
   const { challenges, syncChallengeTaskFromCalendarEvent } = useChallenges();
   const { completionMap, syncStatus: completionSyncStatus, lastError: completionError, setCompletion } = useCalendarCompletions();
   const { overrides, saveOverride } = useCalendarOverrides();
@@ -738,7 +749,7 @@ export default function TodayPage() {
           <div className="min-w-0">
             <h2 className="text-left text-lg font-black tracking-tight">{todayLabel}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-monkey-muted">
-              {tasksSyncing || calendarSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : pendingRemoteCalendarSaves > 0 || calendarSyncStatus === "saving" || completionSyncStatus === "saving" || calendarLastSaveMode === "pending" ? "Guardando en tu cuenta…" : calendarError || completionError ? "No pudimos sincronizar. Revisá conexión." : localOnlyCalendarSaves > 0 && calendarSyncStatus === "error" ? "Hay cambios locales pendientes" : "Guardado en tu cuenta"}
+              {tasksSyncing || completionSyncStatus === "loading" ? "Sincronizando avances…" : completionSyncStatus === "saving" ? "Guardando avances…" : completionError ? "No pudimos sincronizar avances." : calendarSaveStatusLabel}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

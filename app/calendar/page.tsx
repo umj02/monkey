@@ -38,6 +38,7 @@ import { resolveActivityCategoryMeta } from "@/lib/category-catalog";
 import { isChallengeCalendarEvent } from "@/lib/challenges";
 import { calendarReactivationKey, useCalendarReactivations, reactivationPenaltyPercent } from "@/hooks/use-calendar-reactivations";
 import { playMonkeySound } from "@/lib/sound/sound-events";
+import { calendarRemoteSaveLabel, countLocalOnlySaves, countPendingRemoteSaves } from "@/lib/calendar/sync-status";
 
 const weekLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const dayLetters = ["L", "M", "X", "J", "V", "S", "D"];
@@ -453,8 +454,9 @@ export default function CalendarPage() {
 
   const selectedDateKey = toDateKey(selectedDate);
   const todayKey = toDateKey(new Date());
-  const pendingRemoteSaves = events.filter((event) => eventSaveState[event.id] === "saving").length;
-  const localOnlySaves = events.filter((event) => eventSaveState[event.id] === "local" || eventSaveState[event.id] === "error").length;
+  const pendingRemoteSaves = countPendingRemoteSaves(eventSaveState);
+  const localOnlySaves = countLocalOnlySaves(eventSaveState);
+  const calendarSaveStatusLabel = calendarRemoteSaveLabel({ syncing, syncStatus, lastSaveMode, lastError, pendingRemoteSaves, localOnlySaves });
   const cancelledChallengeIds = useMemo(() => new Set(challenges.filter((challenge) => challenge.status === "cancelled").map((challenge) => challenge.id)), [challenges]);
   const visibleMonth = monthNames[selectedDate.getMonth()];
   const visibleYear = selectedDate.getFullYear();
@@ -765,7 +767,7 @@ export default function CalendarPage() {
             <CalendarDaySummary
               label={formatLongDate(selectedDate)}
               count={eventsForSelectedDate.length}
-              syncStatus={syncStatus}
+              saveStatus={{ syncing, syncStatus, lastSaveMode, lastError, pendingRemoteSaves, localOnlySaves }}
             />
 
             <CalendarTimeline
@@ -997,7 +999,7 @@ export default function CalendarPage() {
         <div className="rounded-[20px] bg-gray-50 p-4">
           <p className="text-sm font-black text-monkey-ink">Resumen</p>
           <p className="mt-2 text-xs leading-5 text-monkey-muted">
-            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {lastError || reminderSyncError ? lastError || reminderSyncError : pendingRemoteSaves > 0 || syncing || syncStatus === "saving" || lastSaveMode === "pending" ? "Guardando en tu cuenta..." : localOnlySaves > 0 && syncStatus === "error" ? "Hay cambios locales pendientes. Revisá conexión." : syncStatus === "synced" || lastSaveMode === "remote" ? "Guardado en tu cuenta." : "Calendario listo."}
+            Tenés {eventsForSelectedDate.length} actividades para el día seleccionado y {upcomingCount} actividades próximas registradas. {reminderSyncError || calendarSaveStatusLabel}
           </p>
         </div>
         <div className="rounded-[20px] bg-green-50 p-4">
