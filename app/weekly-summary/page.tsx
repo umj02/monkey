@@ -12,7 +12,7 @@ import {
   Sparkles,
   ShieldCheck,
   Trophy,
-  WalletCards,
+  Banana,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MonkeyAvatar } from "@/components/monkey-avatar";
@@ -23,6 +23,7 @@ import { usePersistentAchievements } from "@/hooks/use-persistent-achievements";
 import { useProfile } from "@/hooks/use-profile";
 import { useTasks } from "@/hooks/use-tasks";
 import { useWallet } from "@/hooks/use-wallet";
+import { useChallenges } from "@/hooks/use-challenges";
 import { buildAchievements, type Achievement } from "@/lib/achievements";
 import { applyCalendarOverridesForDate, getCalendarEventDone, toDateKey } from "@/lib/calendar/calendar-utils";
 import { getRewardMedalIcon, getRewardTrophyIcon } from "@/lib/reward-media";
@@ -101,6 +102,7 @@ export default function WeeklySummaryPage() {
   const { overrides } = useCalendarOverrides();
   const { completionMap, syncStatus: completionSyncStatus } = useCalendarCompletions();
   const { wallet, syncing: walletSyncing } = useWallet();
+  const { bananaLedger, summary: challengeSummary, syncing: challengeSyncing } = useChallenges();
 
   const calculatedAchievementResult = useMemo(() => buildAchievements({
     blocks,
@@ -162,7 +164,10 @@ export default function WeeklySummaryPage() {
     saving: walletTotal(walletTransactionsThisWeek, "saving"),
   }), [walletTransactionsThisWeek]);
 
-  const syncing = tasksSyncing || calendarSyncing || completionSyncStatus === "loading" || walletSyncing || achievementSyncStatus === "loading";
+  const bananasThisWeek = bananaLedger.filter((entry) => weekSet.has(toDateKey(new Date(entry.createdAt))));
+  const bananasTotal = bananasThisWeek.reduce((sum, entry) => sum + entry.amount, 0);
+
+  const syncing = tasksSyncing || calendarSyncing || completionSyncStatus === "loading" || walletSyncing || challengeSyncing || achievementSyncStatus === "loading";
   const message = motivationalMessage(totals.completion, achievementResult.stats.streak, achievementsThisWeek.length);
 
   return (
@@ -210,26 +215,33 @@ export default function WeeklySummaryPage() {
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
-          <SectionTitle title="Ritmo por día" subtitle="Checks, calendario, wallet y medallas" icon={<BarChart3 className="h-5 w-5 text-monkey-greenDark" />} />
+          <SectionTitle title="Ritmo por día" subtitle="Checks, calendario, bananas y medallas" icon={<BarChart3 className="h-5 w-5 text-monkey-greenDark" />} />
           <div className="grid gap-3">
             {dayReports.map((day) => <DayRow key={day.key} day={day} maxScore={Math.max(1, ...dayReports.map((item) => item.score))} />)}
           </div>
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
-          <SectionTitle title="Wallet semanal" subtitle="Movimiento financiero de los últimos 7 días" icon={<WalletCards className="h-5 w-5 text-monkey-green" />} />
-          {walletTransactionsThisWeek.length ? (
-            <div className="grid grid-cols-2 gap-3">
-              {(["income", "extra", "expense", "saving"] as WalletTransactionType[]).map((type) => (
-                <div key={type} className={cn("rounded-[20px] p-3", walletTone[type])}>
-                  <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">{walletTypeLabels[type]}</p>
-                  <p className="mt-1 text-sm font-black">{money(walletSummary[type], wallet.currency)}</p>
-                </div>
-              ))}
+          <SectionTitle title="Bananas semanales" subtitle="Monedero interno de recompensas" icon={<Banana className="h-5 w-5 text-orange-600" />} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-[20px] bg-yellow-50 p-3 text-orange-700">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Reclamadas</p>
+              <p className="mt-1 text-sm font-black">{bananasTotal} bananas</p>
             </div>
-          ) : (
-            <EmptyPanel title="Sin movimientos esta semana" body="Agregá un ingreso, gasto o ahorro para ver el reporte financiero." href="/wallet" label="Abrir Wallet" />
-          )}
+            <div className="rounded-[20px] bg-green-50 p-3 text-monkey-greenDark">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Listas</p>
+              <p className="mt-1 text-sm font-black">{challengeSummary.bananasAvailable} bananas</p>
+            </div>
+            <div className="rounded-[20px] bg-purple-50 p-3 text-purple-700">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Retos activos</p>
+              <p className="mt-1 text-sm font-black">{challengeSummary.active}</p>
+            </div>
+            <div className="rounded-[20px] bg-pink-50 p-3 text-monkey-pink">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">No ganadas</p>
+              <p className="mt-1 text-sm font-black">{challengeSummary.bananasLost}</p>
+            </div>
+          </div>
+          {!bananasThisWeek.length ? <EmptyPanel title="Sin bananas esta semana" body="Completá retos para sumar bananas al monedero." href="/wallet" label="Abrir Bananas" /> : null}
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
@@ -240,7 +252,7 @@ export default function WeeklySummaryPage() {
               {achievementsThisWeek.length > 4 ? <Link href="/achievements" className="rounded-full bg-purple-50 px-4 py-3 text-center text-xs font-black text-monkey-purple">Ver todas las medallas</Link> : null}
             </div>
           ) : (
-            <EmptyPanel title="Sin medallas nuevas" body="Completá checks, calendario o wallet para desbloquear la próxima." href="/achievements" label="Ver logros" />
+            <EmptyPanel title="Sin medallas nuevas" body="Completá checks, calendario o bananas para desbloquear la próxima." href="/achievements" label="Ver logros" />
           )}
         </section>
 

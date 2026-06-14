@@ -19,7 +19,7 @@ import {
   Sparkles,
   Target,
   Trophy,
-  WalletCards,
+  Banana,
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -42,14 +42,14 @@ type FilterMode = "all" | "unlocked" | "locked";
 const groupLabels: Record<AchievementGroup, string> = {
   daily: "Hoy",
   calendar: "Calendario",
-  wallet: "Wallet",
+  wallet: "Bananas",
   growth: "Crecimiento",
 };
 
 const groupHints: Record<AchievementGroup, string> = {
   daily: "Checks, tareas y avance de tu día.",
   calendar: "Actividades planeadas y completadas.",
-  wallet: "Movimientos, metas y presupuesto.",
+  wallet: "Bananas, retos y recompensas.",
   growth: "Rachas, rutinas y hábitos constantes.",
 };
 
@@ -70,7 +70,7 @@ function achievementIcon(icon: string, className = "h-5 w-5") {
     calendar: <CalendarDays className={className} />,
     trophy: <Trophy className={className} />,
     repeat: <Repeat2 className={className} />,
-    wallet: <WalletCards className={className} />,
+    wallet: <Banana className={className} />,
     piggy: <PiggyBank className={className} />,
   };
   return icons[icon] ?? <Award className={className} />;
@@ -365,7 +365,7 @@ function StarterEmptyState() {
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <QuickLink href="/today" label="Crear tarea" />
             <QuickLink href="/calendar" label="Planear día" />
-            <QuickLink href="/wallet" label="Abrir Wallet" />
+            <QuickLink href="/wallet" label="Abrir Bananas" />
           </div>
         </div>
       </div>
@@ -490,7 +490,7 @@ function TipsSection() {
   const tips = [
     { title: "Para ganar rápido", body: "Marcá una tarea como lista en Hoy.", href: "/today", label: "Ir a Hoy", icon: CheckCircle2 },
     { title: "Para crear rutina", body: "Repetí una actividad 3 veces en calendario.", href: "/calendar", label: "Abrir calendario", icon: Repeat2 },
-    { title: "Para Wallet", body: "Registrá un movimiento o creá una meta.", href: "/wallet", label: "Abrir Wallet", icon: WalletCards },
+    { title: "Para Bananas", body: "Completá retos y cobrá tus bananas.", href: "/wallet", label: "Abrir Bananas", icon: Banana },
   ];
   return (
     <section className="mt-6 rounded-[28px] bg-white p-4 shadow-card">
@@ -524,7 +524,7 @@ function SourcesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-black">Cómo se calculan</h2>
           <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-Las medallas se calculan con Hoy, Calendario, completions, onboarding y Wallet. Desde v2.22.1, el momento de recompensa usa arte dedicado de oro, plata y bronce, respeta mejor el espacio móvil, conserva el historial de medallas y evita repetir animaciones al recargar.
+Las medallas se calculan con Hoy, Calendario, completions, onboarding y Bananas. Desde v2.22.1, el momento de recompensa usa arte dedicado de oro, plata y bronce, respeta mejor el espacio móvil, conserva el historial de medallas y evita repetir animaciones al recargar.
           </p>
         </div>
       </div>

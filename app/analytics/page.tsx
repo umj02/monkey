@@ -382,14 +382,14 @@ export default function AnalyticsPage() {
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-black">Empezá con 1 acción</h2>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-monkey-muted">
-                  Analytics se llena solo cuando usás Hoy, Calendario o Wallet. No hay datos inventados: todo sale de tus checks reales.
+                  Analytics se llena solo cuando usás Hoy, Calendario, Retos y Bananas. No hay datos inventados: todo sale de tus checks reales.
                 </p>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-center text-[11px] font-black">
               <QuickLink href="/today" icon={<CheckSquare2 className="h-4 w-4" />} label="Hoy" />
               <QuickLink href="/calendar" icon={<CalendarDays className="h-4 w-4" />} label="Calendario" />
-              <QuickLink href="/wallet" icon={<WalletCards className="h-4 w-4" />} label="Wallet" />
+              <QuickLink href="/wallet" icon={<Banana className="h-4 w-4" />} label="Bananas" />
             </div>
           </section>
         ) : null}
@@ -409,7 +409,7 @@ export default function AnalyticsPage() {
         <section className="mt-5 grid gap-3">
           <InsightCard icon={<CalendarDays className="h-5 w-5" />} label="Mejor día" value={bestDay ? fullDayLabel(bestDay.dateKey) : "Pendiente"} hint={bestDay ? `${bestDay.done}/${bestDay.total} completadas` : "Completá algo para calcularlo"} />
           <InsightCard icon={<Trophy className="h-5 w-5" />} label="Actividad top" value={topActivity?.label ?? "Pendiente"} hint={topActivity ? `${topActivity.total} registros en el período` : "Aparece cuando tengas actividad"} />
-          <InsightCard icon={<PiggyBank className="h-5 w-5" />} label="Balance período" value={hasWalletData ? money(walletSummary.net, wallet.currency) : "Sin datos"} hint={wallet.budgetLimit ? `Presupuesto usado ${walletSummary.budgetUse}%` : "Agregá ingresos o gastos"} />
+          <InsightCard icon={<Banana className="h-5 w-5" />} label="Monedero" value={`${challengeMetrics.bananasEarned} bananas`} hint={challengeMetrics.claimableBananas ? `${challengeMetrics.claimableBananas} listas para cobrar` : "Ganás bananas completando retos"} />
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
@@ -485,54 +485,29 @@ export default function AnalyticsPage() {
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
-          <SectionTitle title="Wallet / Budget" subtitle="Resumen financiero del período" icon={<WalletCards className="h-5 w-5 text-monkey-green" />} />
-          {hasWalletData ? (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                {(["income", "extra", "expense", "saving"] as WalletTransactionType[]).map((type) => (
-                  <div key={type} className={cn("rounded-[20px] p-3", walletTone[type])}>
-                    <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">{walletTypeLabels[type]}</p>
-                    <p className="mt-1 text-sm font-black">{money(transactionAmountByType(walletTransactionsInRange, type), wallet.currency)}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 rounded-[22px] bg-gray-50 p-3">
-                <div className="flex items-center justify-between text-xs font-black">
-                  <span>Uso de presupuesto</span>
-                  <span>{walletSummary.budgetUse}%</span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                  <div className="h-full rounded-full bg-monkey-pink" style={{ width: `${walletSummary.budgetUse}%` }} />
-                </div>
-                {!wallet.budgetLimit ? <p className="mt-2 text-[11px] font-bold text-monkey-muted">Definí un presupuesto para ver este indicador con más detalle.</p> : null}
-              </div>
-
-              {walletCategoryStats.length ? (
-                <div className="mt-4 grid gap-2">
-                  {walletCategoryStats.map((item) => (
-                    <div key={item.key} className="flex items-center justify-between rounded-[18px] bg-gray-50 px-3 py-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <AssetThumb icon={item.iconKey} src={item.imagePath} alt={item.label} size={30} />
-                        <span className="truncate text-xs font-black text-monkey-ink">{item.label}</span>
-                      </div>
-                      <strong className="text-xs font-black text-monkey-muted">{money(item.amount, wallet.currency)}</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {walletSummary.topGoal ? (
-                <div className="mt-3 flex items-center gap-3 rounded-[22px] bg-purple-50 p-3">
-                  <PiggyBank className="h-5 w-5 shrink-0 text-purple-700" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black">Meta: {walletSummary.topGoal.title}</p>
-                    <p className="text-[11px] font-bold text-monkey-muted">{money(walletSummary.topGoal.current, walletSummary.topGoal.currency)} de {money(walletSummary.topGoal.target, walletSummary.topGoal.currency)}</p>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <EmptyAnalytics title="Wallet sin movimientos" body="Agregá ingresos, gastos o una meta para ver tu resumen financiero." actionHref="/wallet" actionLabel="Abrir Wallet" />
-          )}
+          <SectionTitle title="Monedero de bananas" subtitle="Saldo interno de la app, sin dinero real" icon={<Banana className="h-5 w-5 text-orange-600" />} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-[20px] bg-yellow-50 p-3 text-orange-700">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Reclamadas</p>
+              <p className="mt-1 text-sm font-black">{challengeMetrics.bananasEarned} bananas</p>
+            </div>
+            <div className="rounded-[20px] bg-green-50 p-3 text-monkey-greenDark">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Listas</p>
+              <p className="mt-1 text-sm font-black">{challengeMetrics.claimableBananas} bananas</p>
+            </div>
+            <div className="rounded-[20px] bg-purple-50 p-3 text-purple-700">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">Retos perfectos</p>
+              <p className="mt-1 text-sm font-black">{challengeMetrics.perfectClosures}</p>
+            </div>
+            <div className="rounded-[20px] bg-pink-50 p-3 text-monkey-pink">
+              <p className="text-[11px] font-black uppercase tracking-[.08em] opacity-70">No ganadas</p>
+              <p className="mt-1 text-sm font-black">{challengeMetrics.lostBananas}</p>
+            </div>
+          </div>
+          <div className="mt-4 rounded-[22px] bg-yellow-50 p-3">
+            <p className="text-xs font-black text-orange-700">El antiguo Wallet financiero queda fuera de la experiencia. Este espacio ahora muestra bananas, canjes internos y recompensas de retos.</p>
+            <Link href="/wallet" className="mt-3 inline-flex rounded-full bg-white px-3 py-2 text-[11px] font-black text-orange-700 shadow-card transition active:scale-95">Abrir monedero</Link>
+          </div>
         </section>
 
         <section className="mt-6 rounded-card bg-white p-4 shadow-card">
@@ -540,7 +515,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-2 text-xs font-bold text-monkey-muted">
             <SourceRow label="Hoy" value={`${summary.taskTotal} checks`} status={tasksSyncing ? "Actualizando" : "OK"} />
             <SourceRow label="Calendario" value={`${summary.calendarTotal} actividades`} status={calendarError ? "Revisar" : calendarSyncing ? "Actualizando" : "OK"} />
-            <SourceRow label="Wallet" value={`${walletTransactionsInRange.length} movimientos`} status={walletError ? "Revisar" : walletSyncing ? "Actualizando" : "OK"} />
+            <SourceRow label="Bananas" value={`${challengeMetrics.bananasEarned} reclamadas`} status={challengeSyncing ? "Actualizando" : "OK"} />
           </div>
         </section>
 
@@ -579,7 +554,7 @@ export default function AnalyticsPage() {
             <div className="grid h-12 w-12 place-items-center rounded-[20px] bg-white text-monkey-greenDark shadow-card"><ClipboardList className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-black">Resumen semanal</h2>
-              <p className="text-xs font-bold text-monkey-muted">Un vistazo simple a tus checks, calendario, wallet y logros.</p>
+              <p className="text-xs font-bold text-monkey-muted">Un vistazo simple a tus checks, calendario, bananas y logros.</p>
             </div>
             <Link href="/weekly-summary" className="shrink-0 rounded-full bg-white px-3 py-2 text-[11px] font-black text-monkey-greenDark shadow-card transition active:scale-95">
               Ver

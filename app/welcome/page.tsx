@@ -63,10 +63,10 @@ const cards: WelcomeCard[] = [
   {
     id: "wallet",
     image: "/assets/onboarding/wallet-06.png",
-    titleGreen: "Controlá",
-    titleDark: "tu dinero",
-    description: "Ingresos, gastos, ahorros\ny metas en orden.",
-    alt: "Wallet con ingresos, gastos variables, gastos planificados, ahorros y metas.",
+    titleGreen: "Juntá",
+    titleDark: "bananas",
+    description: "Retos, canjes internos\ny logros en orden.",
+    alt: "Monedero de bananas con retos, canjes y logros internos.",
   },
   {
     id: "medallas",
@@ -82,7 +82,7 @@ const cards: WelcomeCard[] = [
     titleGreen: "¡Todo",
     titleDark: "listo!",
     description: "Empezá pequeño. Monkey Checks\nte acompaña paso a paso.",
-    alt: "Mono celebrando con cards de Hoy, Calendario, Wallet y Logros.",
+    alt: "Mono celebrando con cards de Hoy, Calendario, Bananas y Logros.",
   },
 ];
 

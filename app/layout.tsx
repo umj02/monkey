@@ -4,7 +4,7 @@ import { SoundSystemProvider } from "@/components/sound-system-provider";
 
 export const metadata: Metadata = {
   title: "Monkey Checks",
-  description: "Organizá tu día, tus recordatorios y tu dinero.",
+  description: "Organizá tu día, tus retos y tus bananas.",
   // Manifest file remains available in /public, but it is not auto-linked here
   // because protected Vercel preview deployments return 401 on browser manifest fetches.
   icons: {

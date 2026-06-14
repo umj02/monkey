@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Home, StickyNote, UserRound, WalletCards } from "lucide-react";
+import { Banana, CalendarDays, Home, StickyNote, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/today", label: "Hoy", icon: Home },
   { href: "/calendar", label: "Calendario", icon: CalendarDays },
   { href: "/notes", label: "Notas", icon: StickyNote },
-  { href: "/wallet", label: "Wallet", icon: WalletCards },
+  { href: "/wallet", label: "Bananas", icon: Banana },
   { href: "/profile", label: "Cuenta", icon: UserRound }
 ];
 
